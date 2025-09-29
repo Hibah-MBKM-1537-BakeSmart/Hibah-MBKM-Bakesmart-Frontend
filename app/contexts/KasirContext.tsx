@@ -1,0 +1,458 @@
+'use client';
+
+import React, { createContext, useContext, useState, useEffect } from 'react';
+
+// Related entities interfaces based on ERD
+export interface Gambar {
+  id: string;
+  file_path: string;
+  product_id: string;
+}
+
+export interface RefJenis {
+  id: string;
+  nama: string;
+}
+
+export interface RefHari {
+  id: string;
+  nama: string;
+}
+
+export interface RefAttribute {
+  id: string;
+  nama: string;
+}
+
+export interface Product {
+  id: number;
+  nama: string;
+  deskripsi: string;
+  harga: number;
+  stok: number;
+  created_at?: string;
+  updated_at?: string;
+  // Related data (populated via joins)
+  gambars?: Gambar[];
+  jenis?: RefJenis[];
+  hari?: RefHari[];
+  attributes?: RefAttribute[];
+}
+
+export interface CartItem {
+  product: Product;
+  quantity: number;
+  note?: string;
+}
+
+export interface Transaction {
+  id: string;
+  items: CartItem[];
+  subtotal: number;
+  tax: number;
+  discount: number;
+  total: number;
+  paymentMethod: 'cash' | 'card' | 'digital';
+  customerName?: string;
+  timestamp: Date;
+  status: 'pending' | 'completed' | 'cancelled';
+}
+
+interface KasirState {
+  cart: CartItem[];
+  currentTransaction: Transaction | null;
+  products: Product[];
+  selectedCategory: string;
+  showCart: boolean;
+  paymentMethod: 'cash' | 'card' | 'digital';
+  customerName: string;
+  discount: number;
+}
+
+interface KasirContextType {
+  state: KasirState;
+  addToCart: (product: Product, quantity?: number, note?: string) => void;
+  removeFromCart: (productId: number) => void;
+  updateCartItemQuantity: (productId: number, quantity: number) => void;
+  updateCartItemNote: (productId: number, note: string) => void;
+  clearCart: () => void;
+  setSelectedCategory: (category: string) => void;
+  toggleCart: () => void;
+  setPaymentMethod: (method: 'cash' | 'card' | 'digital') => void;
+  setCustomerName: (name: string) => void;
+  setDiscount: (discount: number) => void;
+  processPayment: () => Promise<boolean>;
+  calculateSubtotal: () => number;
+  calculateTax: () => number;
+  calculateTotal: () => number;
+}
+
+const KasirContext = createContext<KasirContextType | undefined>(undefined);
+
+// Sample products data
+const sampleProducts: Product[] = [
+  {
+    id: 1,
+    nama: 'Chocolate Cake',
+    harga: 125000,
+    deskripsi: 'Rich chocolate cake with cream frosting',
+    stok: 10,
+    gambars: [
+      { id: '1', file_path: '/img/cake1.jpg', product_id: '1' }
+    ],
+    jenis: [
+      { id: '1', nama: 'Cake' }
+    ],
+    hari: [
+      { id: '1', nama: 'Monday' },
+      { id: '2', nama: 'Tuesday' },
+      { id: '3', nama: 'Wednesday' },
+      { id: '4', nama: 'Thursday' },
+      { id: '5', nama: 'Friday' },
+      { id: '6', nama: 'Saturday' },
+      { id: '7', nama: 'Sunday' }
+    ],
+    attributes: [
+      { id: '1', nama: 'Sweet' },
+      { id: '2', nama: 'Premium' }
+    ]
+  },
+  {
+    id: 2,
+    nama: 'Red Velvet Cupcakes',
+    harga: 15000,
+    deskripsi: 'Classic red velvet cupcakes (per piece)',
+    stok: 24,
+    gambars: [
+      { id: '2', file_path: '/img/cupcake1.jpg', product_id: '2' }
+    ],
+    jenis: [
+      { id: '2', nama: 'Cupcake' }
+    ],
+    hari: [
+      { id: '1', nama: 'Monday' },
+      { id: '2', nama: 'Tuesday' },
+      { id: '3', nama: 'Wednesday' },
+      { id: '4', nama: 'Thursday' },
+      { id: '5', nama: 'Friday' }
+    ],
+    attributes: [
+      { id: '1', nama: 'Sweet' }
+    ]
+  },
+  {
+    id: 3,
+    nama: 'Croissant',
+    harga: 12000,
+    deskripsi: 'Buttery French croissant',
+    stok: 15,
+    gambars: [
+      { id: '3', file_path: '/img/croissant1.jpg', product_id: '3' }
+    ],
+    jenis: [
+      { id: '3', nama: 'Pastry' }
+    ],
+    hari: [
+      { id: '1', nama: 'Monday' },
+      { id: '2', nama: 'Tuesday' },
+      { id: '3', nama: 'Wednesday' },
+      { id: '4', nama: 'Thursday' },
+      { id: '5', nama: 'Friday' },
+      { id: '6', nama: 'Saturday' }
+    ],
+    attributes: [
+      { id: '3', nama: 'Fresh' }
+    ]
+  },
+  {
+    id: 4,
+    nama: 'Birthday Cake',
+    harga: 200000,
+    deskripsi: 'Custom birthday cake with decoration',
+    stok: 5,
+    gambars: [
+      { id: '4', file_path: '/img/birthday1.jpg', product_id: '4' }
+    ],
+    jenis: [
+      { id: '1', nama: 'Cake' }
+    ],
+    hari: [
+      { id: '6', nama: 'Saturday' },
+      { id: '7', nama: 'Sunday' }
+    ],
+    attributes: [
+      { id: '2', nama: 'Premium' },
+      { id: '4', nama: 'Custom' }
+    ]
+  },
+  {
+    id: 5,
+    nama: 'Donuts Box (12 pcs)',
+    harga: 60000,
+    deskripsi: 'Mixed flavors donut box',
+    stok: 8,
+    gambars: [
+      { id: '5', file_path: '/img/donuts1.jpg', product_id: '5' }
+    ],
+    jenis: [
+      { id: '4', nama: 'Donut' }
+    ],
+    hari: [
+      { id: '1', nama: 'Monday' },
+      { id: '2', nama: 'Tuesday' },
+      { id: '3', nama: 'Wednesday' },
+      { id: '4', nama: 'Thursday' },
+      { id: '5', nama: 'Friday' },
+      { id: '6', nama: 'Saturday' },
+      { id: '7', nama: 'Sunday' }
+    ],
+    attributes: [
+      { id: '1', nama: 'Sweet' },
+      { id: '5', nama: 'Mixed' }
+    ]
+  },
+  {
+    id: 6,
+    nama: 'Cheese Tart',
+    harga: 25000,
+    deskripsi: 'Creamy cheese tart',
+    stok: 12,
+    gambars: [
+      { id: '6', file_path: '/img/tart1.jpg', product_id: '6' }
+    ],
+    jenis: [
+      { id: '5', nama: 'Tart' }
+    ],
+    hari: [
+      { id: '2', nama: 'Tuesday' },
+      { id: '3', nama: 'Wednesday' },
+      { id: '4', nama: 'Thursday' },
+      { id: '5', nama: 'Friday' },
+      { id: '6', nama: 'Saturday' }
+    ],
+    attributes: [
+      { id: '6', nama: 'Creamy' }
+    ]
+  },
+  {
+    id: 7,
+    nama: 'Apple Pie',
+    harga: 45000,
+    deskripsi: 'Traditional apple pie',
+    stok: 6,
+    gambars: [
+      { id: '7', file_path: '/img/pie1.jpg', product_id: '7' }
+    ],
+    jenis: [
+      { id: '6', nama: 'Pie' }
+    ],
+    hari: [
+      { id: '3', nama: 'Wednesday' },
+      { id: '4', nama: 'Thursday' },
+      { id: '5', nama: 'Friday' },
+      { id: '6', nama: 'Saturday' },
+      { id: '7', nama: 'Sunday' }
+    ],
+    attributes: [
+      { id: '7', nama: 'Traditional' }
+    ]
+  },
+  {
+    id: 8,
+    nama: 'Bagel',
+    harga: 18000,
+    deskripsi: 'Fresh baked bagel',
+    stok: 20,
+    gambars: [
+      { id: '8', file_path: '/img/bagel1.jpg', product_id: '8' }
+    ],
+    jenis: [
+      { id: '7', nama: 'Bread' }
+    ],
+    hari: [
+      { id: '1', nama: 'Monday' },
+      { id: '2', nama: 'Tuesday' },
+      { id: '3', nama: 'Wednesday' },
+      { id: '4', nama: 'Thursday' },
+      { id: '5', nama: 'Friday' }
+    ],
+    attributes: [
+      { id: '3', nama: 'Fresh' }
+    ]
+  }
+];
+
+export function KasirProvider({ children }: { children: React.ReactNode }) {
+  const [state, setState] = useState<KasirState>({
+    cart: [],
+    currentTransaction: null,
+    products: sampleProducts,
+    selectedCategory: 'All',
+    showCart: false,
+    paymentMethod: 'cash',
+    customerName: '',
+    discount: 0
+  });
+
+  const addToCart = (product: Product, quantity: number = 1, note?: string) => {
+    setState(prev => {
+      const existingItem = prev.cart.find(item => item.product.id === product.id);
+      
+      if (existingItem) {
+        return {
+          ...prev,
+          cart: prev.cart.map(item =>
+            item.product.id === product.id
+              ? { ...item, quantity: item.quantity + quantity, note: note || item.note }
+              : item
+          )
+        };
+      }
+      
+      return {
+        ...prev,
+        cart: [...prev.cart, { product, quantity, note }]
+      };
+    });
+  };
+
+  const removeFromCart = (productId: number) => {
+    setState(prev => ({
+      ...prev,
+      cart: prev.cart.filter(item => item.product.id !== productId)
+    }));
+  };
+
+  const updateCartItemQuantity = (productId: number, quantity: number) => {
+    if (quantity <= 0) {
+      removeFromCart(productId);
+      return;
+    }
+
+    setState(prev => ({
+      ...prev,
+      cart: prev.cart.map(item =>
+        item.product.id === productId
+          ? { ...item, quantity }
+          : item
+      )
+    }));
+  };
+
+  const updateCartItemNote = (productId: number, note: string) => {
+    setState(prev => ({
+      ...prev,
+      cart: prev.cart.map(item =>
+        item.product.id === productId
+          ? { ...item, note }
+          : item
+      )
+    }));
+  };  const clearCart = () => {
+    setState(prev => ({
+      ...prev,
+      cart: [],
+      customerName: '',
+      discount: 0
+    }));
+  };
+
+  const setSelectedCategory = (category: string) => {
+    setState(prev => ({ ...prev, selectedCategory: category }));
+  };
+
+  const toggleCart = () => {
+    setState(prev => ({ ...prev, showCart: !prev.showCart }));
+  };
+
+  const setPaymentMethod = (method: 'cash' | 'card' | 'digital') => {
+    setState(prev => ({ ...prev, paymentMethod: method }));
+  };
+
+  const setCustomerName = (name: string) => {
+    setState(prev => ({ ...prev, customerName: name }));
+  };
+
+  const setDiscount = (discount: number) => {
+    setState(prev => ({ ...prev, discount }));
+  };
+
+  const calculateSubtotal = () => {
+    return state.cart.reduce((total, item) => {
+      return total + (item.product.harga * item.quantity);
+    }, 0);
+  };
+
+  const calculateTax = () => {
+    const subtotal = calculateSubtotal();
+    return subtotal * 0.1; // 10% tax
+  };
+
+  const calculateTotal = () => {
+    const subtotal = calculateSubtotal();
+    const tax = calculateTax();
+    return subtotal + tax - state.discount;
+  };
+
+  const processPayment = async (): Promise<boolean> => {
+    try {
+      const transaction: Transaction = {
+        id: `TXN${Date.now()}`,
+        items: [...state.cart],
+        subtotal: calculateSubtotal(),
+        tax: calculateTax(),
+        discount: state.discount,
+        total: calculateTotal(),
+        paymentMethod: state.paymentMethod,
+        customerName: state.customerName,
+        timestamp: new Date(),
+        status: 'completed'
+      };
+
+      setState(prev => ({ ...prev, currentTransaction: transaction }));
+      
+      // Simulate payment processing
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Clear cart after successful payment
+      clearCart();
+      
+      return true;
+    } catch (error) {
+      console.error('Payment processing failed:', error);
+      return false;
+    }
+  };
+
+  const contextValue: KasirContextType = {
+    state,
+    addToCart,
+    removeFromCart,
+    updateCartItemQuantity,
+    updateCartItemNote,
+    clearCart,
+    setSelectedCategory,
+    toggleCart,
+    setPaymentMethod,
+    setCustomerName,
+    setDiscount,
+    processPayment,
+    calculateSubtotal,
+    calculateTax,
+    calculateTotal
+  };
+
+  return (
+    <KasirContext.Provider value={contextValue}>
+      {children}
+    </KasirContext.Provider>
+  );
+}
+
+export function useKasir() {
+  const context = useContext(KasirContext);
+  if (context === undefined) {
+    throw new Error('useKasir must be used within a KasirProvider');
+  }
+  return context;
+}
