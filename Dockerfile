@@ -7,15 +7,13 @@ WORKDIR /app
 # Copy dependency files
 COPY package*.json ./
 
-# Install ALL dependencies dengan alokasi memori tambahan
-# INI ADALAH PERBAIKANNYA: Menambahkan NODE_OPTIONS
+# Install SEMUA dependencies (termasuk dev) untuk proses build
 RUN NODE_OPTIONS="--max-old-space-size=4096" npm ci --legacy-peer-deps
 
 # Copy seluruh source code
 COPY . .
 
 # Build Next.js
-# Pastikan Anda punya script "build" di package.json
 RUN npm run build
 
 # Stage 2: Production image
@@ -23,17 +21,20 @@ FROM node:20.11.1-slim AS runner
 
 WORKDIR /app
 
-# Di stage production, sebaiknya tidak dijalankan sebagai root user
 # Membuat user baru bernama "nextjs"
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# Copy hanya yang dibutuhkan dari builder dan set ownership ke user baru
+# Copy hanya package.json dan lock file
 COPY --from=builder /app/package*.json ./
+
+# --- PERBAIKAN DI SINI ---
+# Install HANYA production dependencies. Ini akan membuat image lebih kecil.
+RUN npm ci --omit=dev
+
+# Copy artefak build dan public folder dari builder
 COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
-# Copy node_modules setelah production dependencies diinstall
-COPY --from=builder /app/node_modules ./node_modules
 
 # Ganti user ke non-root
 USER nextjs

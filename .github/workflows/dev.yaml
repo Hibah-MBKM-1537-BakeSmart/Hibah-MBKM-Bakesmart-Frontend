@@ -22,3 +22,5 @@ jobs:
         with:
           push: true
           tags: reniuswatun/dev-frontend-merpatisolobakery:latest
+          cache-from: type=gha,scope=${{ github.workflow }}
+          cache-to: type=gha,mode=max,scope=${{ github.workflow }}
