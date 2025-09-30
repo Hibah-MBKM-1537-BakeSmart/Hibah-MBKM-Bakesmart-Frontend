@@ -1,5 +1,5 @@
 # ---------- builder stage ----------
-FROM node:20-alpine AS builder
+FROM node:alpine3.21 AS builder
 
 # active corepack/pnpm
 RUN corepack enable
@@ -7,7 +7,7 @@ RUN corepack enable
 WORKDIR /app
 
 # copy package manifests first (caching)
-COPY package.json pnpm-lock.yaml* ./
+COPY package.json pnpm-lock.yaml ./
 
 # install deps (will install dev deps too; needed for build)
 RUN pnpm install
@@ -19,7 +19,7 @@ COPY . .
 RUN pnpm build
 
 # ---------- production runner ----------
-FROM node:20-alpine AS runner
+FROM node:alpine3.21 AS runner
 
 ENV NODE_ENV=production
 RUN corepack enable
