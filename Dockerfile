@@ -10,7 +10,7 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 
 # install dependencies
-RUN npm ci
+RUN npm install
 
 # copy semua source
 COPY . .
