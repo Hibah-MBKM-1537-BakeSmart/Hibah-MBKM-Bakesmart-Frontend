@@ -9,8 +9,11 @@ WORKDIR /app
 # copy package manifests first (caching)
 COPY package.json pnpm-lock.yaml ./
 
-# install deps (will install dev deps too; needed for build)
-RUN pnpm install
+# install pnpm
+RUN npm install -g pnpm@9
+
+# install semua dependency (dev + prod)
+RUN pnpm install --frozen-lockfile
 
 # copy rest of the source
 COPY . .
@@ -21,16 +24,23 @@ RUN pnpm build
 # ---------- production runner ----------
 FROM node:alpine3.21 AS runner
 
-ENV NODE_ENV=production
-RUN corepack enable
+# RUN corepack enable
 
 WORKDIR /app
+ENV NODE_ENV=production
 
-# copy only production artifacts
+# install pnpm
+RUN npm install -g pnpm@9
+
+# copy hanya file yang diperlukan untuk runtime
+COPY package.json pnpm-lock.yaml ./
+
+# install hanya production dependencies
+RUN pnpm install --frozen-lockfile --prod
+
+# copy build artifacts dari builder
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./package.json
 
 EXPOSE 3000
 
