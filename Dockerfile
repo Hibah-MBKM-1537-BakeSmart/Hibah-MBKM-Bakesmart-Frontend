@@ -6,39 +6,35 @@ RUN corepack enable
 
 WORKDIR /app
 
-# aktifkan corepack & set versi pnpm
-RUN corepack enable && corepack prepare pnpm@9 --activate
-
-# copy package manifests dulu (biar caching jalan)
-COPY package.json pnpm-lock.yaml ./
+# copy package.json & lockfile dulu (buat caching layer)
+COPY package.json package-lock.json ./
 
 # install dependencies
-RUN pnpm install
+RUN npm ci
 
 # copy semua source
 COPY . .
 
-# build app (misal Next.js atau Node build)
-RUN pnpm build
+# build Next.js (output .next/)
+RUN npm run build
 
 # ---------- production runner ----------
 FROM node:alpine3.21 AS runner
 
 # RUN corepack enable
 
-ENV NODE_ENV=production
 WORKDIR /app
+ENV NODE_ENV=production
 
-# aktifkan corepack & pnpm di runner
-RUN corepack enable && corepack prepare pnpm@9 --activate
-
-# copy hasil build + deps
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/node_modules ./node_modules
+# copy only necessary files
 COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/next.config.js ./next.config.js
 
+# port default Next.js
 EXPOSE 3000
 
-# pastikan ada script "start" di package.json
-CMD ["pnpm", "start"]
+# jalankan Next.js
+CMD ["npm", "start"]
