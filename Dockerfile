@@ -7,7 +7,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install ALL dependencies (termasuk devDependencies, supaya ada "next")
-RUN npm install
+RUN npm install --legacy-peer-deps
 
 # Copy seluruh source code
 COPY . .
