@@ -1,31 +1,32 @@
-# Stage 1: Build the Next.js application
-FROM node:20-alpine AS builder
+# Stage 1: Build Next.js app
+FROM node:20 AS builder
 
 WORKDIR /app
 
-# Copy package.json and package-lock.json first to leverage Docker cache
-COPY package.json package-lock.json ./
-RUN npm ci
+# Copy dependency files
+COPY package*.json ./
 
-# Copy the rest of the application code
+# Install ALL dependencies (termasuk devDependencies, supaya ada "next")
+RUN npm install
+
+# Copy seluruh source code
 COPY . .
 
-# Build the Next.js application
-# Ensure standalone output for a self-contained server
+# Build Next.js
 RUN npm run build
 
-# Stage 2: Create the final production image
-FROM node:20-alpine AS runner
+# Stage 2: Production image
+FROM node:20-slim AS runner
 
 WORKDIR /app
 
-# Copy necessary files from the builder stage
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
+# Copy hanya yang dibutuhkan dari builder
+COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
 
-# Expose the port Next.js runs on
 EXPOSE 3000
 
-# Start the Next.js application
-CMD ["node", "server.js"]
+# Jalankan aplikasi
+CMD ["npm", "start"]
