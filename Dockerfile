@@ -18,8 +18,8 @@ RUN npm run build
 # ---------- production runner ----------
 FROM node:20-slim AS runner
 
-ENV NODE_ENV=production
 WORKDIR /app
+ENV NODE_ENV=production
 
 # copy only production deps
 COPY --from=builder /app/node_modules ./node_modules
