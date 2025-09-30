@@ -1,16 +1,12 @@
 # ---------- builder stage ----------
 FROM node:20 AS builder
 
-# active corepack/pnpm
-RUN corepack enable
-
 WORKDIR /app
 
-# copy package.json & lockfile dulu (buat caching layer)
+# copy package manifests dulu (buat caching layer)
 COPY package.json package-lock.json* ./
 
-# bersihin cache & install deps
-RUN npm cache clean --force
+# install semua deps (termasuk dev)
 RUN npm install --legacy-peer-deps
 
 # copy semua source
@@ -22,14 +18,13 @@ RUN npm run build
 # ---------- production runner ----------
 FROM node:20-slim AS runner
 
-# RUN corepack enable
-
 ENV NODE_ENV=production
 WORKDIR /app
 
+# copy only production deps
+COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
-COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
 
 EXPOSE 3000
