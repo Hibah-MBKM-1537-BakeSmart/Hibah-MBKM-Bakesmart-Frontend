@@ -1,31 +1,25 @@
-# ---------- builder stage ----------
+# Stage 1: Build Next.js app
 FROM node:20 AS builder
 
 WORKDIR /app
+COPY package*.json ./
 
-# copy package manifests dulu (buat caching layer)
-COPY package.json package-lock.json* ./
+# install dependencies (jangan lupa --legacy-peer-deps kalau perlu)
+RUN npm install
 
-# install semua deps (termasuk dev)
-RUN npm install --legacy-peer-deps
-
-# copy semua source
 COPY . .
-
-# build Next.js (output .next/)
 RUN npm run build
 
-# ---------- production runner ----------
+# Stage 2: Run app
 FROM node:20-slim AS runner
 
 WORKDIR /app
-ENV NODE_ENV=production
 
-# copy only production deps
+# copy only built files and node_modules from builder
+COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
-COPY --from=builder /app/package.json ./package.json
 
 EXPOSE 3000
 CMD ["npm", "start"]
