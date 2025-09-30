@@ -7,7 +7,7 @@ RUN corepack enable
 WORKDIR /app
 
 # copy package.json & lockfile dulu (buat caching layer)
-COPY package.json package-lock.json ./
+COPY package.json package-lock.json* ./
 
 # install dependencies
 RUN npm ci
