@@ -3,28 +3,26 @@
 import type React from "react";
 import { createContext, useContext, useState, useEffect } from "react";
 import { stockManager } from "@/lib/api/stockManager";
-import type { ProductAttribute } from "@/lib/api/mockData";
 
 interface CartItem {
   id: number;
-  name: string; // Transformed from nama_id/nama_en
-  discountPrice: string; // Formatted price string
-  originalPrice?: string; // Formatted original price string
+  name: string;
+  discountPrice: string;
+  originalPrice?: string;
   isDiscount?: boolean;
-  image: string; // Primary image from gambars array
-  category: string; // From jenis array
-  description?: string;
-  ingredients?: string; // From bahans array
-  notes?: string;
-  stock: number; // From stok
-  availableDays: string[]; // From hari array, transformed to string array
+  image: string;
   quantity: number;
+  category: string;
   orderDay: string; // Hari pesanan (senin, selasa, etc.)
-  selectedAttributes?: ProductAttribute[];
+  availableDays: string[];
+  stock: number; // Stock tersedia untuk hari tersebut
+  selectedAttributes?: {
+    id: number;
+    name: string;
+    additionalPrice: number;
+  }[];
   attributesPrice?: number;
   cartId: string; // Add unique cartId for each cart item
-  // Keep reference to original API data for advanced operations
-  _originalData?: any;
 }
 
 interface CartContextType {
@@ -95,13 +93,15 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setSelectedOrderDayState(day);
   };
 
+  // Helper function to create unique cart item identifier
+  // FIXED: Remove orderDay from key to allow proper matching of same customizations
   const getCartItemKey = (item: Omit<CartItem, "quantity" | "cartId">) => {
     const attributesKey =
       item.selectedAttributes
-        ?.map((attr) => `${attr.id}-${attr.harga}`)
+        ?.map((attr) => `${attr.id}-${attr.additionalPrice}`)
         .sort()
         .join(",") || "no-attributes";
-    return `${item.id}-${attributesKey}`;
+    return `${item.id}-${attributesKey}`; // Removed orderDay from key
   };
 
   const canAddToCart = (item: Omit<CartItem, "quantity" | "cartId">) => {
@@ -114,12 +114,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       // Use the selectedOrderDay if available, otherwise use the day from first cart item
       const cartDay = selectedOrderDay || cartItems[0].orderDay;
       // Check if item is available on the same day as cart items
-      if (
-        !item.availableDays ||
-        !item.availableDays.some(
-          (day) => day.toLowerCase() === cartDay.toLowerCase()
-        )
-      ) {
+      if (!item.availableDays.includes(cartDay)) {
         return {
           canAdd: false,
           reason: `Pesanan Anda untuk hari ${cartDay}. Produk ini tidak tersedia untuk hari tersebut.`,
@@ -130,10 +125,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     if (
       selectedOrderDay &&
       cartItems.length === 0 &&
-      (!item.availableDays ||
-        !item.availableDays.some(
-          (day) => day.toLowerCase() === selectedOrderDay.toLowerCase()
-        ))
+      !item.availableDays.includes(selectedOrderDay)
     ) {
       return {
         canAdd: false,
@@ -162,27 +154,24 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
     if (cartItems.length === 0) {
       // If we have a selectedOrderDay and item is available on that day, use it
-      const availableDayNames =
-        item.availableDays?.map((d) => d.toLowerCase()) || [];
-      if (
-        selectedOrderDay &&
-        availableDayNames.includes(selectedOrderDay.toLowerCase())
-      ) {
+      if (selectedOrderDay && item.availableDays.includes(selectedOrderDay)) {
         console.log("[v0] Using existing selectedOrderDay:", selectedOrderDay);
         // Keep the selectedOrderDay
       } else {
         // Otherwise, use the first available day for this item
-        const firstAvailableDay = item.availableDays?.[0] || "senin";
-        console.log("[v0] Setting new selectedOrderDay:", firstAvailableDay);
-        setSelectedOrderDay(firstAvailableDay);
+        console.log(
+          "[v0] Setting new selectedOrderDay:",
+          item.availableDays[0]
+        );
+        setSelectedOrderDay(item.availableDays[0]);
       }
     }
 
     setCartItems((prev) => {
       const itemKey = getCartItemKey(item);
-      const orderDay = selectedOrderDay || item.availableDays?.[0] || "senin";
+      const orderDay = selectedOrderDay || item.availableDays[0];
 
-      // Look for existing item with same customization AND same order day
+      // FIXED: Look for existing item with same customization AND same order day
       const existingItem = prev.find((cartItem) => {
         const cartItemKey = getCartItemKey(cartItem);
         return cartItemKey === itemKey && cartItem.orderDay === orderDay;
@@ -199,7 +188,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
       const attributesPrice =
         item.selectedAttributes?.reduce(
-          (total, attr) => total + attr.harga,
+          (total, attr) => total + attr.additionalPrice,
           0
         ) || 0;
 
@@ -218,6 +207,23 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setShowCartAnimation(true);
     setTimeout(() => setShowCartAnimation(false), 600);
     return true;
+  };
+
+  const removeFromCart = (cartId: string) => {
+    console.log(
+      "[DEBUG] CartContext: removeFromCart called with cartId:",
+      cartId
+    );
+    setCartItems((prev) => {
+      const newItems = prev.filter((item) => item.cartId !== cartId);
+      console.log("[DEBUG] CartContext: Items before removal:", prev.length);
+      console.log("[DEBUG] CartContext: Items after removal:", newItems.length);
+
+      if (newItems.length === 0) {
+        setSelectedOrderDay(null);
+      }
+      return newItems;
+    });
   };
 
   const updateQuantity = (cartId: string, quantity: number) => {
@@ -290,9 +296,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const getTotalOriginalPrice = () => {
     return cartItems.reduce((total, item) => {
-      const basePrice = item.originalPrice
-        ? Number.parseInt(item.originalPrice.replace(/\D/g, ""))
-        : Number.parseInt(item.discountPrice.replace(/\D/g, ""));
+      const shouldUseOriginal = item.isDiscount && item.originalPrice;
+      const priceToUse = shouldUseOriginal
+        ? item.originalPrice!
+        : item.discountPrice;
+      const basePrice = Number.parseInt(priceToUse.replace(/\D/g, ""));
       const attributesPrice = item.attributesPrice || 0;
       return total + (basePrice + attributesPrice) * item.quantity;
     }, 0);
@@ -305,12 +313,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const getValidItems = () => {
     if (!selectedOrderDay) return cartItems;
     return cartItems.filter(
-      (item) =>
-        item.availableDays &&
-        item.availableDays.some(
-          (day) => day.toLowerCase() === selectedOrderDay.toLowerCase()
-        ) &&
-        item.stock > 0
+      (item) => item.availableDays.includes(selectedOrderDay) && item.stock > 0
     );
   };
 
@@ -318,11 +321,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     if (!selectedOrderDay) return [];
     return cartItems.filter(
       (item) =>
-        !item.availableDays ||
-        !item.availableDays.some(
-          (day) => day.toLowerCase() === selectedOrderDay.toLowerCase()
-        ) ||
-        item.stock <= 0
+        !item.availableDays.includes(selectedOrderDay) || item.stock <= 0
     );
   };
 
@@ -354,23 +353,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     // Clear cart setelah order berhasil
     clearCart();
     return true;
-  };
-
-  const removeFromCart = (cartId: string) => {
-    console.log(
-      "[DEBUG] CartContext: removeFromCart called with cartId:",
-      cartId
-    );
-    setCartItems((prev) => {
-      const newItems = prev.filter((item) => item.cartId !== cartId);
-      console.log("[DEBUG] CartContext: Items before removal:", prev.length);
-      console.log("[DEBUG] CartContext: Items after removal:", newItems.length);
-
-      if (newItems.length === 0) {
-        setSelectedOrderDay(null);
-      }
-      return newItems;
-    });
   };
 
   return (

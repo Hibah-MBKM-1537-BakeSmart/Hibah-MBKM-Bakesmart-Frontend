@@ -4,6 +4,7 @@ import { AdminSidebar } from '@/components/adminPage';
 import { AdminHeader } from '@/components/adminPage';
 import { AdminProvider } from '@/app/contexts/AdminContext';
 import { CategoriesProvider } from '@/app/contexts/CategoriesContext';
+import { ProductsProvider } from '@/app/contexts/ProductsContext';
 
 const poppins = Poppins({
   subsets: ['latin'],
@@ -25,29 +26,31 @@ export default function AdminLayout({
   return (
     <AdminProvider>
       <CategoriesProvider>
-        <div 
-          className={`flex h-screen ${poppins.variable} ${inter.variable}`}
-          style={{ 
-            backgroundColor: '#f5f1eb',
-            fontFamily: 'var(--font-inter), sans-serif'
-          }}
-        >
-          {/* Sidebar */}
-          <AdminSidebar />
-          
-          {/* Main Content */}
-          <div className="flex-1 flex flex-col overflow-hidden">
-            {/* Header */}
-            <AdminHeader />
+        <ProductsProvider>
+          <div 
+            className={`flex h-screen ${poppins.variable} ${inter.variable}`}
+            style={{ 
+              backgroundColor: '#f5f1eb',
+              fontFamily: 'var(--font-inter), sans-serif'
+            }}
+          >
+            {/* Sidebar */}
+            <AdminSidebar />
             
-            {/* Page Content */}
-            <main className="flex-1 overflow-auto p-6">
-              <div className="max-w-7xl mx-auto">
-                {children}
-              </div>
-            </main>
+            {/* Main Content */}
+            <div className="flex-1 flex flex-col overflow-hidden">
+              {/* Header */}
+              <AdminHeader />
+              
+              {/* Page Content */}
+              <main className="flex-1 overflow-auto p-6">
+                <div className="max-w-7xl mx-auto">
+                  {children}
+                </div>
+              </main>
+            </div>
           </div>
-        </div>
+        </ProductsProvider>
       </CategoriesProvider>
     </AdminProvider>
   );
