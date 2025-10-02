@@ -1,6 +1,7 @@
 'use client';
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { categoriesApi, checkApiConnection } from '@/lib/api/mockApi';
 
 export interface Category {
   id: number;
@@ -13,6 +14,7 @@ interface CategoriesState {
   categories: Category[];
   loading: boolean;
   error: string | null;
+  isApiConnected: boolean;
 }
 
 interface CategoriesContextType {
@@ -20,6 +22,7 @@ interface CategoriesContextType {
   categories: Category[];
   loading: boolean;
   error: string | null;
+  isApiConnected: boolean;
   
   // Actions
   addCategory: (categoryData: Omit<Category, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
@@ -78,17 +81,78 @@ const mockCategories: Category[] = [
 
 export function CategoriesProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<CategoriesState>({
-    categories: mockCategories,
+    categories: [],
     loading: false,
     error: null,
+    isApiConnected: false,
   });
+
+  // Load categories from API or localStorage on component mount
+  useEffect(() => {
+    const initializeData = async () => {
+      setState(prev => ({ ...prev, loading: true }));
+      
+      try {
+        // Check if API is available
+        const isConnected = await checkApiConnection();
+        setState(prev => ({ ...prev, isApiConnected: isConnected }));
+        
+        if (isConnected) {
+          // Load from API
+          const categories = await categoriesApi.getAll();
+          setState(prev => ({ 
+            ...prev, 
+            categories, 
+            loading: false,
+            error: null 
+          }));
+        } else {
+          // Fallback to localStorage
+          const savedCategories = localStorage.getItem('bakesmart_categories');
+          if (savedCategories) {
+            const categories = JSON.parse(savedCategories);
+            setState(prev => ({ 
+              ...prev, 
+              categories, 
+              loading: false,
+              error: 'API tidak tersedia - menggunakan data lokal' 
+            }));
+          } else {
+            // Use mock data as last resort
+            setState(prev => ({ 
+              ...prev, 
+              categories: mockCategories, 
+              loading: false,
+              error: 'API tidak tersedia - menggunakan data demo' 
+            }));
+            localStorage.setItem('bakesmart_categories', JSON.stringify(mockCategories));
+          }
+        }
+      } catch (error) {
+        console.error('Error initializing categories data:', error);
+        setState(prev => ({ 
+          ...prev, 
+          loading: false, 
+          error: 'Gagal memuat data kategori' 
+        }));
+      }
+    };
+
+    initializeData();
+  }, []);
+
+  // Helper function to save categories to localStorage
+  const saveCategoriesToStorage = (categories: Category[]) => {
+    try {
+      localStorage.setItem('bakesmart_categories', JSON.stringify(categories));
+    } catch (error) {
+      console.error('Error saving categories to localStorage:', error);
+    }
+  };
 
   const addCategory = async (categoryData: Omit<Category, 'id' | 'created_at' | 'updated_at'>): Promise<void> => {
     try {
       setState(prev => ({ ...prev, loading: true, error: null }));
-      
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 500));
       
       // Check if category name already exists
       const existingCategory = state.categories.find(
@@ -96,30 +160,37 @@ export function CategoriesProvider({ children }: { children: ReactNode }) {
       );
       
       if (existingCategory) {
+        setState(prev => ({ ...prev, loading: false }));
         throw new Error('Kategori dengan nama ini sudah ada');
       }
       
-      const newCategory: Category = {
-        id: Date.now(), // Generate temporary ID
-        ...categoryData,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
+      if (state.isApiConnected) {
+        // Use API
+        const newCategory = await categoriesApi.create(categoryData);
+        setState(prev => ({
+          ...prev,
+          categories: [...prev.categories, newCategory],
+          loading: false,
+        }));
+      } else {
+        // Fallback to localStorage
+        const newCategory: Category = {
+          id: Date.now(),
+          ...categoryData,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
 
-      setState(prev => ({
-        ...prev,
-        categories: [...prev.categories, newCategory],
-        loading: false,
-      }));
-      
-      // TODO: Replace with actual API call
-      // const response = await fetch('/api/categories', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(categoryData),
-      // });
-      // if (!response.ok) throw new Error('Failed to add category');
-      // const newCategory = await response.json();
+        setState(prev => {
+          const updatedCategories = [...prev.categories, newCategory];
+          localStorage.setItem('bakesmart_categories', JSON.stringify(updatedCategories));
+          return {
+            ...prev,
+            categories: updatedCategories,
+            loading: false,
+          };
+        });
+      }
       
     } catch (error) {
       setState(prev => ({
@@ -145,19 +216,25 @@ export function CategoriesProvider({ children }: { children: ReactNode }) {
         );
         
         if (existingCategory) {
+          setState(prev => ({ ...prev, loading: false }));
           throw new Error('Kategori dengan nama ini sudah ada');
         }
       }
 
-      setState(prev => ({
-        ...prev,
-        categories: prev.categories.map(cat =>
+      setState(prev => {
+        const updatedCategories = prev.categories.map(cat =>
           cat.id === id
             ? { ...cat, ...categoryData, updated_at: new Date().toISOString() }
             : cat
-        ),
-        loading: false,
-      }));
+        );
+        // Save to localStorage with the most current state
+        saveCategoriesToStorage(updatedCategories);
+        return {
+          ...prev,
+          categories: updatedCategories,
+          loading: false,
+        };
+      });
       
       // TODO: Replace with actual API call
       // const response = await fetch(`/api/categories/${id}`, {
@@ -188,11 +265,16 @@ export function CategoriesProvider({ children }: { children: ReactNode }) {
       // This would need to be checked against actual product data
       // For now, we'll skip this check in mock implementation
       
-      setState(prev => ({
-        ...prev,
-        categories: prev.categories.filter(cat => cat.id !== id),
-        loading: false,
-      }));
+      setState(prev => {
+        const updatedCategories = prev.categories.filter(cat => cat.id !== id);
+        // Save to localStorage with the most current state
+        saveCategoriesToStorage(updatedCategories);
+        return {
+          ...prev,
+          categories: updatedCategories,
+          loading: false,
+        };
+      });
       
       // TODO: Replace with actual API call
       // const response = await fetch(`/api/categories/${id}`, {
@@ -243,6 +325,7 @@ export function CategoriesProvider({ children }: { children: ReactNode }) {
     categories: state.categories,
     loading: state.loading,
     error: state.error,
+    isApiConnected: state.isApiConnected,
     
     // Actions
     addCategory,
