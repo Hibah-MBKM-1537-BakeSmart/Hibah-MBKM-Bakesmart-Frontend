@@ -16,6 +16,7 @@ import {
 import { AddProductModal } from '@/components/adminPage/productsPage/AddProductModal';
 import { CategoryManager } from '@/components/adminPage/productsPage/CategoryManager';
 import { ProductDetailModal } from '@/components/adminPage/productsPage/ProductDetailModal';
+import { EditProductModal } from '@/components/adminPage/productsPage/EditProductModal';
 import { ApiStatusBanner } from '@/components/adminPage/productsPage/ApiStatusBanner';
 import { useToast } from '@/components/adminPage/Toast';
 import { useCategories } from '@/app/contexts/CategoriesContext';
@@ -29,10 +30,11 @@ export default function ProductsPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [showProductDetail, setShowProductDetail] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const { addToast, ToastContainer } = useToast();
   const { categories } = useCategories();
-  const { products, addProduct, deleteProduct } = useProducts();
+  const { products, addProduct, deleteProduct, updateProduct } = useProducts();
 
   // Combine 'all' with actual category names
   const categoryOptions = ['all', ...categories.map(cat => cat.nama)];
@@ -92,12 +94,34 @@ export default function ProductsPage() {
   };
 
   const handleEditProduct = (productId: number, productName: string) => {
-    // Placeholder untuk fungsi edit
-    addToast({
-      type: 'info',
-      title: 'Fitur Edit',
-      message: `Edit produk "${productName}" akan segera tersedia.`,
-    });
+    const product = products.find(p => p.id === productId);
+    if (product) {
+      setSelectedProduct(product);
+      setShowEditModal(true);
+    }
+  };
+
+  const handleUpdateProduct = async (productData: Partial<Omit<Product, 'id' | 'created_at' | 'updated_at'>>) => {
+    if (!selectedProduct) return;
+    
+    try {
+      await updateProduct(selectedProduct.id, productData);
+      setShowEditModal(false);
+      setSelectedProduct(null);
+      
+      // Show success notification
+      addToast({
+        type: 'success',
+        title: 'Produk berhasil diupdate!',
+        message: `${productData.nama || selectedProduct.nama} telah diperbarui.`,
+      });
+    } catch (error) {
+      addToast({
+        type: 'error',
+        title: 'Gagal mengupdate produk',
+        message: error instanceof Error ? error.message : 'Terjadi kesalahan yang tidak diketahui',
+      });
+    }
   };
 
   const handleViewProduct = (productId: number) => {
@@ -391,6 +415,17 @@ export default function ProductsPage() {
       <CategoryManager
         isOpen={showCategoryManager}
         onClose={() => setShowCategoryManager(false)}
+      />
+
+      {/* Edit Product Modal */}
+      <EditProductModal
+        isOpen={showEditModal}
+        onClose={() => {
+          setShowEditModal(false);
+          setSelectedProduct(null);
+        }}
+        onEditProduct={handleUpdateProduct}
+        product={selectedProduct}
       />
 
       {/* Product Detail Modal */}
