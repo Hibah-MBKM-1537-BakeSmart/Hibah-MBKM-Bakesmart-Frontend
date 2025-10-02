@@ -1,45 +1,33 @@
-# Stage 1: Build Next.js app
-# Menggunakan versi node yang lebih spesifik untuk konsistensi
-FROM node:20.11.1 AS builder
-
+# Stage 1: Build dependencies
+FROM node:20-alpine AS deps
 WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci
 
-# Copy dependency files
-COPY package*.json ./
-
-# Install SEMUA dependencies (termasuk dev) untuk proses build
-RUN NODE_OPTIONS="--max-old-space-size=4096" npm ci --legacy-peer-deps
-
-# Copy seluruh source code
+# Stage 2: Build the Next.js application
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-
-# Build Next.js
+ENV NEXT_TELEMETRY_DISABLED 1
 RUN npm run build
 
-# Stage 2: Production image
-FROM node:20.11.1-slim AS runner
-
+# Stage 3: Production runtime
+FROM node:20-alpine AS runner
 WORKDIR /app
 
-# Membuat user baru bernama "nextjs"
-RUN addgroup --system --gid 1001 nodejs
+# Create a non-root user for security
+RUN addgroup --system --gid 1001 nextjs
 RUN adduser --system --uid 1001 nextjs
 
-# Copy hanya package.json dan lock file
-COPY --from=builder /app/package*.json ./
+# Copy the built application and necessary files
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/public ./public
 
-# --- PERBAIKAN DI SINI ---
-# Install HANYA production dependencies. Ini akan membuat image lebih kecil.
-RUN npm ci --omit=dev
-
-# Copy artefak build dan public folder dari builder
-COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
-COPY --from=builder --chown=nextjs:nodejs /app/public ./public
-
-# Ganti user ke non-root
+# Set the user and expose the port
 USER nextjs
-
 EXPOSE 3000
 
-# Jalankan aplikasi
-CMD ["npm", "start"]
+# Start the Next.js application
+CMD ["node", "server.js"]
