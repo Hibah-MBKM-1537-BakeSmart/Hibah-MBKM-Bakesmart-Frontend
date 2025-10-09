@@ -1,79 +1,58 @@
 # ================================================================
 # Stage 1: Instalasi dependensi (Deps)
 # ================================================================
-# Menggunakan base image yang spesifik untuk dependensi agar cache layer lebih efisien.
+# Stage ini tetap sama, untuk caching dependensi.
 FROM node:20-alpine AS deps
 WORKDIR /app
-
-# Menginstal pnpm secara global menggunakan npm (yang sudah ada di base image)
 RUN npm install -g pnpm
-
-# (Opsional tapi direkomendasikan) Menginstal build tools yang dibutuhkan oleh beberapa paket.
 RUN apk add --no-cache python3 make g++
-
-# Menyalin file manifest yang dibutuhkan oleh pnpm.
-# Jika Anda menggunakan pnpm workspaces, salin juga 'pnpm-workspace.yaml'.
 COPY package.json pnpm-lock.yaml ./
-
-# Menjalankan instalasi dependensi.
-# '--frozen-lockfile' adalah ekuivalen pnpm untuk 'npm ci', memastikan instalasi sesuai lock file.
 RUN pnpm install --frozen-lockfile
-
 
 # ================================================================
 # Stage 2: Build aplikasi (Builder)
 # ================================================================
-# Menggunakan base image yang sama untuk konsistensi.
 FROM node:20-alpine AS builder
 WORKDIR /app
-
-# Menginstal pnpm lagi di stage ini karena setiap stage adalah environment baru.
 RUN npm install -g pnpm
-
-# Menyalin node_modules yang sudah terinstal dari stage 'deps'.
 COPY --from=deps /app/node_modules ./node_modules
-
-# Menyalin sisa kode aplikasi.
-# Gunakan .dockerignore untuk menghindari penyalinan file yang tidak perlu.
 COPY . .
-
-# Mengatur environment variable untuk menonaktifkan telemetri Next.js.
 ENV NEXT_TELEMETRY_DISABLED=1
-
-# Menjalankan script build aplikasi menggunakan pnpm.
 RUN pnpm run build
 
+# Setelah build selesai, hapus dependensi yang hanya untuk development.
+# Ini akan membuat folder node_modules lebih kecil untuk stage produksi.
+RUN pnpm prune --prod
 
 # ================================================================
-# Stage 3: Produksi (Runner)
+# Stage 3: Produksi (Runner) - VERSI NON-STANDALONE
 # ================================================================
-# Menggunakan base image yang sama dan ringan. Stage ini tidak butuh pnpm.
 FROM node:20-alpine AS runner
 WORKDIR /app
 
-# Mengatur environment variable untuk environment produksi.
-# Menggunakan format KEY=value yang direkomendasikan.
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV HOSTNAME=0.0.0.0
 ENV PORT=3000
 
-# Membuat user dan group khusus untuk aplikasi demi keamanan (prinsip least privilege).
+# Install pnpm untuk menjalankan perintah 'pnpm start'.
+RUN npm install -g pnpm
+
+# Membuat user dan group khusus untuk keamanan.
 RUN addgroup --system --gid 1001 nextjs
 RUN adduser --system --uid 1001 nextjs
 
-# Menyalin hasil build dari stage 'builder'.
-# Opsi '--chown' secara efisien mengubah kepemilikan file ke user 'nextjs'.
-# Bagian ini tidak berubah karena hanya menyalin hasil build Next.js.
-COPY --from=builder --chown=nextjs:nextjs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nextjs /app/.next/static ./.next/static
+# Menyalin hanya file-file yang dibutuhkan untuk produksi dari stage 'builder'.
+# Perhatikan kita sekarang menyalin .next, node_modules (yang sudah di-prune), dan package.json.
+COPY --from=builder --chown=nextjs:nextjs /app/.next ./.next
+COPY --from=builder --chown=nextjs:nextjs /app/node_modules ./node_modules
+COPY --from=builder --chown=nextjs:nextjs /app/package.json ./package.json
 COPY --from=builder --chown=nextjs:nextjs /app/public ./public
 
-# Mengubah user ke non-root yang telah dibuat.
+# Mengubah user ke non-root.
 USER nextjs
 
-# Mengekspos port yang digunakan oleh aplikasi.
 EXPOSE 3000
 
-# Perintah untuk menjalankan aplikasi (Next.js standalone output).
-CMD ["node", "server.js"]
+# Menjalankan aplikasi menggunakan 'pnpm start'.
+CMD ["pnpm", "start"]
