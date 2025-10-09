@@ -1,7 +1,9 @@
-import type { NextConfig } from "next";
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  // Opsi konfigurasi Anda yang lain...
 
-const nextConfig: NextConfig = {
-  /* config options here */
+  // Tambahkan baris ini!
+  output: "standalone",
 };
 
-export default nextConfig;
+module.exports = nextConfig;
