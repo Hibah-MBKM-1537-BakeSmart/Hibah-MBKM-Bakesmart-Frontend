@@ -4,34 +4,35 @@
 FROM node:20-alpine AS deps
 WORKDIR /app
 
-# Install pnpm dan dependencies native
-RUN npm install -g pnpm
+# Install pnpm dan dependensi sistem
+RUN corepack enable && corepack prepare pnpm@10.15.0 --activate
 RUN apk add --no-cache libc6-compat
 
-# Copy dan install dependency
+# Salin hanya file yang dibutuhkan untuk install
 COPY package.json pnpm-lock.yaml* ./
 RUN pnpm install --frozen-lockfile
 
 
 # ================================================================
-# Stage 2: Build
+# Stage 2: Build (Standalone Mode)
 # ================================================================
 FROM node:20-alpine AS builder
 WORKDIR /app
 
-RUN npm install -g pnpm
+RUN corepack enable && corepack prepare pnpm@10.15.0 --activate
+
+# Copy hasil install dependensi
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Nonaktifkan telemetry
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV NODE_ENV=production
 
-# Build aplikasi Next.js
+# ✅ Gunakan standalone build agar runtime lebih kecil
 RUN pnpm run build
 
-
 # ================================================================
-# Stage 3: Production runtime
+# Stage 3: Production runtime (super kecil)
 # ================================================================
 FROM node:20-alpine AS runner
 WORKDIR /app
@@ -41,19 +42,19 @@ ENV HOSTNAME=0.0.0.0
 ENV PORT=3000
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# Buat user non-root untuk keamanan
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
+# Buat user non-root
+RUN addgroup --system --gid 1001 nodejs \
+ && adduser --system --uid 1001 nextjs
 
-# Copy hasil build
+# ✅ Copy hanya hasil standalone (lebih ringan)
+COPY --from=builder /app/.next/standalone ./        
+# kode server
+COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./package.json
 
 USER nextjs
 
 EXPOSE 3000
 
-# Jalankan Next.js server
-CMD ["pnpm", "start"]
+# Jalankan server Next.js standalone
+CMD ["node", "server.js"]
