@@ -3,6 +3,11 @@
 FROM node:20-alpine AS deps
 WORKDIR /app
 
+# ---> [SOLUSI] Install build tools yang dibutuhkan oleh beberapa paket npm <---
+# Beberapa paket perlu meng-compile C++ addons saat instalasi,
+# jadi kita perlu menyediakan build-essentials.
+RUN apk add --no-cache python3 make g++
+
 # Menyalin hanya package.json dan lock file terlebih dahulu
 COPY package.json package-lock.json ./
 # Menggunakan 'npm ci' yang lebih cepat dan direkomendasikan untuk environment CI/CD
