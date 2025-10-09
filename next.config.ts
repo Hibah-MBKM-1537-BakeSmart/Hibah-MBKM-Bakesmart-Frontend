@@ -1,9 +1,14 @@
-/** @type {import('next').NextConfig} */
-const nextConfig = {
-  // Opsi konfigurasi Anda yang lain...
+import type { NextConfig } from "next";
 
-  // Tambahkan baris ini!
-  output: "standalone",
+const nextConfig: NextConfig = {
+  output: "standalone", // buat build tracing otomatis
+  reactStrictMode: true,
+  poweredByHeader: false,
+
+  experimental: {
+    // bantu Docker tracing dependensi dari root project
+    outputFileTracingRoot: __dirname,
+  },
 };
 
-module.exports = nextConfig;
+export default nextConfig;
