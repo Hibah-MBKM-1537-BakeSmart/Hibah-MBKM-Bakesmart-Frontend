@@ -16,10 +16,11 @@ interface MenuModalProps {
 
 export function MenuModal({ item, isOpen, onClose }: MenuModalProps) {
   const { t, language } = useTranslation();
-  const { addToCart, cartItems } = useCart();
+  const { addToCart, cartItems, selectedOrderDay } = useCart();
   const [tempOrderDay, setTempOrderDay] = useState<string>("");
   const [selectedAttributes, setSelectedAttributes] = useState<number[]>([]);
   const [isImagePopupOpen, setIsImagePopupOpen] = useState(false);
+  const [quantity, setQuantity] = useState(1);
 
   const hasItemInCart = item
     ? cartItems.some((cartItem) => cartItem.id === item.id)
@@ -28,8 +29,10 @@ export function MenuModal({ item, isOpen, onClose }: MenuModalProps) {
   useEffect(() => {
     if (isOpen && item) {
       document.body.style.overflow = "hidden";
-      const availableDays = item.hari.map((day) => day.nama_id.toLowerCase());
-      if (availableDays.length > 0) {
+      const availableDays = item.hari.map((day) => day.nama_id);
+      if (selectedOrderDay && availableDays.includes(selectedOrderDay)) {
+        setTempOrderDay(selectedOrderDay);
+      } else if (availableDays.length > 0) {
         setTempOrderDay(availableDays[0]);
       }
       setSelectedAttributes([]);
@@ -47,6 +50,11 @@ export function MenuModal({ item, isOpen, onClose }: MenuModalProps) {
   if (!isOpen || !item) return null;
 
   const handleDaySelection = (day: string) => {
+    console.log("Selected day:", day);
+    console.log(
+      "Available days:",
+      item.hari.map((h) => h.nama_id)
+    );
     setTempOrderDay(day);
   };
 
@@ -67,6 +75,14 @@ export function MenuModal({ item, isOpen, onClose }: MenuModalProps) {
     return basePrice + attributesPrice;
   };
 
+  const handleQuantityChange = (delta: number) => {
+    const newQuantity = Math.max(1, quantity + delta);
+    const currentStock = item?.stok || 0;
+    if (newQuantity <= currentStock) {
+      setQuantity(newQuantity);
+    }
+  };
+
   const handleAddToCart = () => {
     if (!tempOrderDay) {
       alert(t("menuModal.selectDayFirst"));
@@ -77,25 +93,45 @@ export function MenuModal({ item, isOpen, onClose }: MenuModalProps) {
       .map((attrId) => item.attributes?.find((attr) => attr.id === attrId))
       .filter(Boolean) as ProductAttribute[];
 
-    addToCart({
-      id: item.id,
-      nama_id: item.nama_en,
-      nama_en: item.nama_en,
-      harga: item.harga,
-      harga_diskon: item.harga_diskon,
-      gambars: item.gambars,
-      jenis: item.jenis,
-      stok: item.stok,
-      hari: item.hari,
-      orderDay: tempOrderDay,
-      selectedAttributes: selectedAttributesData,
-    });
+    const discountPrice = item.harga_diskon
+      ? `Rp ${item.harga_diskon.toLocaleString("id-ID")}`
+      : `Rp ${item.harga.toLocaleString("id-ID")}`;
+
+    const originalPrice = item.harga_diskon
+      ? `Rp ${item.harga.toLocaleString("id-ID")}`
+      : undefined;
+
+    // Add multiple times based on quantity
+    let success = true;
+    for (let i = 0; i < quantity; i++) {
+      const added = addToCart({
+        id: item.id,
+        name: language === "id" ? item.nama_id : item.nama_en,
+        discountPrice,
+        originalPrice,
+        isDiscount: !!item.harga_diskon && item.harga_diskon < item.harga,
+        image: item.gambars?.[0]?.file_path || "/placeholder.svg",
+        category: item.jenis?.[0]
+          ? language === "id"
+            ? item.jenis[0].nama_id
+            : item.jenis[0].nama_en
+          : "",
+        stock: item.stok,
+        availableDays: item.hari.map((h) => h.nama_id),
+        orderDay: tempOrderDay,
+        selectedAttributes: selectedAttributesData,
+      });
+      if (!added) {
+        success = false;
+        break;
+      }
+    }
     onClose();
   };
 
   const handleResetCustomization = () => {
     setSelectedAttributes([]);
-    const availableDays = item.hari.map((day) => day.nama_id.toLowerCase());
+    const availableDays = item.hari.map((day) => day.nama_id);
     setTempOrderDay(availableDays[0] || "");
   };
 
@@ -106,13 +142,13 @@ export function MenuModal({ item, isOpen, onClose }: MenuModalProps) {
 
   const getDayLabel = (day: string) => {
     const dayLabels: { [key: string]: string } = {
-      senin: t("day.monday"),
-      selasa: t("day.tuesday"),
-      rabu: t("day.wednesday"),
-      kamis: t("day.thursday"),
-      jumat: t("day.friday"),
-      sabtu: t("day.saturday"),
-      minggu: t("day.sunday"),
+      Senin: t("day.monday"),
+      Selasa: t("day.tuesday"),
+      Rabu: t("day.wednesday"),
+      Kamis: t("day.thursday"),
+      Jumat: t("day.friday"),
+      Sabtu: t("day.saturday"),
+      Minggu: t("day.sunday"),
     };
     return dayLabels[day] || day;
   };
@@ -207,6 +243,7 @@ export function MenuModal({ item, isOpen, onClose }: MenuModalProps) {
                             ? "bg-[#5D4037] text-white shadow-md"
                             : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 hover:border-[#8B6F47]"
                         }`}
+                        data-day={day} // For debugging
                       >
                         {getDayLabel(day)}
                       </button>
@@ -318,6 +355,34 @@ export function MenuModal({ item, isOpen, onClose }: MenuModalProps) {
                 </div>
 
                 <div className="flex flex-col items-stretch md:items-end gap-2">
+                  {/* Quantity Controls */}
+                  <div className="flex items-center gap-2 mb-2 justify-end">
+                    <button
+                      onClick={() => handleQuantityChange(-1)}
+                      disabled={quantity <= 1}
+                      className={`w-8 h-8 flex items-center justify-center rounded-full ${
+                        quantity <= 1
+                          ? "bg-gray-100 text-gray-400"
+                          : "bg-[#5D4037] text-white hover:bg-[#8B6F47]"
+                      }`}
+                    >
+                      -
+                    </button>
+                    <span className="w-12 text-center font-medium">
+                      {quantity}
+                    </span>
+                    <button
+                      onClick={() => handleQuantityChange(1)}
+                      disabled={quantity >= (item?.stok || 0)}
+                      className={`w-8 h-8 flex items-center justify-center rounded-full ${
+                        quantity >= (item?.stok || 0)
+                          ? "bg-gray-100 text-gray-400"
+                          : "bg-[#5D4037] text-white hover:bg-[#8B6F47]"
+                      }`}
+                    >
+                      +
+                    </button>
+                  </div>
                   <button
                     className={`px-6 md:px-8 py-3 md:py-3.5 rounded-lg font-medium transition-all duration-300 text-sm md:text-base w-full md:w-auto ${
                       isOutOfStock || !tempOrderDay

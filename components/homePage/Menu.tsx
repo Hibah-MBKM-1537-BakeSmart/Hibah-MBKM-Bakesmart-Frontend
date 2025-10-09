@@ -1,172 +1,167 @@
 "use client";
 
+import type React from "react";
+
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { useState } from "react";
-import { useCart } from "@/app/contexts/CartContext";
-import { MenuModal } from "@/components/menuPage/MenuModal";
+import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "@/app/contexts/TranslationContext";
 import { useMenuData } from "@/app/hooks/useMenuData";
+import { useCart } from "@/app/contexts/CartContext";
+import { MenuModal } from "@/components/menuPage/MenuModal";
+import { ExistingCustomizationModal } from "@/components/menuPage/ExistingCustomModal";
+import { RemoveCustomizationModal } from "@/components/menuPage/RemoveCustomizationModal";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { MenuItem } from "@/lib/api/mockData";
 
 const menuData = {
   hero: {
     backgroundImage: "/delicious-bread-and-pastries-on-wooden-table-with-.jpg",
   },
-  categories: [
-    { id: "foccacia", name: "menu.categories.foccacia", active: true },
-    { id: "cupcake", name: "menu.categories.cupcake", active: false },
-    { id: "muffin", name: "menu.categories.muffin", active: false },
-    { id: "pastries", name: "menu.categories.pastries", active: false },
-    { id: "bread", name: "menu.categories.bread", active: false },
-    { id: "favorite", name: "menu.categories.favorite", active: false },
-  ],
 };
 
-function ProductCard(item: MenuItem) {
-  const { addToCart } = useCart();
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const { t, language } = useTranslation();
-
-  const name = language === "id" ? item.nama_id : item.nama_en;
-  const description = language === "id" ? item.deskripsi_id : item.deskripsi_en;
-  const isDiscount =
-    item.harga_diskon !== null && item.harga_diskon < item.harga;
-  const discountPrice = isDiscount
-    ? `Rp ${item.harga_diskon?.toLocaleString("id-ID")}`
-    : `Rp ${item.harga.toLocaleString("id-ID")}`;
-  const originalPrice = isDiscount
-    ? `Rp ${item.harga.toLocaleString("id-ID")}`
-    : undefined;
-
-  const image =
-    item.gambars && item.gambars.length > 0
-      ? item.gambars[0].file_path
-      : "/placeholder.svg";
-
-  const availableDays = item.hari.map((day) =>
-    language === "id" ? day.nama_id : day.nama_en
-  );
-  const category =
-    item.jenis.length > 0
-      ? language === "id"
-        ? item.jenis[0].nama_id
-        : item.jenis[0].nama_en
-      : "";
-  const ingredients = item.bahans
-    .map((bahan) => (language === "id" ? bahan.nama_id : bahan.nama_en))
-    .join(", ");
-  const stock = item.stok;
-  const attributes = item.attributes.map((attr) => ({
-    id: attr.id,
-    name: language === "id" ? attr.nama_id : attr.nama_en,
-    additionalPrice: attr.harga,
-  }));
-
-  const isOutOfStock = stock <= 0;
-
-  return (
-    <>
-      <Card className="overflow-hidden bg-white shadow-lg transition-shadow hover:shadow-xl">
-        <div
-          className="aspect-square overflow-hidden relative cursor-pointer"
-          onClick={() => setIsModalOpen(true)}
-        >
-          <Image
-            src={image || "/placeholder.svg"}
-            alt={name}
-            width={200}
-            height={200}
-            className="h-full w-full object-cover transition-transform hover:scale-105"
-          />
-          {isDiscount && originalPrice && (
-            <div className="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">
-              {t("menu.discount")}
-            </div>
-          )}
-        </div>
-        <CardContent className="p-6">
-          <div className="mb-4 border-b border-gray-200 pb-2">
-            <h3
-              className="font-serif text-xl font-bold cursor-pointer hover:text-[#8B6F47] transition-colors"
-              style={{ color: "#5D4037" }}
-              onClick={() => setIsModalOpen(true)}
-            >
-              {name}
-            </h3>
-            <p className="text-xs text-gray-500 mt-1 capitalize">
-              {t("menu.availableOn")}: {availableDays.join(", ")}
-            </p>
-            {attributes && attributes.length > 0 && (
-              <p className="text-xs text-[#8B6F47] mt-1 font-medium">
-                +{attributes.length} pilihan tambahan tersedia
-              </p>
-            )}
-          </div>
-          <p className="mb-4 text-sm text-gray-600 leading-relaxed line-clamp-2">
-            {description}
-          </p>
-          <div className="flex items-center justify-between">
-            <div className="flex flex-col">
-              <span
-                className="font-semibold text-lg"
-                style={{ color: "#5D4037" }}
-              >
-                {discountPrice}
-              </span>
-              {isDiscount && originalPrice && (
-                <span className="text-sm text-gray-400 line-through">
-                  {originalPrice}
-                </span>
-              )}
-            </div>
-            <Button
-              size="sm"
-              className={`px-4 py-2 text-sm font-medium text-white hover:opacity-90 ${
-                isOutOfStock ? "opacity-50 cursor-not-allowed" : ""
-              }`}
-              style={{ backgroundColor: isOutOfStock ? "#9CA3AF" : "#8B6F47" }}
-              onClick={() => setIsModalOpen(true)}
-              disabled={isOutOfStock}
-              title={isOutOfStock ? t("menu.outOfStock") : t("menu.addToCart")}
-            >
-              {t("menu.order")}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-      <MenuModal
-        item={{
-          id: item.id,
-          name,
-          discountPrice,
-          originalPrice,
-          isDiscount,
-          image,
-          category,
-          description,
-          ingredients,
-          notes: "", // Not available in new API structure
-          stock,
-          availableDays,
-          attributes,
-        }}
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-      />
-    </>
-  );
-}
-
 export function Menu() {
-  const [activeCategory, setActiveCategory] = useState("foccacia");
-  const { t } = useTranslation();
+  const [activeCategory, setActiveCategory] = useState("all");
+  const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [
+    isExistingCustomizationModalOpen,
+    setIsExistingCustomizationModalOpen,
+  ] = useState(false);
+  const [isRemoveCustomizationModalOpen, setIsRemoveCustomizationModalOpen] =
+    useState(false);
+  const [carouselIndex, setCarouselIndex] = useState(0);
+  const { t, language } = useTranslation();
+  const { addToCart, cartItems } = useCart();
+  const carouselRef = useRef<HTMLDivElement>(null);
 
-  const { menuItems, loading, error } = useMenuData({
+  const { menuItems, categories, loading, error } = useMenuData({
     category: activeCategory,
   });
+
+  // Helper functions to replace missing context methods
+  const getItemQuantityInCart = (itemId: number): number => {
+    return cartItems
+      .filter((cartItem) => cartItem.id === itemId)
+      .reduce((total, item) => total + item.quantity, 0);
+  };
+
+  const hasCustomizations = (itemId: number): boolean => {
+    return cartItems.some((cartItem) => cartItem.id === itemId);
+  };
+
+  const menuCategories = [
+    {
+      id: "all",
+      name: t("menuGrid.allProducts"),
+      active: activeCategory === "all",
+    },
+    ...categories
+      .filter((cat) => cat.id !== 0)
+      .map((cat) => ({
+        id: cat.nama_id.toLowerCase().replace(/ /g, "-"),
+        name: language === "id" ? cat.nama_id : cat.nama_en,
+        active: activeCategory === cat.nama_id.toLowerCase().replace(/ /g, "-"),
+      })),
+  ];
+
+  const itemsPerView = 4;
+  const maxIndex = Math.max(0, Math.ceil(menuItems.length / itemsPerView) - 1);
+
+  const handlePrevious = () => {
+    setCarouselIndex((prev) => Math.max(0, prev - 1));
+  };
+
+  const handleNext = () => {
+    setCarouselIndex((prev) => Math.min(maxIndex, prev + 1));
+  };
+
+  useEffect(() => {
+    setCarouselIndex(0);
+  }, [activeCategory]);
+
+  const visibleItems = menuItems.slice(
+    carouselIndex * itemsPerView,
+    (carouselIndex + 1) * itemsPerView
+  );
+
+  const handleItemClick = (item: MenuItem) => {
+    const itemInCart = hasCustomizations(item.id);
+    if (itemInCart) {
+      setSelectedItem(item);
+      setIsExistingCustomizationModalOpen(true);
+    } else {
+      setSelectedItem(item);
+      setIsModalOpen(true);
+    }
+  };
+
+  const handleQuickAdd = (item: MenuItem, e: React.MouseEvent) => {
+    e.stopPropagation();
+    // Check if item has attributes (customizations)
+    if (item.attributes && item.attributes.length > 0) {
+      handleItemClick(item);
+    } else {
+      // Add item without customizations
+      const itemToAdd = {
+        id: item.id,
+        name: language === "id" ? item.nama_id : item.nama_en,
+        discountPrice: item.harga_diskon
+          ? `Rp ${item.harga_diskon.toLocaleString("id-ID")}`
+          : `Rp ${item.harga.toLocaleString("id-ID")}`,
+        originalPrice: item.harga_diskon
+          ? `Rp ${item.harga.toLocaleString("id-ID")}`
+          : undefined,
+        isDiscount: !!item.harga_diskon && item.harga_diskon < item.harga,
+        image: item.gambars?.[0]?.file_path || "/placeholder.svg",
+        category: item.jenis?.[0]
+          ? language === "id"
+            ? item.jenis[0].nama_id
+            : item.jenis[0].nama_en
+          : "",
+        stock: item.stok,
+        availableDays: item.hari.map((h) => h.nama_id),
+        orderDay: item.hari[0]?.nama_id || "Senin",
+        selectedAttributes: [],
+      };
+      addToCart(itemToAdd);
+    }
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setIsExistingCustomizationModalOpen(false);
+    setIsRemoveCustomizationModalOpen(false);
+    setTimeout(() => {
+      setSelectedItem(null);
+    }, 200);
+  };
+
+  const handleCloseExistingCustomizationModal = () => {
+    setIsExistingCustomizationModalOpen(false);
+    setIsModalOpen(false);
+    setIsRemoveCustomizationModalOpen(false);
+    setTimeout(() => {
+      setSelectedItem(null);
+    }, 200);
+  };
+
+  const handleCloseRemoveCustomizationModal = () => {
+    setIsRemoveCustomizationModalOpen(false);
+    setIsModalOpen(false);
+    setIsExistingCustomizationModalOpen(false);
+    setTimeout(() => {
+      setSelectedItem(null);
+    }, 200);
+  };
+
+  const handleAddNewCustomization = () => {
+    setIsExistingCustomizationModalOpen(false);
+    setTimeout(() => {
+      setIsModalOpen(true);
+    }, 100);
+  };
 
   if (loading) {
     return (
@@ -289,57 +284,114 @@ export function Menu() {
         style={{ backgroundColor: "#F5F1EB" }}
       >
         <div className="container mx-auto px-4 sm:px-6 lg:px-16">
-          <div className="mb-12 md:mb-16">
-            <div className="overflow-x-auto scrollbar-hide">
-              <div className="flex justify-center md:justify-center gap-2 md:gap-4 min-w-max px-4 md:px-0">
-                {menuData.categories.map((category) => (
+          <div className="mb-12">
+            <div className="overflow-x-auto pb-2">
+              <div className="flex gap-3 justify-center min-w-max px-2">
+                {menuCategories.map((category) => (
                   <button
                     key={category.id}
                     onClick={() => setActiveCategory(category.id)}
-                    className={`px-4 py-2 md:px-6 md:py-3 text-sm md:text-base font-medium transition-all duration-200 border-b-2 whitespace-nowrap ${
+                    className={`px-6 py-2.5 text-sm font-medium transition-all duration-200 whitespace-nowrap ${
                       activeCategory === category.id
-                        ? "border-[#8B6F47] text-[#5D4037] font-semibold"
-                        : "border-transparent text-gray-600 hover:text-[#5D4037] hover:border-[#8B6F47]/50"
+                        ? "bg-[#8B6F47] text-white shadow-md"
+                        : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-200"
                     }`}
                   >
-                    {t(category.name)}
+                    {category.name}
                   </button>
                 ))}
               </div>
             </div>
           </div>
 
-          <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8 mb-12">
-            {menuItems.map((product) => (
-              <ProductCard key={product.id} {...product} />
-            ))}
-          </div>
-
-          <div className="md:hidden mb-12">
-            <div className="overflow-x-auto scrollbar-hide">
-              <div
-                className="flex gap-4 pb-4"
-                style={{ width: `${menuItems.length * 280}px` }}
+          <div className="relative mb-12">
+            {carouselIndex > 0 && (
+              <button
+                onClick={handlePrevious}
+                className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10 bg-white rounded-full p-2 shadow-lg hover:bg-gray-50 transition-colors"
+                aria-label="Previous"
               >
-                {menuItems.map((product) => (
-                  <div key={product.id} className="flex-shrink-0 w-64">
-                    <ProductCard {...product} />
-                  </div>
-                ))}
+                <ChevronLeft className="w-6 h-6 text-gray-700" />
+              </button>
+            )}
+
+            <div ref={carouselRef} className="overflow-hidden">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {visibleItems.map((item) => {
+                  const quantity = getItemQuantityInCart(item.id);
+                  return (
+                    <div
+                      key={item.id}
+                      className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow cursor-pointer"
+                      onClick={() => handleItemClick(item)}
+                    >
+                      <div className="relative h-48 w-full">
+                        <Image
+                          src={
+                            item.gambars?.[0]?.file_path || "/placeholder.svg"
+                          }
+                          alt={language === "id" ? item.nama_id : item.nama_en}
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
+                      <div className="p-4">
+                        <h3 className="font-semibold text-lg mb-2 text-gray-900">
+                          {language === "id" ? item.nama_id : item.nama_en}
+                        </h3>
+                        <p className="text-sm text-gray-600 mb-4 line-clamp-2">
+                          {language === "id"
+                            ? item.deskripsi_id
+                            : item.deskripsi_en}
+                        </p>
+                        <div className="flex items-center justify-between">
+                          <span className="text-lg font-bold text-gray-900">
+                            Rp{item.harga.toLocaleString("id-ID")}
+                          </span>
+                          <Button
+                            onClick={(e) => handleQuickAdd(item, e)}
+                            className="bg-[#5D4037] hover:bg-[#4E342E] text-white px-4 py-2 text-sm"
+                          >
+                            {quantity > 0
+                              ? `${t("menu.inCart")} (${quantity})`
+                              : t("menu.order")}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
+
+            {carouselIndex < maxIndex && (
+              <button
+                onClick={handleNext}
+                className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10 bg-white rounded-full p-2 shadow-lg hover:bg-gray-50 transition-colors"
+                aria-label="Next"
+              >
+                <ChevronRight className="w-6 h-6 text-gray-700" />
+              </button>
+            )}
           </div>
 
-          <div className="flex justify-center">
+          {menuItems.length === 0 && (
+            <div className="text-center py-16">
+              <p className="text-gray-500 text-lg">
+                {t("menuGrid.noProductsAvailable")}
+              </p>
+            </div>
+          )}
+
+          <div className="flex justify-center mt-8">
             <Button
               asChild
               variant="outline"
               size="lg"
-              className="border-2 px-8 py-3 text-base font-medium hover:opacity-90 bg-transparent"
+              className="border-2 px-8 py-3 text-base font-medium hover:bg-[#8B6F47] hover:text-white transition-colors bg-transparent"
               style={{
                 borderColor: "#8B6F47",
                 color: "#8B6F47",
-                backgroundColor: "transparent",
               }}
             >
               <Link href="/menu">{t("menu.viewAll")}</Link>
@@ -347,6 +399,31 @@ export function Menu() {
           </div>
         </div>
       </div>
+
+      {!isExistingCustomizationModalOpen && !isRemoveCustomizationModalOpen && (
+        <MenuModal
+          item={selectedItem}
+          isOpen={isModalOpen}
+          onClose={handleCloseModal}
+        />
+      )}
+
+      {!isModalOpen && !isRemoveCustomizationModalOpen && (
+        <ExistingCustomizationModal
+          item={selectedItem}
+          isOpen={isExistingCustomizationModalOpen}
+          onClose={handleCloseExistingCustomizationModal}
+          onAddNewCustomization={handleAddNewCustomization}
+        />
+      )}
+
+      {!isModalOpen && !isExistingCustomizationModalOpen && (
+        <RemoveCustomizationModal
+          item={selectedItem}
+          isOpen={isRemoveCustomizationModalOpen}
+          onClose={handleCloseRemoveCustomizationModal}
+        />
+      )}
     </section>
   );
 }

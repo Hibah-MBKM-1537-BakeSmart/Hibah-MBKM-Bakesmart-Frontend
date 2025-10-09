@@ -11,11 +11,16 @@ interface EditCustomizationModalProps {
   cartItem: {
     cartId: string;
     id: number;
-    nama_id: string;
-    nama_en: string;
+    name: string;
+    discountPrice: string;
+    originalPrice?: string;
+    isDiscount?: boolean;
+    image: string;
+    category: string;
     quantity: number;
     selectedAttributes?: ProductAttribute[];
     orderDay: string;
+    stock: number;
   } | null;
   isOpen: boolean;
   onClose: () => void;
@@ -28,7 +33,7 @@ export function EditCustomizationModal({
   onClose,
 }: EditCustomizationModalProps) {
   const { t, language } = useTranslation();
-  const { updateQuantity, removeFromCart, addToCart } = useCart();
+  const { updateQuantity, removeFromCart, addToCart, cartItems } = useCart();
   const [selectedAttributes, setSelectedAttributes] = useState<
     ProductAttribute[]
   >([]);
@@ -55,6 +60,13 @@ export function EditCustomizationModal({
 
   if (!isOpen || !item || !cartItem) return null;
 
+  const handleQuantityChange = (delta: number) => {
+    const newQuantity = Math.max(1, quantity + delta);
+    if (newQuantity <= (item?.stok || 0)) {
+      setQuantity(newQuantity);
+    }
+  };
+
   const handleAttributeToggle = (attribute: ProductAttribute) => {
     setSelectedAttributes((prev) => {
       const exists = prev.find((attr) => attr.id === attribute.id);
@@ -67,29 +79,67 @@ export function EditCustomizationModal({
   };
 
   const handleSaveChanges = () => {
-    // Remove old cart item
-    removeFromCart(cartItem.cartId);
+    // Jika hanya quantity yang berubah, gunakan updateQuantity
+    if (!hasAttributeChanges && hasQuantityChanges) {
+      const success = updateQuantity(cartItem.cartId, quantity);
+      if (!success) {
+        // Jika gagal update quantity, kembalikan ke nilai awal
+        setQuantity(cartItem.quantity);
+        return;
+      }
+      onClose();
+      return;
+    }
 
-    // Add new cart item with updated customization
+    // Jika ada perubahan attribute, buat item baru
     const updatedItem = {
       id: item.id,
-      nama_id: item.nama_id,
-      nama_en: item.nama_en,
-      harga: item.harga,
-      harga_diskon: item.harga_diskon,
-      gambars: item.gambars,
-      jenis: item.jenis,
-      stok: item.stok,
-      hari: item.hari,
+      name: language === "id" ? item.nama_id : item.nama_en,
+      discountPrice: cartItem.discountPrice,
+      originalPrice: cartItem.originalPrice,
+      isDiscount: cartItem.isDiscount,
+      image: cartItem.image,
+      category: cartItem.category,
+      stock: item.stok,
+      availableDays: item.hari.map((h) => h.nama_id),
       orderDay: cartItem.orderDay,
       selectedAttributes: selectedAttributes,
     };
 
-    // Add the updated item with the new quantity
-    for (let i = 0; i < quantity; i++) {
-      addToCart(updatedItem);
+    // Periksa stok terlebih dahulu
+    const currentStock = item.stok;
+    if (quantity > currentStock) {
+      alert(`Stok tidak mencukupi. Maksimal ${currentStock} item`);
+      return;
     }
 
+    let success = true;
+    // Coba tambahkan customization baru
+    const added = addToCart({ ...updatedItem });
+    if (!added) {
+      alert(
+        "Tidak dapat menambahkan produk dengan kustomisasi ini untuk hari yang dipilih"
+      );
+      return;
+    }
+
+    // Update quantity untuk item baru jika berhasil ditambahkan
+    if (quantity > 1 && success) {
+      // Cari item yang baru saja ditambahkan
+      const newCartItems = [...cartItems];
+      const lastCartItem = newCartItems[newCartItems.length - 1];
+      if (lastCartItem) {
+        const quantityUpdated = updateQuantity(lastCartItem.cartId, quantity);
+        if (!quantityUpdated) {
+          removeFromCart(lastCartItem.cartId);
+          alert("Gagal mengupdate jumlah item");
+          return;
+        }
+      }
+    }
+
+    // Hapus item lama
+    removeFromCart(cartItem.cartId);
     onClose();
   };
 
@@ -205,8 +255,9 @@ export function EditCustomizationModal({
               </label>
               <div className="flex items-center gap-3">
                 <button
-                  className="w-8 h-8 rounded-full border-2 border-[#8B6F47] text-[#8B6F47] hover:bg-[#8B6F47] hover:text-white transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                  type="button"
+                  className="w-8 h-8 rounded-full bg-[#5D4037] text-white hover:bg-[#8B6F47] transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={() => handleQuantityChange(-1)}
                   disabled={quantity <= 1}
                 >
                   <Minus size={16} />
@@ -215,14 +266,15 @@ export function EditCustomizationModal({
                   {quantity}
                 </span>
                 <button
-                  className="w-8 h-8 rounded-full border-2 border-[#8B6F47] text-[#8B6F47] hover:bg-[#8B6F47] hover:text-white transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-                  onClick={() => setQuantity(quantity + 1)}
-                  disabled={quantity >= item.stok}
+                  type="button"
+                  className="w-8 h-8 rounded-full bg-[#5D4037] text-white hover:bg-[#8B6F47] transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={() => handleQuantityChange(1)}
+                  disabled={quantity >= (item?.stok || 0)}
                 >
                   <Plus size={16} />
                 </button>
                 <span className="text-sm text-gray-500 ml-2">
-                  (Max: {item.stok})
+                  (Stok: {item.stok})
                 </span>
               </div>
             </div>

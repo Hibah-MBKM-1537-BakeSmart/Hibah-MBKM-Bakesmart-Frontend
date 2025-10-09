@@ -8,7 +8,7 @@ import {
   ShoppingBag,
   AlertTriangle,
   Calendar,
-  Edit2,
+  Ticket,
 } from "lucide-react";
 import { useCart } from "@/app/contexts/CartContext";
 import { useTranslation } from "@/app/contexts/TranslationContext";
@@ -18,16 +18,20 @@ import { useMenuData } from "@/app/hooks/useMenuData";
 import Link from "next/link";
 import { useState } from "react";
 
-interface OrderSummaryProps {
+export interface OrderSummaryProps {
   deliveryMode?: string;
   deliveryFee?: number;
   orderDay?: string;
+  voucherDiscount?: number;
+  voucherCode?: string;
 }
 
 export function OrderSummary({
   deliveryMode = "",
   deliveryFee = 0,
   orderDay = "",
+  voucherDiscount = 0,
+  voucherCode = "",
 }: OrderSummaryProps) {
   const {
     cartItems,
@@ -39,20 +43,18 @@ export function OrderSummary({
   } = useCart();
   const { t } = useTranslation();
 
-  // Use the useMenuData hook to get menu items
   const { menuItems } = useMenuData();
 
-  // State for edit modal
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [editingCartItem, setEditingCartItem] = useState<any>(null);
 
   const subtotal = getTotalPrice();
   const savings = getTotalSavings();
-  const tax = subtotal * 0.1; // 10% tax
+  const tax = subtotal * 0.1;
 
   const finalDeliveryFee = deliveryMode === "pickup" ? 0 : deliveryFee;
-  const total = subtotal + tax + finalDeliveryFee;
+  const total = subtotal + tax + finalDeliveryFee - voucherDiscount;
 
   const currentOrderDay = orderDay || selectedOrderDay || "";
 
@@ -80,7 +82,6 @@ export function OrderSummary({
   };
 
   const handleEditItem = (cartItem: any) => {
-    // Use menuItems from useMenuData hook to get the menu data
     const originalProduct = menuItems.find(
       (product: MenuItem) => product.id === cartItem.id
     );
@@ -90,7 +91,6 @@ export function OrderSummary({
       return;
     }
 
-    // Use attributes from original product, not from cart selectedAttributes
     const mockItem = {
       id: cartItem.id,
       name: cartItem.name,
@@ -99,12 +99,21 @@ export function OrderSummary({
       isDiscount: cartItem.isDiscount,
       image: cartItem.image,
       category: cartItem.category,
-      description: originalProduct.description || "",
-      ingredients: originalProduct.ingredients || "",
-      notes: originalProduct.notes || "",
+      description:
+        originalProduct.deskripsi_id || originalProduct.deskripsi_en || "",
+      ingredients:
+        originalProduct.bahans?.map((b) => b.nama_id).join(", ") || "",
+      notes: "", // MenuItem doesn't have notes property
       stock: cartItem.stock,
       availableDays: cartItem.availableDays,
       attributes: originalProduct.attributes || [],
+      harga: originalProduct.harga,
+      harga_diskon: originalProduct.harga_diskon,
+      stok: originalProduct.stok,
+      nama_id: originalProduct.nama_id,
+      nama_en: originalProduct.nama_en,
+      gambars: originalProduct.gambars,
+      hari: originalProduct.hari,
     };
 
     console.log("Original product attributes:", originalProduct.attributes);
@@ -124,7 +133,7 @@ export function OrderSummary({
   const getCartItemKey = (item: any) => {
     const attributesKey =
       item.selectedAttributes
-        ?.map((attr: any) => `${attr.id}-${attr.additionalPrice}`)
+        ?.map((attr: any) => `${attr.id}-${attr.harga}`)
         .sort()
         .join(",") || "no-attributes";
     return `${item.id}-${attributesKey}`;
@@ -155,7 +164,9 @@ export function OrderSummary({
     "selectedOrderDay:",
     selectedOrderDay,
     "currentOrderDay:",
-    currentOrderDay
+    currentOrderDay,
+    "voucherDiscount:",
+    voucherDiscount
   );
 
   if (cartItems.length === 0) {
@@ -260,24 +271,6 @@ export function OrderSummary({
                     <h4 className="font-medium text-[#5D4037] text-sm line-clamp-1 flex-1">
                       {item.name}
                     </h4>
-                    {/* Edit Button - Show for all items that have attributes in original product */}
-                    {/* {(() => {
-                      const originalProduct = menuItems.find(
-                        (product: MenuItem) => product.id === item.id
-                      );
-                      return (
-                        originalProduct &&
-                        originalProduct.attributes &&
-                        originalProduct.attributes.length > 0
-                      );
-                    })() && (
-                      <button
-                        onClick={() => handleEditItem(item)}
-                        className="text-xs text-[#8B6F47] font-medium hover:underline ml-2"
-                      >
-                        Edit Pesanan
-                      </button>
-                    )} */}
                   </div>
 
                   {item.availableDays && (
@@ -293,7 +286,7 @@ export function OrderSummary({
                         <span className="font-medium">Add-ons: </span>
                         {item.selectedAttributes.map((attr, index) => (
                           <span key={attr.id}>
-                            {attr.name} (+{formatPrice(attr.additionalPrice)})
+                            {attr.nama_id} (+{formatPrice(attr.harga)})
                             {index < item.selectedAttributes!.length - 1
                               ? ", "
                               : ""}
@@ -335,7 +328,6 @@ export function OrderSummary({
                   )}
                 </div>
                 <div className="flex flex-col items-center gap-1.5 flex-shrink-0">
-                  {/* Minus / Quantity / Plus */}
                   <div className="flex items-center gap-1.5">
                     <Button
                       size="sm"
@@ -362,7 +354,6 @@ export function OrderSummary({
                     </Button>
                   </div>
 
-                  {/* Edit Pesanan Button */}
                   {(() => {
                     const originalProduct = menuItems.find(
                       (product: MenuItem) => product.id === item.id
@@ -432,6 +423,18 @@ export function OrderSummary({
                 )}
               </span>
             </div>
+
+            {voucherDiscount > 0 && voucherCode && (
+              <div className="flex justify-between items-center text-sm bg-green-50 -mx-4 px-4 py-2">
+                <span className="text-green-700 font-medium flex items-center gap-1">
+                  <Ticket className="h-4 w-4" />
+                  Voucher ({voucherCode})
+                </span>
+                <span className="text-green-700 font-bold">
+                  -{formatPrice(voucherDiscount)}
+                </span>
+              </div>
+            )}
           </div>
 
           <div className="border-t-2 border-[#8B6F47] pt-3">
@@ -443,12 +446,19 @@ export function OrderSummary({
                 {formatPrice(total)}
               </span>
             </div>
-            {savings > 0 && (
+            {(savings > 0 || voucherDiscount > 0) && (
               <div className="bg-green-100 border border-green-300 p-2 rounded-md text-center mt-3">
                 <p className="text-sm text-green-700 font-medium">
                   🎉 {t("orderSummary.youSave")}{" "}
-                  <span className="font-bold">{formatPrice(savings)}</span>
+                  <span className="font-bold">
+                    {formatPrice(savings + voucherDiscount)}
+                  </span>
                 </p>
+                {voucherDiscount > 0 && (
+                  <p className="text-xs text-green-600 mt-1">
+                    Termasuk diskon voucher: {formatPrice(voucherDiscount)}
+                  </p>
+                )}
               </div>
             )}
             {currentOrderDay && !isCartValid && (
@@ -463,7 +473,6 @@ export function OrderSummary({
         </CardContent>
       </Card>
 
-      {/* Edit Customization Modal */}
       <EditCustomizationModal
         item={editingItem}
         cartItem={editingCartItem}

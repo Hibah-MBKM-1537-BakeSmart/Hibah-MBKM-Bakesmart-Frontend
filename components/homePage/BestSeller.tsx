@@ -10,6 +10,7 @@ import { useState } from "react";
 import { useTranslation } from "@/app/contexts/TranslationContext";
 import { useBestSellers } from "@/app/hooks/useMenuData";
 import type { MenuItem } from "@/lib/api/mockData";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 function ProductCard(item: MenuItem) {
   const { addToCart, selectedOrderDay } = useCart();
@@ -30,26 +31,16 @@ function ProductCard(item: MenuItem) {
   const image: string =
     item.gambars && item.gambars.length > 0
       ? item.gambars[0].file_path
-      : "/placeholder.svg"; // ✅ selalu string
+      : "/placeholder.svg";
 
-  const availableDays = item.hari.map((day) =>
-    language === "id" ? day.nama_id : day.nama_en
-  );
+  const availableDays = item.hari.map((day) => day.nama_id);
   const category =
     item.jenis.length > 0
       ? language === "id"
         ? item.jenis[0].nama_id
         : item.jenis[0].nama_en
       : "";
-  const ingredients = item.bahans
-    .map((bahan) => (language === "id" ? bahan.nama_id : bahan.nama_en))
-    .join(", ");
   const stock = item.stok;
-  const attributes = item.attributes.map((attr) => ({
-    id: attr.id,
-    name: language === "id" ? attr.nama_id : attr.nama_en,
-    additionalPrice: attr.harga,
-  }));
 
   const isOutOfStock = stock <= 0;
 
@@ -87,14 +78,28 @@ function ProductCard(item: MenuItem) {
               {name}
             </h3>
             <p className="text-xs text-gray-500 mt-1 capitalize line-clamp-1">
-              {t("menu.availableOn")}: {availableDays.join(", ")}
+              {t("menu.availableOn")}:{" "}
+              {availableDays
+                .map((day) => {
+                  const dayLabels: { [key: string]: string } = {
+                    senin: t("day.monday"),
+                    selasa: t("day.tuesday"),
+                    rabu: t("day.wednesday"),
+                    kamis: t("day.thursday"),
+                    jumat: t("day.friday"),
+                    sabtu: t("day.saturday"),
+                    minggu: t("day.sunday"),
+                  };
+                  return dayLabels[day.toLowerCase()] || day;
+                })
+                .join(", ")}
             </p>
             <p className="text-sm text-gray-600 mt-2 line-clamp-2">
               {description}
             </p>
-            {attributes && attributes.length > 0 && (
+            {item.attributes && item.attributes.length > 0 && (
               <p className="text-xs text-[#8B6F47] mt-1 font-medium">
-                +{attributes.length} pilihan tambahan
+                +{item.attributes.length} pilihan tambahan
               </p>
             )}
           </div>
@@ -129,24 +134,9 @@ function ProductCard(item: MenuItem) {
       </Card>
 
       <MenuModal
-        item={{
-          id: item.id,
-          name,
-          discountPrice,
-          originalPrice,
-          isDiscount,
-          image,
-          category,
-          description,
-          ingredients,
-          notes: "", // Not available in new API structure
-          stock,
-          availableDays,
-          attributes,
-        }}
+        item={item}
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        selectedOrderDay={selectedOrderDay}
       />
     </>
   );
@@ -155,6 +145,27 @@ function ProductCard(item: MenuItem) {
 export function BestSeller() {
   const { t } = useTranslation();
   const { bestSellers, loading, error } = useBestSellers();
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const itemsPerPage = 4;
+
+  const totalPages = Math.ceil(bestSellers.length / itemsPerPage);
+  const visibleProducts = bestSellers.slice(
+    currentIndex,
+    currentIndex + itemsPerPage
+  );
+
+  const handlePrevious = () => {
+    setCurrentIndex((prev) => Math.max(0, prev - itemsPerPage));
+  };
+
+  const handleNext = () => {
+    setCurrentIndex((prev) =>
+      Math.min(bestSellers.length - itemsPerPage, prev + itemsPerPage)
+    );
+  };
+
+  const canGoPrevious = currentIndex > 0;
+  const canGoNext = currentIndex + itemsPerPage < bestSellers.length;
 
   if (loading) {
     return (
@@ -225,22 +236,42 @@ export function BestSeller() {
           </div>
         </div>
 
-        {/* --- Products Grid --- */}
-        <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8 mb-12">
-          {bestSellers.map((product) => (
-            <ProductCard key={product.id} {...product} />
-          ))}
-        </div>
+        {/* --- Products Carousel with Navigation Arrows --- */}
+        <div className="relative mb-12">
+          {/* Left Arrow */}
+          {canGoPrevious && (
+            <button
+              onClick={handlePrevious}
+              className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10 bg-white rounded-full p-2 shadow-lg hover:bg-gray-50 transition-colors"
+              style={{ color: "#5D4037" }}
+              aria-label="Previous products"
+            >
+              <ChevronLeft className="w-6 h-6" />
+            </button>
+          )}
 
-        {/* Mobile grid layout */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 md:hidden mb-12">
-          {bestSellers.map((product) => (
-            <ProductCard key={product.id} {...product} />
-          ))}
+          {/* Products Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
+            {visibleProducts.map((product) => (
+              <ProductCard key={product.id} {...product} />
+            ))}
+          </div>
+
+          {/* Right Arrow */}
+          {canGoNext && (
+            <button
+              onClick={handleNext}
+              className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10 bg-white rounded-full p-2 shadow-lg hover:bg-gray-50 transition-colors"
+              style={{ color: "#5D4037" }}
+              aria-label="Next products"
+            >
+              <ChevronRight className="w-6 h-6" />
+            </button>
+          )}
         </div>
 
         {/* --- View All Button --- */}
-        <div className="flex justify-center lg:justify-end">
+        <div className="flex justify-center">
           <Button
             asChild
             variant="outline"

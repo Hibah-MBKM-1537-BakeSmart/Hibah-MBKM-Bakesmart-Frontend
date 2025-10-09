@@ -60,7 +60,8 @@ export class MenuAPI {
       if (filters?.day && filters.day !== "all") {
         filteredItems = filteredItems.filter((item) => {
           return item.hari.some((hari) => {
-            return hari.nama_id.toLowerCase() === filters.day?.toLowerCase();
+            // Exact case-sensitive match since MenuGrid uses proper capitalization
+            return hari.nama_id === filters.day;
           });
         });
       }

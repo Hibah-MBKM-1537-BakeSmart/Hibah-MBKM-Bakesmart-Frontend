@@ -23,7 +23,7 @@ interface OrderFormProps {
   onDeliveryModeChange?: (mode: string) => void;
   onDeliveryFeeChange?: (fee: number) => void;
   onOrderDayChange?: (day: string) => void;
-  onFormDataChange?: (formData: any) => void; // NEW: Add form data change handler
+  onFormDataChange?: (formData: any) => void;
   maxDaysAhead?: number;
 }
 
@@ -31,7 +31,7 @@ export function OrderForm({
   onDeliveryModeChange,
   onDeliveryFeeChange,
   onOrderDayChange,
-  onFormDataChange, // NEW: Receive form data change handler
+  onFormDataChange,
   maxDaysAhead = 30,
 }: OrderFormProps) {
   const { t } = useTranslation();
@@ -41,7 +41,7 @@ export function OrderForm({
     namaPenerima: "",
     nomorTelepon: "",
     deliveryMode: "",
-    orderDay: "",
+    orderDay: cartOrderDay || "",
     alamat: "",
     kodePos: "",
     catatan: "",
@@ -53,7 +53,29 @@ export function OrderForm({
   const [deliveryOptions, setDeliveryOptions] = useState<any[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date>();
 
-  // NEW: Effect to send form data changes to parent
+  useEffect(() => {
+    if (cartOrderDay && !selectedDate) {
+      const today = new Date();
+      const targetDayOfWeek = getDayOfWeekFromIndonesianDay(cartOrderDay);
+
+      if (targetDayOfWeek !== undefined) {
+        const currentDayOfWeek = today.getDay();
+        let daysToAdd = targetDayOfWeek - currentDayOfWeek;
+
+        if (daysToAdd < 0) {
+          daysToAdd += 7;
+        }
+
+        const targetDate = new Date(today);
+        targetDate.setDate(today.getDate() + daysToAdd);
+
+        setSelectedDate(targetDate);
+        setFormData((prev) => ({ ...prev, orderDay: cartOrderDay }));
+        onOrderDayChange?.(cartOrderDay);
+      }
+    }
+  }, [cartOrderDay]);
+
   useEffect(() => {
     onFormDataChange?.(formData);
   }, [formData, onFormDataChange]);
@@ -82,8 +104,6 @@ export function OrderForm({
     setIsCalculatingDelivery(true);
     try {
       console.log("[v0] Calculating delivery fee...");
-      // Simulate API call to Biteship or similar service
-      // In real implementation, you would call actual delivery API
       await new Promise((resolve) => setTimeout(resolve, 2000));
 
       const mockDeliveryOptions = [
@@ -130,7 +150,6 @@ export function OrderForm({
             longitude: longitude.toString(),
           }));
 
-          // Reverse geocoding using free API (OpenStreetMap Nominatim)
           try {
             const response = await fetch(
               `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&addressdetails=1`
@@ -158,7 +177,6 @@ export function OrderForm({
     }
   };
 
-  // Helper function to get day name in Indonesian
   const getDayLabel = (date: Date) => {
     const today = new Date();
     const tomorrow = new Date(today);

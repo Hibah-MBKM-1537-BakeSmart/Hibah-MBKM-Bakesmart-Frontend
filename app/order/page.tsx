@@ -1,18 +1,29 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { OrderForm } from "@/components/orderPage/OrderForm";
 import { OrderSummary } from "@/components/orderPage/OrderSummary";
 import { PaymentMethods } from "@/components/orderPage/PaymentMethods";
+import { VoucherSection } from "@/components/orderPage/VoucherSection";
+import { useCart } from "@/app/contexts/CartContext";
 
 export default function OrderPage() {
-  const [deliveryMode, setDeliveryMode] = useState("");
-  const [deliveryFee, setDeliveryFee] = useState(0);
-  const [orderDay, setOrderDay] = useState("");
+  const { selectedOrderDay } = useCart();
 
-  // NEW: State to store form data from OrderForm
+  const [deliveryMode, setDeliveryMode] = useState<string>("");
+  const [deliveryFee, setDeliveryFee] = useState<number>(0);
+  const [orderDay, setOrderDay] = useState<string>(selectedOrderDay || "");
+  const [voucherDiscount, setVoucherDiscount] = useState<number>(0);
+  const [voucherCode, setVoucherCode] = useState<string>("");
+
+  useEffect(() => {
+    if (selectedOrderDay) {
+      setOrderDay(selectedOrderDay);
+    }
+  }, [selectedOrderDay]);
+
   const [orderFormData, setOrderFormData] = useState({
     namaPenerima: "",
     nomorTelepon: "",
@@ -40,10 +51,21 @@ export default function OrderPage() {
     setOrderDay(day);
   };
 
-  // NEW: Handler to receive form data from OrderForm
   const handleFormDataChange = (formData: typeof orderFormData) => {
     console.log("[v0] Order page - form data changed:", formData);
     setOrderFormData(formData);
+  };
+
+  const handleVoucherApplied = (code: string, discount: number) => {
+    console.log("[v0] Voucher applied:", code, "Discount:", discount);
+    setVoucherCode(code);
+    setVoucherDiscount(discount);
+  };
+
+  const handleVoucherRemoved = () => {
+    console.log("[v0] Voucher removed");
+    setVoucherCode("");
+    setVoucherDiscount(0);
   };
 
   console.log(
@@ -52,7 +74,9 @@ export default function OrderPage() {
     "deliveryFee:",
     deliveryFee,
     "orderDay:",
-    orderDay
+    orderDay,
+    "voucherDiscount:",
+    voucherDiscount
   );
 
   return (
@@ -74,11 +98,13 @@ export default function OrderPage() {
                 onDeliveryModeChange={handleDeliveryModeChange}
                 onDeliveryFeeChange={handleDeliveryFeeChange}
                 onOrderDayChange={handleOrderDayChange}
-                onFormDataChange={handleFormDataChange} // NEW: Pass form data handler
+                onFormDataChange={handleFormDataChange}
               />
-              <PaymentMethods
-                formData={orderFormData} // NEW: Pass form data to PaymentMethods
+              <VoucherSection
+                onVoucherApplied={handleVoucherApplied}
+                onVoucherRemoved={handleVoucherRemoved}
               />
+              <PaymentMethods formData={orderFormData} />
             </div>
 
             <div className="lg:col-span-1">
@@ -86,6 +112,8 @@ export default function OrderPage() {
                 deliveryMode={deliveryMode}
                 deliveryFee={deliveryFee}
                 orderDay={orderDay}
+                voucherDiscount={voucherDiscount}
+                voucherCode={voucherCode}
               />
             </div>
           </div>

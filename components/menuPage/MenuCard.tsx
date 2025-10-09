@@ -11,8 +11,8 @@ import type { MenuItem } from "@/lib/api/mockData";
 interface MenuCardProps {
   item: MenuItem;
   onClick: () => void;
-  onShowExistingCustomization?: (item: MenuItem) => void;
-  onShowRemoveCustomization: (item: MenuItem) => void;
+  onShowExistingCustomization?: (item: MenuItem, cartItem: any) => void;
+  onShowRemoveCustomization: (item: MenuItem, cartItem: any) => void;
 }
 
 export function MenuCard({
@@ -44,9 +44,10 @@ export function MenuCard({
     item.gambars && item.gambars.length > 0
       ? item.gambars[0].file_path
       : "/placeholder.svg";
+  // Extract the raw day names in Indonesian (nama_id) since the cart uses Indonesian day names
   const availableDays = (item.hari || [])
     .filter((day) => day !== null)
-    .map((day) => (language === "id" ? day.nama_id : day.nama_en));
+    .map((day) => day.nama_id);
   const category =
     (item.jenis || []).filter((jenis) => jenis !== null).length > 0
       ? language === "id"
@@ -129,11 +130,19 @@ export function MenuCard({
       if (hasItemInCart) {
         // Jika sudah ada di cart, tampilkan modal existing customization
         console.log("🟢 MenuCard: Calling onShowExistingCustomization");
-        onShowExistingCustomization?.(item);
-      } else {
-        // Jika belum ada di cart, buka modal untuk pilih customization
-        console.log("🟢 MenuCard: Calling onClick (main modal)");
-        onClick();
+        // Find existing item in cart with same attributes
+        const existingCartItem = cartItems.find(
+          (cartItem) =>
+            cartItem.id === item.id && cartItem.orderDay === selectedOrderDay
+        );
+
+        if (existingCartItem) {
+          onShowExistingCustomization?.(item, existingCartItem);
+        } else {
+          // Jika belum ada di cart, buka modal untuk pilih customization
+          console.log("🟢 MenuCard: Calling onClick (main modal)");
+          onClick();
+        }
       }
       return;
     }
@@ -161,10 +170,16 @@ export function MenuCard({
 
     // For products with attributes, show REMOVE customization modal
     if (attributes && attributes.length > 0) {
-      console.log(
-        "🔴 MenuCard: Calling onShowRemoveCustomization (THIS IS THE FIX!)"
+      // Find existing item in cart
+      const existingCartItem = cartItems.find(
+        (cartItem) =>
+          cartItem.id === item.id && cartItem.orderDay === selectedOrderDay
       );
-      onShowRemoveCustomization(item); // Changed from onShowExistingCustomization!
+
+      if (existingCartItem) {
+        console.log("🔴 MenuCard: Calling onShowRemoveCustomization");
+        onShowRemoveCustomization(item, existingCartItem);
+      }
       return;
     }
 

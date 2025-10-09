@@ -3,27 +3,10 @@
 import type React from "react";
 import { createContext, useContext, useState, useEffect } from "react";
 import { stockManager } from "@/lib/api/stockManager";
+import type { ProductAttribute } from "@/lib/api/mockData";
+import type { CartItem } from "@/lib/types";
 
-interface CartItem {
-  id: number;
-  name: string;
-  discountPrice: string;
-  originalPrice?: string;
-  isDiscount?: boolean;
-  image: string;
-  quantity: number;
-  category: string;
-  orderDay: string; // Hari pesanan (senin, selasa, etc.)
-  availableDays: string[];
-  stock: number; // Stock tersedia untuk hari tersebut
-  selectedAttributes?: {
-    id: number;
-    name: string;
-    additionalPrice: number;
-  }[];
-  attributesPrice?: number;
-  cartId: string; // Add unique cartId for each cart item
-}
+export // Using CartItem from @/lib/types
 
 interface CartContextType {
   cartItems: CartItem[];
@@ -93,15 +76,16 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setSelectedOrderDayState(day);
   };
 
-  // Helper function to create unique cart item identifier
-  // FIXED: Remove orderDay from key to allow proper matching of same customizations
   const getCartItemKey = (item: Omit<CartItem, "quantity" | "cartId">) => {
     const attributesKey =
       item.selectedAttributes
-        ?.map((attr) => `${attr.id}-${attr.additionalPrice}`)
+        ?.map((attr) => `${attr.id}-${attr.harga}`)
         .sort()
         .join(",") || "no-attributes";
-    return `${item.id}-${attributesKey}`; // Removed orderDay from key
+    // Include orderDay in the key to allow same product with same customization on different days
+    const orderDay =
+      item.orderDay || selectedOrderDay || item.availableDays?.[0] || "Senin";
+    return `${item.id}-${attributesKey}-${orderDay}`;
   };
 
   const canAddToCart = (item: Omit<CartItem, "quantity" | "cartId">) => {
@@ -114,7 +98,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       // Use the selectedOrderDay if available, otherwise use the day from first cart item
       const cartDay = selectedOrderDay || cartItems[0].orderDay;
       // Check if item is available on the same day as cart items
-      if (!item.availableDays.includes(cartDay)) {
+      console.log("Available days:", item.availableDays);
+      console.log("Cart day:", cartDay);
+      if (!item.availableDays || !item.availableDays.includes(cartDay)) {
         return {
           canAdd: false,
           reason: `Pesanan Anda untuk hari ${cartDay}. Produk ini tidak tersedia untuk hari tersebut.`,
@@ -125,14 +111,15 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     if (
       selectedOrderDay &&
       cartItems.length === 0 &&
-      !item.availableDays.includes(selectedOrderDay)
+      (!item.availableDays || !item.availableDays.includes(selectedOrderDay))
     ) {
+      console.log("Available days:", item.availableDays);
+      console.log("Selected day:", selectedOrderDay);
       return {
         canAdd: false,
         reason: `Produk tidak tersedia untuk hari ${selectedOrderDay}`,
       };
     }
-
     const totalQuantityForProduct = cartItems
       .filter((cartItem) => cartItem.id === item.id)
       .reduce((total, cartItem) => total + cartItem.quantity, 0);
@@ -154,41 +141,71 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
     if (cartItems.length === 0) {
       // If we have a selectedOrderDay and item is available on that day, use it
-      if (selectedOrderDay && item.availableDays.includes(selectedOrderDay)) {
+      const availableDayNames = item.availableDays || [];
+      if (selectedOrderDay && availableDayNames.includes(selectedOrderDay)) {
         console.log("[v0] Using existing selectedOrderDay:", selectedOrderDay);
         // Keep the selectedOrderDay
       } else {
         // Otherwise, use the first available day for this item
-        console.log(
-          "[v0] Setting new selectedOrderDay:",
-          item.availableDays[0]
-        );
-        setSelectedOrderDay(item.availableDays[0]);
+        const firstAvailableDay = item.availableDays?.[0] || "Senin";
+        console.log("[v0] Setting new selectedOrderDay:", firstAvailableDay);
+        setSelectedOrderDay(firstAvailableDay);
       }
     }
 
     setCartItems((prev) => {
       const itemKey = getCartItemKey(item);
-      const orderDay = selectedOrderDay || item.availableDays[0];
+      const orderDay = selectedOrderDay || item.availableDays?.[0] || "Senin";
 
-      // FIXED: Look for existing item with same customization AND same order day
+      // Look for existing item with EXACTLY same customization AND same order day
       const existingItem = prev.find((cartItem) => {
         const cartItemKey = getCartItemKey(cartItem);
-        return cartItemKey === itemKey && cartItem.orderDay === orderDay;
+        const sameCustomization = item.selectedAttributes?.every((attr) =>
+          cartItem.selectedAttributes?.some(
+            (cartAttr) =>
+              cartAttr.id === attr.id && cartAttr.harga === attr.harga
+          )
+        );
+        return (
+          cartItemKey === itemKey &&
+          cartItem.orderDay === orderDay &&
+          sameCustomization
+        );
       });
 
       if (existingItem) {
-        return prev.map((cartItem) => {
-          const cartItemKey = getCartItemKey(cartItem);
-          return cartItemKey === itemKey && cartItem.orderDay === orderDay
-            ? { ...cartItem, quantity: cartItem.quantity + 1 }
-            : cartItem;
-        });
+        // Cek stok sebelum menambah quantity
+        const totalQuantityForProduct = prev
+          .filter(
+            (cartItem) =>
+              cartItem.id === item.id &&
+              cartItem.orderDay === orderDay &&
+              cartItem.cartId !== existingItem.cartId
+          )
+          .reduce((total, cartItem) => total + cartItem.quantity, 0);
+
+        const newQuantity = existingItem.quantity + 1;
+        const currentStock = stockManager.getStock(item.id);
+
+        if (totalQuantityForProduct + newQuantity > currentStock) {
+          alert(
+            `Stok tidak mencukupi. Tersisa ${
+              currentStock - totalQuantityForProduct
+            } item`
+          );
+          return prev;
+        }
+
+        return prev.map((cartItem) =>
+          cartItem.cartId === existingItem.cartId
+            ? { ...cartItem, quantity: newQuantity }
+            : cartItem
+        );
       }
 
       const attributesPrice =
         item.selectedAttributes?.reduce(
-          (total, attr) => total + attr.additionalPrice,
+          (total, attr) => total + attr.harga,
           0
         ) || 0;
 
@@ -207,23 +224,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setShowCartAnimation(true);
     setTimeout(() => setShowCartAnimation(false), 600);
     return true;
-  };
-
-  const removeFromCart = (cartId: string) => {
-    console.log(
-      "[DEBUG] CartContext: removeFromCart called with cartId:",
-      cartId
-    );
-    setCartItems((prev) => {
-      const newItems = prev.filter((item) => item.cartId !== cartId);
-      console.log("[DEBUG] CartContext: Items before removal:", prev.length);
-      console.log("[DEBUG] CartContext: Items after removal:", newItems.length);
-
-      if (newItems.length === 0) {
-        setSelectedOrderDay(null);
-      }
-      return newItems;
-    });
   };
 
   const updateQuantity = (cartId: string, quantity: number) => {
@@ -249,15 +249,26 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
 
     const currentStock = stockManager.getStock(targetItem.id);
+
+    // Filter semua item yang sama (termasuk variasi berbeda) untuk cek stok
     const totalQuantityForProduct = cartItems
-      .filter((cartItem) => cartItem.id === targetItem.id)
+      .filter(
+        (cartItem) =>
+          cartItem.id === targetItem.id &&
+          cartItem.orderDay === targetItem.orderDay &&
+          cartItem.cartId !== cartId // Exclude the current item being updated
+      )
       .reduce((total, cartItem) => total + cartItem.quantity, 0);
 
-    const newTotalQuantity =
-      totalQuantityForProduct - targetItem.quantity + quantity;
+    // Tambahkan quantity yang baru ke total
+    const newTotalQuantity = totalQuantityForProduct + quantity;
 
     if (newTotalQuantity > currentStock) {
-      alert(`Stok tidak mencukupi. Maksimal ${currentStock} item`);
+      alert(
+        `Stok tidak mencukupi. Tersisa ${
+          currentStock - totalQuantityForProduct
+        } item`
+      );
       return false;
     }
 
@@ -296,11 +307,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const getTotalOriginalPrice = () => {
     return cartItems.reduce((total, item) => {
-      const shouldUseOriginal = item.isDiscount && item.originalPrice;
-      const priceToUse = shouldUseOriginal
-        ? item.originalPrice!
-        : item.discountPrice;
-      const basePrice = Number.parseInt(priceToUse.replace(/\D/g, ""));
+      const basePrice = item.originalPrice
+        ? Number.parseInt(item.originalPrice.replace(/\D/g, ""))
+        : Number.parseInt(item.discountPrice.replace(/\D/g, ""));
       const attributesPrice = item.attributesPrice || 0;
       return total + (basePrice + attributesPrice) * item.quantity;
     }, 0);
@@ -313,7 +322,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const getValidItems = () => {
     if (!selectedOrderDay) return cartItems;
     return cartItems.filter(
-      (item) => item.availableDays.includes(selectedOrderDay) && item.stock > 0
+      (item) =>
+        item.availableDays &&
+        item.availableDays.some(
+          (day) => day.toLowerCase() === selectedOrderDay.toLowerCase()
+        ) &&
+        item.stock > 0
     );
   };
 
@@ -321,7 +335,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     if (!selectedOrderDay) return [];
     return cartItems.filter(
       (item) =>
-        !item.availableDays.includes(selectedOrderDay) || item.stock <= 0
+        !item.availableDays ||
+        !item.availableDays.some(
+          (day) => day.toLowerCase() === selectedOrderDay.toLowerCase()
+        ) ||
+        item.stock <= 0
     );
   };
 
@@ -353,6 +371,23 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     // Clear cart setelah order berhasil
     clearCart();
     return true;
+  };
+
+  const removeFromCart = (cartId: string) => {
+    console.log(
+      "[DEBUG] CartContext: removeFromCart called with cartId:",
+      cartId
+    );
+    setCartItems((prev) => {
+      const newItems = prev.filter((item) => item.cartId !== cartId);
+      console.log("[DEBUG] CartContext: Items before removal:", prev.length);
+      console.log("[DEBUG] CartContext: Items after removal:", newItems.length);
+
+      if (newItems.length === 0) {
+        setSelectedOrderDay(null);
+      }
+      return newItems;
+    });
   };
 
   return (

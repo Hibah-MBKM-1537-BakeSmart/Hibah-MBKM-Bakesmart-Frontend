@@ -1,24 +1,54 @@
 export interface MenuItem {
   id: number;
-  name: string;
-  category: string;
-  availableDays: string[];
-  discountPrice: string;
-  originalPrice?: string;
-  isDiscount: boolean;
-  stock: number;
-  image: string;
-  description: string;
-  ingredients: string;
-  notes: string;
-  isBestSeller?: boolean;
-  attributes?: ProductAttribute[];
+  nama_id: string;
+  nama_en: string;
+  deskripsi_id: string;
+  deskripsi_en: string;
+  harga: number;
+  harga_diskon: number | null;
+  stok: number;
+  isBestSeller: boolean;
+  created_at: string;
+  updated_at: string;
+  gambars: ProductImage[];
+  jenis: ProductType[];
+  hari: ProductDay[];
+  attributes: ProductAttribute[];
+  bahans: ProductIngredient[];
+}
+
+export interface ProductImage {
+  id: number;
+  file_path: string;
+  product_id: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProductType {
+  id: number;
+  nama_en: string;
+  nama_id: string;
+}
+
+export interface ProductDay {
+  id: number;
+  nama_en: string;
+  nama_id: string;
 }
 
 export interface ProductAttribute {
   id: number;
-  name: string;
-  additionalPrice: number;
+  harga: number;
+  nama_en: string;
+  nama_id: string;
+}
+
+export interface ProductIngredient {
+  id: number;
+  jumlah: number;
+  nama_en: string;
+  nama_id: string;
 }
 
 export interface Category {
@@ -33,185 +63,295 @@ export interface ApiResponse<T> {
   message?: string;
 }
 
-// Mock menu data
 export const mockMenuItems: MenuItem[] = [
   {
     id: 1,
-    name: "Foccacia Plain",
-    category: "foccacia",
-    availableDays: ["senin", "rabu", "jumat"],
-    discountPrice: "Rp20,000",
-    originalPrice: "Rp25,000",
-    isDiscount: true,
-    stock: 15,
-    image: "/img/Roti.png",
-    description:
-      "Roti foccacia lembut dengan tekstur yang sempurna. Dibuat dengan bahan-bahan berkualitas tinggi dan dipanggang hingga golden brown. Cocok untuk sarapan atau camilan sore hari.",
-    ingredients:
-      "Tepung terigu premium, ragi aktif, minyak zaitun, garam laut, air mineral",
-    notes:
-      "Mengandung gluten, telur, dan susu. Dapat disimpan dalam suhu ruang selama 2-3 hari. Untuk hasil terbaik, panaskan sebentar sebelum disajikan. Tersedia juga varian dengan topping herbs dan olive oil. Sangat cocok untuk sarapan dengan kopi atau teh panas.",
-    isBestSeller: true,
+    nama_id: "Roti 1",
+    nama_en: "Bread 1",
+    deskripsi_id: "Tes",
+    deskripsi_en: "Tes",
+    harga: 1000,
+    harga_diskon: null,
+    stok: 10,
+    isBestSeller: false,
+    created_at: "2025-09-26T04:12:33.534Z",
+    updated_at: "2025-09-26T04:12:33.534Z",
+    gambars: [
+      {
+        id: 1,
+        file_path: "/images/roti_1_a.jpg",
+        product_id: 1,
+        created_at: "",
+        updated_at: "",
+      },
+      {
+        id: 2,
+        file_path: "/images/roti_1_b.jpg",
+        product_id: 1,
+        created_at: "",
+        updated_at: "",
+      },
+    ],
+    jenis: [{ id: 1, nama_en: "Bread Type A", nama_id: "Jenis Roti A" }],
+    hari: [
+      { id: 1, nama_en: "Monday", nama_id: "Senin" },
+      { id: 3, nama_en: "Wednesday", nama_id: "Rabu" },
+    ],
     attributes: [
-      { id: 1, name: "Extra Herbs", additionalPrice: 3000 },
-      { id: 2, name: "Olive Oil Drizzle", additionalPrice: 2000 },
+      { id: 1, harga: 10000, nama_en: "Cut", nama_id: "Potong" },
+      { id: 6, harga: 2000, nama_en: "Extra Cheese", nama_id: "Tambah Keju" },
+    ],
+    bahans: [
+      {
+        id: 1,
+        jumlah: 1,
+        nama_en: "Bread Ingredient A",
+        nama_id: "Bahan Roti A",
+      },
     ],
   },
   {
     id: 2,
-    name: "Turkish Cheese Bread",
-    category: "turkish-cheese",
-    availableDays: ["selasa", "kamis", "sabtu"],
-    discountPrice: "Rp25,000",
-    originalPrice: "Rp32,000",
-    isDiscount: false,
-    stock: 8,
-    image: "/red-velvet-cake-slice-with-cream-cheese-frosting.jpg",
-    description:
-      "Roti Turki dengan keju yang melimpah. Tekstur lembut dengan rasa keju yang gurih dan creamy.",
-    ingredients:
-      "Tepung terigu Turki, keju mozzarella, keju feta, telur segar, susu murni, mentega",
-    notes:
-      "Dibuat dengan resep tradisional Turki. Menggunakan keju import premium. Sangat cocok untuk sarapan atau makan siang. Dapat dipanaskan kembali di oven untuk mengembalikan tekstur keju yang meleleh. Proses pembuatan menggunakan teknik tradisional dari Istanbul.",
-    isBestSeller: true,
+    nama_id: "Roti 2",
+    nama_en: "Bread 2",
+    deskripsi_id: "Tes",
+    deskripsi_en: "Tes",
+    harga: 5000,
+    harga_diskon: null,
+    stok: 10,
+    isBestSeller: false,
+    created_at: "2025-09-26T04:12:33.534Z",
+    updated_at: "2025-09-26T04:12:33.534Z",
+    gambars: [
+      {
+        id: 3,
+        file_path: "/images/roti_2_a.jpg",
+        product_id: 2,
+        created_at: "",
+        updated_at: "",
+      },
+    ],
+    jenis: [{ id: 2, nama_en: "Bread Type B", nama_id: "Jenis Roti B" }],
+    hari: [
+      { id: 2, nama_en: "Tuesday", nama_id: "Selasa" },
+      { id: 4, nama_en: "Thursday", nama_id: "Kamis" },
+      { id: 6, nama_en: "Saturday", nama_id: "Sabtu" },
+    ],
+    attributes: [
+      { id: 2, harga: 10000, nama_en: "Jam", nama_id: "Selai" },
+      { id: 7, harga: 3000, nama_en: "Peanut Butter", nama_id: "Selai Kacang" },
+    ],
+    bahans: [
+      {
+        id: 2,
+        jumlah: 1,
+        nama_en: "Bread Ingredient B",
+        nama_id: "Bahan Roti B",
+      },
+    ],
   },
   {
     id: 3,
-    name: "Country Bread Klasik",
-    category: "country-bread",
-    availableDays: ["senin", "selasa", "rabu", "kamis", "jumat"],
-    discountPrice: "Rp18,000",
-    originalPrice: "Rp23,000",
-    isDiscount: true,
-    stock: 20,
-    image: "/blueberry-muffin-with-fresh-blueberries.jpg",
-    description:
-      "Roti country dengan tekstur padat dan rasa yang khas. Sempurna untuk sandwich atau dimakan langsung.",
-    ingredients:
-      "Tepung gandum utuh, biji-bijian, madu alami, ragi alami, garam laut",
-    notes:
-      "Menggunakan tepung gandum utuh organik. Tanpa pengawet buatan. Kaya serat dan nutrisi. Dapat disimpan dalam wadah kedap udara hingga 1 minggu. Tersedia juga varian dengan biji wijen dan biji bunga matahari. Tekstur yang padat dan rasa gandum yang autentik.",
+    nama_id: "Roti 3",
+    nama_en: "Bread 3",
+    deskripsi_id: "Tes",
+    deskripsi_en: "Tes",
+    harga: 7000,
+    harga_diskon: null,
+    stok: 10,
+    isBestSeller: false,
+    created_at: "2025-09-26T04:12:33.534Z",
+    updated_at: "2025-09-26T04:12:33.534Z",
+    gambars: [
+      {
+        id: 4,
+        file_path: "/images/roti_3_a.jpg",
+        product_id: 3,
+        created_at: "",
+        updated_at: "",
+      },
+    ],
+    jenis: [{ id: 3, nama_en: "Bread Type C", nama_id: "Jenis Roti C" }],
+    hari: [
+      { id: 1, nama_en: "Monday", nama_id: "Senin" },
+      { id: 2, nama_en: "Tuesday", nama_id: "Selasa" },
+      { id: 5, nama_en: "Friday", nama_id: "Jumat" },
+    ],
+    attributes: [
+      { id: 3, harga: 10000, nama_en: "Bread Atr C", nama_id: "Atr Roti C" },
+    ],
+    bahans: [
+      {
+        id: 3,
+        jumlah: 1,
+        nama_en: "Bread Ingredient C",
+        nama_id: "Bahan Roti C",
+      },
+    ],
   },
   {
     id: 4,
-    name: "Country Loaf Spesial",
-    category: "country-loaf",
-    availableDays: ["jumat", "sabtu", "minggu"],
-    discountPrice: "Rp35,000",
-    originalPrice: "Rp42,000",
-    isDiscount: true,
-    stock: 5,
-    image: "/cinnamon-roll-with-glaze.jpg",
-    description:
-      "Loaf country premium dengan fermentasi panjang. Rasa yang kompleks dan tekstur yang sempurna.",
-    ingredients:
-      "Tepung gandum organik, starter alami, biji-bijian campuran, madu, garam laut",
-    notes:
-      "Proses fermentasi 48 jam untuk rasa yang optimal. Lebih mudah dicerna dan memiliki nilai gizi tinggi. Cocok untuk diet sehat. Dapat disimpan hingga 2 minggu dalam freezer. Slice sesuai kebutuhan. Dibuat dengan starter yang sudah berumur 10 tahun.",
-    isBestSeller: true,
+    nama_id: "Roti 4",
+    nama_en: "Bread 4",
+    deskripsi_id: "Tes",
+    deskripsi_en: "Tes",
+    harga: 9000,
+    harga_diskon: null,
+    stok: 10,
+    isBestSeller: false,
+    created_at: "2025-09-26T04:12:33.534Z",
+    updated_at: "2025-09-26T04:12:33.534Z",
+    gambars: [
+      {
+        id: 5,
+        file_path: "/images/roti_4_a.jpg",
+        product_id: 4,
+        created_at: "",
+        updated_at: "",
+      },
+    ],
+    jenis: [{ id: 4, nama_en: "Bread Type D", nama_id: "Jenis Roti D" }],
+    hari: [
+      { id: 4, nama_en: "Thursday", nama_id: "Kamis" },
+      { id: 6, nama_en: "Saturday", nama_id: "Sabtu" },
+    ],
+    attributes: [
+      { id: 4, harga: 10000, nama_en: "Bread Atr D", nama_id: "Atr Roti D" },
+      {
+        id: 8,
+        harga: 4000,
+        nama_en: "Add Chocolate",
+        nama_id: "Tambah Cokelat",
+      },
+    ],
+    bahans: [
+      {
+        id: 4,
+        jumlah: 1,
+        nama_en: "Bread Ingredient D",
+        nama_id: "Bahan Roti D",
+      },
+    ],
   },
   {
     id: 5,
-    name: "Center Piece Artisan",
-    category: "center-piece",
-    availableDays: ["sabtu", "minggu"],
-    discountPrice: "Rp45,000",
-    originalPrice: "Rp55,000",
-    isDiscount: false,
-    stock: 3,
-    image: "/chocolate-chip-cookies-golden-brown.jpg",
-    description:
-      "Roti artisan premium yang menjadi center piece di meja makan. Bentuk dan rasa yang istimewa.",
-    ingredients:
-      "Tepung premium, mentega Eropa, telur organik, susu sapi murni, ragi premium",
-    notes:
-      "Dibuat khusus untuk acara spesial dan presentasi. Bentuk yang artistik dan rasa yang luar biasa. Cocok untuk hadiah atau acara penting. Kemasan premium tersedia. Pre-order 2 hari sebelumnya. Setiap loaf dibuat dengan perhatian detail yang tinggi.",
+    nama_id: "Roti 5",
+    nama_en: "Bread 5",
+    deskripsi_id: "Tes",
+    deskripsi_en: "Tes",
+    harga: 11000,
+    harga_diskon: null,
+    stok: 10,
+    isBestSeller: false,
+    created_at: "2025-09-26T04:12:33.534Z",
+    updated_at: "2025-09-26T04:12:33.534Z",
+    gambars: [
+      {
+        id: 6,
+        file_path: "/images/roti_5_a.jpg",
+        product_id: 5,
+        created_at: "",
+        updated_at: "",
+      },
+    ],
+    jenis: [{ id: 5, nama_en: "Bread Type E", nama_id: "Jenis Roti E" }],
+    hari: [
+      { id: 5, nama_en: "Friday", nama_id: "Jumat" },
+      { id: 7, nama_en: "Sunday", nama_id: "Minggu" },
+      { id: 3, nama_en: "Wednesday", nama_id: "Rabu" },
+    ],
+    attributes: [
+      { id: 5, harga: 10000, nama_en: "Bread Atr E", nama_id: "Atr Roti E" },
+      { id: 9, harga: 3500, nama_en: "Extra Cream", nama_id: "Extra Cream" },
+    ],
+    bahans: [
+      {
+        id: 5,
+        jumlah: 1,
+        nama_en: "Bread Ingredient E",
+        nama_id: "Bahan Roti E",
+      },
+    ],
   },
   {
     id: 6,
-    name: "Gandum 4 Grain",
-    category: "gandum",
-    availableDays: ["senin", "rabu", "jumat", "minggu"],
-    discountPrice: "Rp28,000",
-    isDiscount: true,
-    stock: 12,
-    image: "/red-velvet-cake-slice-with-cream-cheese-frosting.jpg",
-    description:
-      "Roti gandum dengan 4 jenis biji-bijian pilihan. Kaya nutrisi dan serat untuk kesehatan optimal.",
-    ingredients:
-      "Tepung gandum utuh, biji quinoa, biji chia, biji flax, biji bunga matahari",
-    notes:
-      "Menggunakan 4 jenis superfood grains. Kaya omega-3 dan protein nabati. Cocok untuk diet sehat dan vegetarian. Tersedia dalam ukuran regular dan jumbo. Tekstur yang unik dengan crunch dari biji-bijian. Sangat bergizi dan mengenyangkan.",
-  },
-  {
-    id: 7,
-    name: "Roti Isi Ayam",
-    category: "roti-isi",
-    availableDays: ["selasa", "kamis", "sabtu"],
-    discountPrice: "Rp22,000",
-    originalPrice: "Rp28,000",
-    isDiscount: true,
-    stock: 10,
-    image: "/cinnamon-roll-with-glaze.jpg",
-    description:
-      "Roti lembut dengan isian ayam yang gurih dan sayuran segar. Sempurna untuk makan siang.",
-    ingredients:
-      "Tepung terigu, daging ayam fillet, wortel, kentang, bawang bombay, rempah pilihan",
-    notes:
-      "Isian ayam dibuat fresh setiap hari. Tanpa MSG dan pengawet buatan. Sayuran segar dari petani lokal. Sangat mengenyangkan dan bergizi. Tersedia juga varian isi daging sapi dan tuna. Cocok untuk bekal kerja atau sekolah.",
-    isBestSeller: true,
-  },
-  {
-    id: 8,
-    name: "Roti Kopi Mocha",
-    category: "roti-kopi",
-    availableDays: [
-      "senin",
-      "selasa",
-      "rabu",
-      "kamis",
-      "jumat",
-      "sabtu",
-      "minggu",
+    nama_id: "Roti 6",
+    nama_en: "Bread 6",
+    deskripsi_id: "Tes",
+    deskripsi_en: "Tes",
+    harga: 20000,
+    harga_diskon: null,
+    stok: 10,
+    isBestSeller: false,
+    created_at: "2025-09-26T04:12:33.534Z",
+    updated_at: "2025-09-26T04:12:33.534Z",
+    gambars: [
+      {
+        id: 7,
+        file_path: "/images/roti_6_a.jpg",
+        product_id: 6,
+        created_at: "",
+        updated_at: "",
+      },
+      {
+        id: 8,
+        file_path: "/images/roti_6_b.jpg",
+        product_id: 6,
+        created_at: "",
+        updated_at: "",
+      },
     ],
-    discountPrice: "Rp20,000",
-    originalPrice: "Rp26,000",
-    isDiscount: false,
-    stock: 15,
-    image: "/blueberry-muffin-with-fresh-blueberries.jpg",
-    description:
-      "Roti dengan aroma dan rasa kopi yang khas. Kombinasi sempurna antara roti dan kopi dalam satu gigitan.",
-    ingredients:
-      "Tepung terigu, kopi arabica premium, cokelat, gula aren, telur, mentega",
-    notes:
-      "Menggunakan kopi arabica single origin. Aroma kopi yang harum dan rasa yang tidak terlalu manis. Cocok untuk pecinta kopi. Dapat dinikmati dengan atau tanpa minuman. Tersedia juga varian espresso dan cappuccino. Tekstur yang lembut dengan hint rasa kopi yang autentik.",
-    isBestSeller: true,
+    jenis: [
+      { id: 1, nama_en: "Bread Type A", nama_id: "Jenis Roti A" },
+      { id: 2, nama_en: "Bread Type B", nama_id: "Jenis Roti B" },
+      { id: 5, nama_en: "Bread Type E", nama_id: "Jenis Roti E" },
+    ],
+    hari: [
+      { id: 1, nama_en: "Monday", nama_id: "Senin" },
+      { id: 2, nama_en: "Tuesday", nama_id: "Selasa" },
+      { id: 3, nama_en: "Wednesday", nama_id: "Rabu" },
+      { id: 4, nama_en: "Thursday", nama_id: "Kamis" },
+      { id: 5, nama_en: "Friday", nama_id: "Jumat" },
+      { id: 6, nama_en: "Saturday", nama_id: "Sabtu" },
+      { id: 7, nama_en: "Sunday", nama_id: "Minggu" },
+    ],
     attributes: [
-      { id: 1, name: "Potong Roti", additionalPrice: 2000 },
-      { id: 2, name: "Tambah Coklat", additionalPrice: 5000 },
+      { id: 1, harga: 10000, nama_en: "Cut", nama_id: "Potong" },
+      { id: 9, harga: 3500, nama_en: "Extra Cream", nama_id: "Extra Cream" },
+      {
+        id: 8,
+        harga: 4000,
+        nama_en: "Add Chocolate",
+        nama_id: "Tambah Cokelat",
+      },
+    ],
+    bahans: [
+      {
+        id: 1,
+        jumlah: 1,
+        nama_en: "Bread Ingredient A",
+        nama_id: "Bahan Roti A",
+      },
     ],
   },
 ];
 
-export const mockCategories: Category[] = [
-  { id: "all", name: "Semua Produk", nameEn: "All Products" },
-  { id: "turkish-cheese", name: "Turkish Cheese", nameEn: "Turkish Cheese" },
-  { id: "country-bread", name: "Country Bread", nameEn: "Country Bread" },
-  { id: "country-loaf", name: "Country Loaf", nameEn: "Country Loaf" },
-  { id: "center-piece", name: "Center Piece", nameEn: "Center Piece" },
-  { id: "gandum", name: "Gandum", nameEn: "Wheat" },
-  { id: "foccacia", name: "Foccacia", nameEn: "Foccacia" },
-  { id: "roti-isi", name: "Roti Isi", nameEn: "Filled Bread" },
-  { id: "roti-kopi", name: "Roti Kopi", nameEn: "Coffee Bread" },
+export const mockCategories: ProductType[] = [
+  { id: 0, nama_id: "Semua Produk", nama_en: "All Products" },
+  { id: 1, nama_id: "Jenis Roti A", nama_en: "Bread Type A" },
+  { id: 2, nama_id: "Jenis Roti B", nama_en: "Bread Type B" },
+  { id: 3, nama_id: "Jenis Roti C", nama_en: "Bread Type C" },
+  { id: 4, nama_id: "Jenis Roti D", nama_en: "Bread Type D" },
+  { id: 5, nama_id: "Jenis Roti E", nama_en: "Bread Type E" },
 ];
 
 export const mockDays = [
   { id: "all", name: "Semua Hari", nameEn: "All Days" },
-  { id: "senin", name: "Senin", nameEn: "Monday" },
-  { id: "selasa", name: "Selasa", nameEn: "Tuesday" },
-  { id: "rabu", name: "Rabu", nameEn: "Wednesday" },
-  { id: "kamis", name: "Kamis", nameEn: "Thursday" },
-  { id: "jumat", name: "Jumat", nameEn: "Friday" },
-  { id: "sabtu", name: "Sabtu", nameEn: "Saturday" },
-  { id: "minggu", name: "Minggu", nameEn: "Sunday" },
+  { id: "1", name: "Senin", nameEn: "Monday" },
+  { id: "2", name: "Selasa", nameEn: "Tuesday" },
+  { id: "3", name: "Rabu", nameEn: "Wednesday" },
+  { id: "4", name: "Kamis", nameEn: "Thursday" },
+  { id: "5", name: "Jumat", nameEn: "Friday" },
+  { id: "6", name: "Sabtu", nameEn: "Saturday" },
+  { id: "7", name: "Minggu", nameEn: "Sunday" },
 ];
