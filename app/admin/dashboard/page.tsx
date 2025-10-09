@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useRouter } from 'next/navigation';
 import {
   TrendingUp,
   TrendingDown,
@@ -131,6 +132,28 @@ const topProducts = [
 ];
 
 export default function DashboardPage() {
+  const router = useRouter();
+
+  const handleQuickAction = (action: string) => {
+    switch (action) {
+      case 'add-product':
+        router.push('/admin/products');
+        break;
+      case 'view-kasir':
+        router.push('/admin/kasir');
+        break;
+      case 'manage-users':
+        router.push('/admin/users');
+        break;
+      case 'view-reports':
+        // Bisa diarahkan ke halaman reports jika sudah ada
+        router.push('/admin/dashboard');
+        break;
+      default:
+        break;
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -305,19 +328,35 @@ export default function DashboardPage() {
       <div className="bg-white rounded-lg shadow-sm border p-6" style={{ borderColor: '#e0d5c7' }}>
         <h2 className="text-lg font-semibold mb-4 font-admin-heading" style={{ color: '#5d4037' }}>Quick Actions</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <button className="flex flex-col items-center p-4 border rounded-lg hover:bg-gray-50 transition-colors" style={{ borderColor: '#e0d5c7' }}>
+          <button 
+            onClick={() => handleQuickAction('add-product')}
+            className="flex flex-col items-center p-4 border rounded-lg hover:bg-gray-50 transition-colors" 
+            style={{ borderColor: '#e0d5c7' }}
+          >
             <Package className="w-8 h-8 mb-2" style={{ color: '#8b6f47' }} />
             <span className="text-sm font-medium font-admin-body" style={{ color: '#5d4037' }}>Add Product</span>
           </button>
-          <button className="flex flex-col items-center p-4 border rounded-lg hover:bg-gray-50 transition-colors" style={{ borderColor: '#e0d5c7' }}>
+          <button 
+            onClick={() => handleQuickAction('view-kasir')}
+            className="flex flex-col items-center p-4 border rounded-lg hover:bg-gray-50 transition-colors" 
+            style={{ borderColor: '#e0d5c7' }}
+          >
             <ShoppingCart className="w-8 h-8 mb-2" style={{ color: '#8b6f47' }} />
             <span className="text-sm font-medium font-admin-body" style={{ color: '#5d4037' }}>View Kasir</span>
           </button>
-          <button className="flex flex-col items-center p-4 border rounded-lg hover:bg-gray-50 transition-colors" style={{ borderColor: '#e0d5c7' }}>
+          <button 
+            onClick={() => handleQuickAction('manage-users')}
+            className="flex flex-col items-center p-4 border rounded-lg hover:bg-gray-50 transition-colors" 
+            style={{ borderColor: '#e0d5c7' }}
+          >
             <Users className="w-8 h-8 mb-2" style={{ color: '#8b6f47' }} />
             <span className="text-sm font-medium font-admin-body" style={{ color: '#5d4037' }}>Manage Users</span>
           </button>
-          <button className="flex flex-col items-center p-4 border rounded-lg hover:bg-gray-50 transition-colors" style={{ borderColor: '#e0d5c7' }}>
+          <button 
+            onClick={() => handleQuickAction('view-reports')}
+            className="flex flex-col items-center p-4 border rounded-lg hover:bg-gray-50 transition-colors" 
+            style={{ borderColor: '#e0d5c7' }}
+          >
             <TrendingUp className="w-8 h-8 mb-2" style={{ color: '#8b6f47' }} />
             <span className="text-sm font-medium font-admin-body" style={{ color: '#5d4037' }}>View Reports</span>
           </button>
