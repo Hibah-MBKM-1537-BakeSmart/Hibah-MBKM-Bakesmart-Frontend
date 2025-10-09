@@ -26,4 +26,5 @@ jobs:
           tags: reniuswatun/dev-frontend-merpatisolobakery:latest
           cache-from: type=gha,scope=${{ github.workflow }}
           cache-to: type=gha,mode=max,scope=${{ github.workflow }}
-           no-cache: true
+          # ---> TAMBAHKAN BARIS INI UNTUK MEMATIKAN CACHE <---
+          no-cache: true
