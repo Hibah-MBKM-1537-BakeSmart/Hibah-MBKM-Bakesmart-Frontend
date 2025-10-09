@@ -126,13 +126,21 @@ export function WhatsAppBlastModal({ isOpen, onClose }: WhatsAppBlastModalProps)
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+    <div 
+      className="fixed inset-0 flex items-center justify-center p-4 z-50"
+      style={{ 
+        backgroundColor: 'rgba(139, 111, 71, 0.1)', // Warna coklat muda yang soft
+        backdropFilter: 'blur(2px)' // Efek blur halus
+      }}
+      onClick={onClose} // Klik di backdrop untuk close
+    >
       <div 
-        className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden"
+        className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[85vh] flex flex-col"
         style={{ borderColor: '#e0d5c7' }}
+        onClick={(e) => e.stopPropagation()} // Prevent modal close when clicking inside
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b" style={{ borderColor: '#e0d5c7' }}>
+        <div className="flex items-center justify-between p-6 border-b flex-shrink-0" style={{ borderColor: '#e0d5c7' }}>
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
               <MessageCircle className="w-5 h-5 text-green-600" />
@@ -156,8 +164,8 @@ export function WhatsAppBlastModal({ isOpen, onClose }: WhatsAppBlastModalProps)
         </div>
 
         {/* Content */}
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
-          <div className="space-y-6">
+        <div className="flex-1 overflow-y-auto">
+          <div className="p-6 space-y-6">
             {/* Periode Selection */}
             <div>
               <label className="block text-sm font-medium mb-3 font-admin-body" style={{ color: '#5d4037' }}>
@@ -305,17 +313,17 @@ export function WhatsAppBlastModal({ isOpen, onClose }: WhatsAppBlastModalProps)
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between p-6 border-t bg-gray-50" style={{ borderColor: '#e0d5c7' }}>
+        <div className="flex items-center justify-between p-6 border-t bg-gray-50 flex-shrink-0" style={{ borderColor: '#e0d5c7' }}>
           <div className="text-sm font-admin-body" style={{ color: '#8b6f47' }}>
             {isSending 
               ? 'Mengirim pesan WhatsApp...'
               : `Siap mengirim ke ${targetCustomers.length} customer`
             }
           </div>
-          <div className="flex gap-3">
+          <div className="flex gap-3 flex-shrink-0">
             <button
               onClick={onClose}
-              className="px-4 py-2 border border-gray-300 rounded-lg font-admin-body hover:bg-gray-50 transition-colors"
+              className="px-6 py-2 border border-gray-300 rounded-lg font-admin-body hover:bg-gray-50 transition-colors"
               style={{ color: '#8b6f47', borderColor: '#e0d5c7' }}
               disabled={isSending}
             >
@@ -324,7 +332,7 @@ export function WhatsAppBlastModal({ isOpen, onClose }: WhatsAppBlastModalProps)
             <button
               onClick={handleSendBlast}
               disabled={targetCustomers.length === 0 || !config.customMessage.trim() || isSending}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg font-admin-body hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="px-6 py-2 bg-green-600 text-white rounded-lg font-admin-body hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 whitespace-nowrap"
             >
               {isSending ? (
                 <>

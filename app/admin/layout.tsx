@@ -5,6 +5,8 @@ import { AdminHeader } from '@/components/adminPage';
 import { AdminProvider } from '@/app/contexts/AdminContext';
 import { CategoriesProvider } from '@/app/contexts/CategoriesContext';
 import { ProductsProvider } from '@/app/contexts/ProductsContext';
+import { AuthProvider } from '@/app/contexts/AuthContext';
+import AdminAuthWrapper from './AdminAuthWrapper';
 
 const poppins = Poppins({
   subsets: ['latin'],
@@ -24,34 +26,23 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   return (
-    <AdminProvider>
-      <CategoriesProvider>
-        <ProductsProvider>
-          <div 
-            className={`flex h-screen ${poppins.variable} ${inter.variable}`}
-            style={{ 
-              backgroundColor: '#f5f1eb',
-              fontFamily: 'var(--font-inter), sans-serif'
-            }}
-          >
-            {/* Sidebar */}
-            <AdminSidebar />
-            
-            {/* Main Content */}
-            <div className="flex-1 flex flex-col overflow-hidden">
-              {/* Header */}
-              <AdminHeader />
-              
-              {/* Page Content */}
-              <main className="flex-1 overflow-auto p-6">
-                <div className="max-w-7xl mx-auto">
-                  {children}
-                </div>
-              </main>
+    <AuthProvider>
+      <AdminProvider>
+        <CategoriesProvider>
+          <ProductsProvider>
+            <div 
+              className={`${poppins.variable} ${inter.variable}`}
+              style={{ 
+                fontFamily: 'var(--font-inter), sans-serif'
+              }}
+            >
+              <AdminAuthWrapper>
+                {children}
+              </AdminAuthWrapper>
             </div>
-          </div>
-        </ProductsProvider>
-      </CategoriesProvider>
-    </AdminProvider>
+          </ProductsProvider>
+        </CategoriesProvider>
+      </AdminProvider>
+    </AuthProvider>
   );
 }
