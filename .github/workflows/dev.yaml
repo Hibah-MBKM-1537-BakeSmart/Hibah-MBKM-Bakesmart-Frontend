@@ -20,7 +20,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Build and push
-        uses: docker/bui  ld-push-action@v6
+        uses: docker/build-push-action@v6
         with:
           push: true
           tags: reniuswatun/dev-frontend-merpatisolobakery:latest
