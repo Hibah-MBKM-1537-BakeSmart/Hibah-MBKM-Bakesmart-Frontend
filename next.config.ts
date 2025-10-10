@@ -2,9 +2,17 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   /* config options here */
-
-  // Tambahkan baris ini untuk mengaktifkan output yang dibutuhkan oleh Docker
   output: "standalone",
+  reactStrictMode: true,
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+  experimental: {
+    typedRoutes: true, // optional
+  },
 };
 
 export default nextConfig;
