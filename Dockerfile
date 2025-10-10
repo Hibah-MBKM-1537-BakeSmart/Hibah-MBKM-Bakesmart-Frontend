@@ -86,7 +86,7 @@ FROM base AS deps
 RUN apk add --no-cache libc6-compat
 # If you still run into build issue, go to "Problem #3: Making /app is read only.
 # in case you have permission issues.
-WORKDIR /
+WORKDIR /app
 
 COPY package.json yarn.lock* package-lock.json* pnpm-lock.yaml* .npmrc* ./
 RUN \
