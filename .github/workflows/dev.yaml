@@ -26,6 +26,6 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: reniuswatun/dev-frontend-merpatisolobakery:latest
+          no-cache: true
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          no-cache: true
