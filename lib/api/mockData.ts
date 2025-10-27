@@ -8,6 +8,8 @@ export interface MenuItem {
   harga_diskon: number | null;
   stok: number;
   isBestSeller: boolean;
+  isDaily: boolean;
+  dailyStock: number;
   created_at: string;
   updated_at: string;
   gambars: ProductImage[];
@@ -74,6 +76,8 @@ export const mockMenuItems: MenuItem[] = [
     harga_diskon: null,
     stok: 10,
     isBestSeller: false,
+    isDaily: true,
+    dailyStock: 8,
     created_at: "2025-09-26T04:12:33.534Z",
     updated_at: "2025-09-26T04:12:33.534Z",
     gambars: [
@@ -120,6 +124,8 @@ export const mockMenuItems: MenuItem[] = [
     harga_diskon: null,
     stok: 10,
     isBestSeller: false,
+    isDaily: true,
+    dailyStock: 12,
     created_at: "2025-09-26T04:12:33.534Z",
     updated_at: "2025-09-26T04:12:33.534Z",
     gambars: [
@@ -160,6 +166,8 @@ export const mockMenuItems: MenuItem[] = [
     harga_diskon: null,
     stok: 10,
     isBestSeller: false,
+    isDaily: false,
+    dailyStock: 0,
     created_at: "2025-09-26T04:12:33.534Z",
     updated_at: "2025-09-26T04:12:33.534Z",
     gambars: [
@@ -199,6 +207,8 @@ export const mockMenuItems: MenuItem[] = [
     harga_diskon: null,
     stok: 10,
     isBestSeller: false,
+    isDaily: true,
+    dailyStock: 15,
     created_at: "2025-09-26T04:12:33.534Z",
     updated_at: "2025-09-26T04:12:33.534Z",
     gambars: [
@@ -243,6 +253,8 @@ export const mockMenuItems: MenuItem[] = [
     harga_diskon: null,
     stok: 10,
     isBestSeller: false,
+    isDaily: true,
+    dailyStock: 10,
     created_at: "2025-09-26T04:12:33.534Z",
     updated_at: "2025-09-26T04:12:33.534Z",
     gambars: [
@@ -283,6 +295,8 @@ export const mockMenuItems: MenuItem[] = [
     harga_diskon: null,
     stok: 10,
     isBestSeller: false,
+    isDaily: true,
+    dailyStock: 5,
     created_at: "2025-09-26T04:12:33.534Z",
     updated_at: "2025-09-26T04:12:33.534Z",
     gambars: [
