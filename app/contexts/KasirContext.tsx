@@ -43,6 +43,12 @@ export interface CartItem {
   product: Product;
   quantity: number;
   note?: string;
+  customizations?: Array<{
+    id: number;
+    nama: string;
+    harga_tambahan: number;
+  }>;
+  finalPrice?: number; // Price per item including customizations
 }
 
 export interface Transaction {
@@ -52,7 +58,7 @@ export interface Transaction {
   tax: number;
   discount: number;
   total: number;
-  paymentMethod: 'cash' | 'card' | 'digital';
+  paymentMethod: 'cash' | 'transfer' | 'gopay' | 'ovo' | 'dana';
   customerName?: string;
   timestamp: Date;
   status: 'pending' | 'completed' | 'cancelled';
@@ -64,27 +70,34 @@ interface KasirState {
   products: Product[];
   selectedCategory: string;
   showCart: boolean;
-  paymentMethod: 'cash' | 'card' | 'digital';
+  paymentMethod: 'cash' | 'transfer' | 'gopay' | 'ovo' | 'dana';
   customerName: string;
+  customerWhatsApp: string;
+  customerAddress: string;
   discount: number;
+  discountType: 'percentage' | 'nominal';
 }
 
 interface KasirContextType {
   state: KasirState;
-  addToCart: (product: Product, quantity?: number, note?: string) => void;
+  addToCart: (product: Product, quantity?: number, note?: string, customizations?: Array<{id: number; nama: string; harga_tambahan: number}>, finalPrice?: number) => void;
   removeFromCart: (productId: number) => void;
   updateCartItemQuantity: (productId: number, quantity: number) => void;
   updateCartItemNote: (productId: number, note: string) => void;
   clearCart: () => void;
   setSelectedCategory: (category: string) => void;
   toggleCart: () => void;
-  setPaymentMethod: (method: 'cash' | 'card' | 'digital') => void;
+  setPaymentMethod: (method: 'cash' | 'transfer' | 'gopay' | 'ovo' | 'dana') => void;
   setCustomerName: (name: string) => void;
+  setCustomerWhatsApp: (whatsapp: string) => void;
+  setCustomerAddress: (address: string) => void;
   setDiscount: (discount: number) => void;
+  setDiscountType: (type: 'percentage' | 'nominal') => void;
   processPayment: () => Promise<boolean>;
   calculateSubtotal: () => number;
   calculateTax: () => number;
   calculateTotal: () => number;
+  calculateDiscountAmount: () => number;
 }
 
 const KasirContext = createContext<KasirContextType | undefined>(undefined);
@@ -291,18 +304,39 @@ export function KasirProvider({ children }: { children: React.ReactNode }) {
     showCart: false,
     paymentMethod: 'cash',
     customerName: '',
-    discount: 0
+    customerWhatsApp: '',
+    customerAddress: '',
+    discount: 0,
+    discountType: 'nominal'
   });
 
-  const addToCart = (product: Product, quantity: number = 1, note?: string) => {
+  const addToCart = (product: Product, quantity: number = 1, note?: string, customizations?: Array<{id: number; nama: string; harga_tambahan: number}>, finalPrice?: number) => {
     setState(prev => {
-      const existingItem = prev.cart.find(item => item.product.id === product.id);
+      // For customized products, always create a new cart item
+      if (customizations && customizations.length > 0) {
+        return {
+          ...prev,
+          cart: [...prev.cart, { 
+            product, 
+            quantity, 
+            note,
+            customizations,
+            finalPrice 
+          }]
+        };
+      }
+
+      // For regular products, check if item exists and update quantity
+      const existingItem = prev.cart.find(item => 
+        item.product.id === product.id && 
+        !item.customizations?.length
+      );
       
       if (existingItem) {
         return {
           ...prev,
           cart: prev.cart.map(item =>
-            item.product.id === product.id
+            item.product.id === product.id && !item.customizations?.length
               ? { ...item, quantity: item.quantity + quantity, note: note || item.note }
               : item
           )
@@ -353,7 +387,10 @@ export function KasirProvider({ children }: { children: React.ReactNode }) {
       ...prev,
       cart: [],
       customerName: '',
-      discount: 0
+      customerWhatsApp: '',
+      customerAddress: '',
+      discount: 0,
+      discountType: 'nominal'
     }));
   };
 
@@ -365,7 +402,7 @@ export function KasirProvider({ children }: { children: React.ReactNode }) {
     setState(prev => ({ ...prev, showCart: !prev.showCart }));
   };
 
-  const setPaymentMethod = (method: 'cash' | 'card' | 'digital') => {
+  const setPaymentMethod = (method: 'cash' | 'transfer' | 'gopay' | 'ovo' | 'dana') => {
     setState(prev => ({ ...prev, paymentMethod: method }));
   };
 
@@ -373,13 +410,26 @@ export function KasirProvider({ children }: { children: React.ReactNode }) {
     setState(prev => ({ ...prev, customerName: name }));
   };
 
+  const setCustomerWhatsApp = (whatsapp: string) => {
+    setState(prev => ({ ...prev, customerWhatsApp: whatsapp }));
+  };
+
+  const setCustomerAddress = (address: string) => {
+    setState(prev => ({ ...prev, customerAddress: address }));
+  };
+
   const setDiscount = (discount: number) => {
     setState(prev => ({ ...prev, discount }));
   };
 
+  const setDiscountType = (type: 'percentage' | 'nominal') => {
+    setState(prev => ({ ...prev, discountType: type }));
+  };
+
   const calculateSubtotal = () => {
     return state.cart.reduce((total, item) => {
-      return total + (item.product.harga * item.quantity);
+      const itemPrice = item.finalPrice || item.product.harga;
+      return total + (itemPrice * item.quantity);
     }, 0);
   };
 
@@ -391,7 +441,22 @@ export function KasirProvider({ children }: { children: React.ReactNode }) {
   const calculateTotal = () => {
     const subtotal = calculateSubtotal();
     const tax = calculateTax();
-    return subtotal + tax - state.discount;
+    const discountAmount = calculateDiscountAmount();
+    const total = subtotal + tax - discountAmount;
+    return Math.max(0, total); // Pastikan total tidak negatif
+  };
+
+  const calculateDiscountAmount = () => {
+    const subtotal = calculateSubtotal();
+    const tax = calculateTax();
+    
+    if (state.discountType === 'percentage') {
+      // Diskon persentase dari subtotal + tax
+      return (subtotal + tax) * (state.discount / 100);
+    } else {
+      // Diskon nominal
+      return state.discount;
+    }
   };
 
   const processPayment = async (): Promise<boolean> => {
@@ -435,11 +500,15 @@ export function KasirProvider({ children }: { children: React.ReactNode }) {
     toggleCart,
     setPaymentMethod,
     setCustomerName,
+    setCustomerWhatsApp,
+    setCustomerAddress,
     setDiscount,
+    setDiscountType,
     processPayment,
     calculateSubtotal,
     calculateTax,
-    calculateTotal
+    calculateTotal,
+    calculateDiscountAmount
   };
 
   return (

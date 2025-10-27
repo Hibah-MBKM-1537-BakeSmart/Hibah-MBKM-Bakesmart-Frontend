@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAdmin } from '@/app/contexts/AdminContext';
+import { useAuth } from '@/app/contexts/AuthContext';
 import { usePageTransition } from '@/hooks/usePageTransition';
 import {
   LayoutDashboard,
@@ -79,7 +80,8 @@ const menuItems: MenuItem[] = [
 ];
 
 export function AdminSidebar() {
-  const { state, toggleSidebar, logout } = useAdmin();
+  const { state, toggleSidebar } = useAdmin();
+  const { logout } = useAuth();
   const { startTransition } = usePageTransition();
   const pathname = usePathname();
 

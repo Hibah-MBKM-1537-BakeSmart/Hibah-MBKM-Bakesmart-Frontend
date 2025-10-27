@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 interface User {
   id: string;
@@ -38,6 +39,7 @@ interface AdminContextType {
 const AdminContext = createContext<AdminContextType | undefined>(undefined);
 
 export function AdminProvider({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
   const [state, setState] = useState<AdminState>({
     user: null,
     isAuthenticated: false,
@@ -89,11 +91,18 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = () => {
+    // Clear authentication data from localStorage
+    localStorage.removeItem('bakesmart_admin_auth');
+    
+    // Update state
     setState(prev => ({
       ...prev,
       user: null,
       isAuthenticated: false
     }));
+    
+    // Redirect to login page
+    router.push('/admin/login');
   };
 
   const toggleSidebar = () => {

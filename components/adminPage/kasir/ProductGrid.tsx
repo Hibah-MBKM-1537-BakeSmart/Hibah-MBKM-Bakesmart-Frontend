@@ -1,11 +1,14 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useKasir } from '@/app/contexts/KasirContext';
-import { Package, Plus, Minus, ShoppingCart } from 'lucide-react';
+import { Package, Plus, Minus, ShoppingCart, Settings } from 'lucide-react';
+import { ProductCustomizationModal } from './ProductCustomizationModal';
 
 export function ProductGrid() {
   const { state, addToCart } = useKasir();
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [showCustomizationModal, setShowCustomizationModal] = useState(false);
   
   const filteredProducts = state.products.filter(product => {
     if (state.selectedCategory === 'All') return true;
@@ -26,6 +29,16 @@ export function ProductGrid() {
 
   const handleAddToCart = (product: any) => {
     addToCart(product, 1);
+  };
+
+  const handleCustomize = (product: any) => {
+    setSelectedProduct(product);
+    setShowCustomizationModal(true);
+  };
+
+  const handleCloseCustomization = () => {
+    setShowCustomizationModal(false);
+    setSelectedProduct(null);
   };
 
   return (
@@ -92,35 +105,52 @@ export function ProductGrid() {
                 </span>
               </div>
 
-              {/* Add to Cart Button */}
-              <button
-                onClick={() => handleAddToCart(product)}
-                disabled={isOutOfStock}
-                className={`w-full flex items-center justify-center space-x-2 py-2 px-3 rounded-lg font-medium transition-all duration-200 ${
-                  isOutOfStock
-                    ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                    : cartQuantity > 0
-                    ? 'bg-orange-100 text-orange-700 border border-orange-200 hover:bg-orange-200'
-                    : 'bg-orange-500 text-white hover:bg-orange-600 shadow-sm hover:shadow-md'
-                }`}
-              >
-                {isOutOfStock ? (
-                  <>
-                    <Package className="w-4 h-4" />
-                    <span className="text-sm">Stok Habis</span>
-                  </>
-                ) : cartQuantity > 0 ? (
-                  <>
-                    <Plus className="w-4 h-4" />
-                    <span className="text-sm">Tambah Lagi</span>
-                  </>
-                ) : (
-                  <>
-                    <ShoppingCart className="w-4 h-4" />
-                    <span className="text-sm">Tambah</span>
-                  </>
-                )}
-              </button>
+              {/* Action Buttons */}
+              <div className="space-y-2">
+                {/* Customize Button */}
+                <button
+                  onClick={() => handleCustomize(product)}
+                  disabled={isOutOfStock}
+                  className={`w-full flex items-center justify-center space-x-2 py-2 px-3 rounded-lg font-medium transition-all duration-200 ${
+                    isOutOfStock
+                      ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                      : 'bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100'
+                  }`}
+                >
+                  <Settings className="w-4 h-4" />
+                  <span className="text-sm">Kustomisasi</span>
+                </button>
+
+                {/* Add to Cart Button */}
+                <button
+                  onClick={() => handleAddToCart(product)}
+                  disabled={isOutOfStock}
+                  className={`w-full flex items-center justify-center space-x-2 py-2 px-3 rounded-lg font-medium transition-all duration-200 ${
+                    isOutOfStock
+                      ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                      : cartQuantity > 0
+                      ? 'bg-orange-100 text-orange-700 border border-orange-200 hover:bg-orange-200'
+                      : 'bg-orange-500 text-white hover:bg-orange-600 shadow-sm hover:shadow-md'
+                  }`}
+                >
+                  {isOutOfStock ? (
+                    <>
+                      <Package className="w-4 h-4" />
+                      <span className="text-sm">Stok Habis</span>
+                    </>
+                  ) : cartQuantity > 0 ? (
+                    <>
+                      <Plus className="w-4 h-4" />
+                      <span className="text-sm">Tambah Lagi</span>
+                    </>
+                  ) : (
+                    <>
+                      <ShoppingCart className="w-4 h-4" />
+                      <span className="text-sm">Tambah</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         );
@@ -137,6 +167,13 @@ export function ProductGrid() {
           </p>
         </div>
       )}
+      
+      {/* Product Customization Modal */}
+      <ProductCustomizationModal
+        product={selectedProduct}
+        isOpen={showCustomizationModal}
+        onClose={handleCloseCustomization}
+      />
     </div>
   );
 }
