@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { productsApi, categoriesApi, checkApiConnection } from '@/lib/api/mockApi';
 
 // Related entities interfaces based on ERD
 export interface Gambar {
@@ -68,6 +69,7 @@ interface KasirState {
   cart: CartItem[];
   currentTransaction: Transaction | null;
   products: Product[];
+  categories: RefJenis[];
   selectedCategory: string;
   showCart: boolean;
   paymentMethod: 'cash' | 'transfer' | 'gopay' | 'ovo' | 'dana';
@@ -76,6 +78,8 @@ interface KasirState {
   customerAddress: string;
   discount: number;
   discountType: 'percentage' | 'nominal';
+  isLoadingProducts: boolean;
+  isApiConnected: boolean;
 }
 
 interface KasirContextType {
@@ -299,7 +303,8 @@ export function KasirProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<KasirState>({
     cart: [],
     currentTransaction: null,
-    products: sampleProducts,
+    products: [],
+    categories: [],
     selectedCategory: 'All',
     showCart: false,
     paymentMethod: 'cash',
@@ -307,8 +312,71 @@ export function KasirProvider({ children }: { children: React.ReactNode }) {
     customerWhatsApp: '',
     customerAddress: '',
     discount: 0,
-    discountType: 'nominal'
+    discountType: 'nominal',
+    isLoadingProducts: true,
+    isApiConnected: false
   });
+
+  // Load products from API on mount
+  useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        setState(prev => ({ ...prev, isLoadingProducts: true }));
+        
+        // Check API connection
+        const isConnected = await checkApiConnection();
+        setState(prev => ({ ...prev, isApiConnected: isConnected }));
+
+        if (isConnected) {
+          // Load from API
+          const [products, categories] = await Promise.all([
+            productsApi.getAll(),
+            categoriesApi.getAll()
+          ]);
+          
+          // Transform API data to match Product interface
+          const transformedProducts: Product[] = products.map((p: any) => ({
+            id: p.id,
+            nama: p.nama,
+            harga: p.harga,
+            deskripsi: p.deskripsi || '',
+            stok: p.stok || 0,
+            gambars: p.gambars || [],
+            jenis: p.jenis || [],
+            hari: p.hari || [],
+            attributes: p.attributes || []
+          }));
+
+          setState(prev => ({
+            ...prev,
+            products: transformedProducts,
+            categories: categories || [],
+            isLoadingProducts: false
+          }));
+        } else {
+          // Use sample products if API not available
+          setState(prev => ({
+            ...prev,
+            products: sampleProducts,
+            categories: [],
+            isLoadingProducts: false
+          }));
+        }
+      } catch (error) {
+        console.error('Failed to load products:', error);
+        // Fallback to sample products on error
+        setState(prev => ({
+          ...prev,
+          products: sampleProducts,
+          categories: [],
+          isLoadingProducts: false,
+          isApiConnected: false
+        }));
+      }
+    };
+
+    loadProducts();
+  }, []);
 
   const addToCart = (product: Product, quantity: number = 1, note?: string, customizations?: Array<{id: number; nama: string; harga_tambahan: number}>, finalPrice?: number) => {
     setState(prev => {

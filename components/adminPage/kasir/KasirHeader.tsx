@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useKasir } from '@/app/contexts/KasirContext';
-import { Clock, User, Receipt, ShoppingCart } from 'lucide-react';
+import { Clock, User, Receipt, ShoppingCart, Wifi, WifiOff } from 'lucide-react';
 
 export function KasirHeader() {
   const { state } = useKasir();
@@ -53,6 +53,25 @@ export function KasirHeader() {
 
         {/* Right Section - Cart Summary */}
         <div className="flex items-center space-x-4">
+          {/* API Connection Status */}
+          <div className={`flex items-center space-x-2 px-3 py-2 rounded-lg ${
+            state.isApiConnected 
+              ? 'bg-green-50 text-green-700' 
+              : 'bg-red-50 text-red-700'
+          }`}>
+            {state.isApiConnected ? (
+              <>
+                <Wifi className="w-4 h-4" />
+                <span className="text-xs font-medium">API Connected</span>
+              </>
+            ) : (
+              <>
+                <WifiOff className="w-4 h-4" />
+                <span className="text-xs font-medium">API Offline</span>
+              </>
+            )}
+          </div>
+
           <div className="flex items-center space-x-2 bg-orange-50 px-4 py-2 rounded-lg">
             <ShoppingCart className="w-5 h-5 text-orange-600" />
             <div className="text-sm">

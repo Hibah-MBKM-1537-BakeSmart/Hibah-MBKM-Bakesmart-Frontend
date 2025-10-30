@@ -9,6 +9,33 @@ export function ProductGrid() {
   const { state, addToCart } = useKasir();
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [showCustomizationModal, setShowCustomizationModal] = useState(false);
+
+  // Show loading state
+  if (state.isLoadingProducts) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-orange-200 border-t-orange-500 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-500">Memuat produk...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show empty state
+  if (state.products.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+          <p className="text-gray-500">Tidak ada produk tersedia</p>
+          {!state.isApiConnected && (
+            <p className="text-sm text-orange-500 mt-2">API tidak terhubung - pastikan server berjalan</p>
+          )}
+        </div>
+      </div>
+    );
+  }
   
   const filteredProducts = state.products.filter(product => {
     if (state.selectedCategory === 'All') return true;

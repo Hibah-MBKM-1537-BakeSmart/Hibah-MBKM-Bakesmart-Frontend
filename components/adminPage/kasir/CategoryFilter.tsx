@@ -1,23 +1,39 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useKasir } from '@/app/contexts/KasirContext';
 import { Package, Search } from 'lucide-react';
-
-const categories = [
-  { id: 'All', name: 'Semua Produk', icon: Package },
-  { id: 'Cake', name: 'Kue', icon: Package },
-  { id: 'Cupcake', name: 'Cupcake', icon: Package },
-  { id: 'Pastry', name: 'Pastry', icon: Package },
-  { id: 'Donut', name: 'Donut', icon: Package },
-  { id: 'Bread', name: 'Roti', icon: Package },
-  { id: 'Tart', name: 'Tart', icon: Package },
-  { id: 'Pie', name: 'Pie', icon: Package }
-];
 
 export function CategoryFilter() {
   const { state, setSelectedCategory } = useKasir();
   const [searchTerm, setSearchTerm] = React.useState('');
+
+  // Build categories from API data
+  const categories = useMemo(() => {
+    const allCategory = { id: 'All', name: 'Semua Produk', icon: Package };
+    
+    if (state.categories && state.categories.length > 0) {
+      // Use categories from API
+      const apiCategories = state.categories.map((cat: any) => ({
+        id: cat.nama,
+        name: cat.nama,
+        icon: Package
+      }));
+      return [allCategory, ...apiCategories];
+    }
+    
+    // Fallback to hardcoded categories if API not available
+    return [
+      allCategory,
+      { id: 'Kue', name: 'Kue', icon: Package },
+      { id: 'Cupcake', name: 'Cupcake', icon: Package },
+      { id: 'Pastry', name: 'Pastry', icon: Package },
+      { id: 'Donut', name: 'Donut', icon: Package },
+      { id: 'Roti', name: 'Roti', icon: Package },
+      { id: 'Tart', name: 'Tart', icon: Package },
+      { id: 'Pie', name: 'Pie', icon: Package }
+    ];
+  }, [state.categories]);
 
   return (
     <div className="mb-6">
