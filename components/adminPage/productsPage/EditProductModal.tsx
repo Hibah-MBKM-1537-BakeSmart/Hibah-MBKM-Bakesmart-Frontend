@@ -21,9 +21,12 @@ export function EditProductModal({ isOpen, onClose, onEditProduct, product }: Ed
     stok: 0,
     status: 'active' as 'active' | 'inactive',
     jenis: [] as Array<{ id: number; nama: string }>,
+    hari_tersedia: [] as string[],
   });
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const daysOfWeek = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
 
   // Reset form when product changes
   useEffect(() => {
@@ -35,6 +38,7 @@ export function EditProductModal({ isOpen, onClose, onEditProduct, product }: Ed
         stok: product.stok,
         status: product.status,
         jenis: product.jenis || [],
+        hari_tersedia: product.hari_tersedia || [],
       });
       setSelectedCategoryId(product.jenis?.[0]?.id || null);
     }
@@ -77,9 +81,19 @@ export function EditProductModal({ isOpen, onClose, onEditProduct, product }: Ed
       stok: 0,
       status: 'active',
       jenis: [],
+      hari_tersedia: [],
     });
     setSelectedCategoryId(null);
     onClose();
+  };
+
+  const toggleDay = (day: string) => {
+    setFormData(prev => ({
+      ...prev,
+      hari_tersedia: prev.hari_tersedia.includes(day)
+        ? prev.hari_tersedia.filter(d => d !== day)
+        : [...prev.hari_tersedia, day]
+    }));
   };
 
   const formatPrice = (price: number) => {
@@ -185,7 +199,7 @@ export function EditProductModal({ isOpen, onClose, onEditProduct, product }: Ed
           </div>
 
           {/* Price and Stock */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4">
             <div>
               <label htmlFor="harga" className="block text-sm font-medium text-gray-700 mb-2">
                 Harga *
@@ -209,21 +223,35 @@ export function EditProductModal({ isOpen, onClose, onEditProduct, product }: Ed
                 </p>
               )}
             </div>
+          </div>
 
-            <div>
-              <label htmlFor="stok" className="block text-sm font-medium text-gray-700 mb-2">
-                Stok
-              </label>
-              <input
-                type="number"
-                id="stok"
-                value={formData.stok}
-                onChange={(e) => setFormData(prev => ({ ...prev, stok: Number(e.target.value) }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                placeholder="0"
-                min="0"
-              />
+          {/* Hari Ketersediaan */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-3">
+              Hari Ketersediaan
+            </label>
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+              {daysOfWeek.map((day) => (
+                <button
+                  key={day}
+                  type="button"
+                  onClick={() => toggleDay(day)}
+                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors border ${
+                    formData.hari_tersedia.includes(day)
+                      ? 'bg-orange-500 text-white border-orange-500'
+                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  {day}
+                </button>
+              ))}
             </div>
+            <p className="text-xs text-gray-500 mt-2">
+              {formData.hari_tersedia.length === 0 
+                ? 'Tidak ada hari dipilih (produk tidak tersedia)'
+                : `Tersedia di: ${formData.hari_tersedia.join(', ')}`
+              }
+            </p>
           </div>
 
           {/* Status */}

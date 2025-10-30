@@ -1,7 +1,7 @@
 {
   "products": [
     {
-      "id": "1",
+      "id": 1,
       "nama": "Chocolate Cake",
       "deskripsi": "Rich chocolate cake with cream frosting",
       "harga": 125000,
@@ -26,7 +26,7 @@
       ]
     },
     {
-      "id": "2",
+      "id": 2,
       "nama": "Red Velvet Cupcakes",
       "deskripsi": "Classic red velvet cupcakes (per piece)",
       "harga": 15000,
@@ -51,32 +51,42 @@
       ]
     },
     {
-      "id": "3",
+      "id": 3,
+      "nama": "Croissant",
+      "deskripsi": "Buttery French croissant",
+      "harga": 12000,
+      "stok": 21,
+      "created_at": "2024-01-15T00:00:00.000Z",
+      "updated_at": "2025-10-30T15:11:47.504Z",
+      "status": "active",
+      "rating": 4.2,
+      "sales": 156,
+      "jenis": [],
+      "hari_tersedia": []
+    },
+    {
+      "id": 4,
       "nama": "Birthday Cake",
       "deskripsi": "Custom birthday cake with decoration",
       "harga": 200000,
       "stok": 8,
       "created_at": "2024-01-15T00:00:00.000Z",
-      "updated_at": "2024-12-15T00:00:00.000Z",
-      "status": "active",
+      "updated_at": "2025-10-30T15:12:28.184Z",
+      "status": "inactive",
       "rating": 4.9,
       "sales": 67,
-      "jenis": [
-        {
-          "id": 1,
-          "nama": "Cake"
-        }
-      ],
+      "jenis": [],
       "gambars": [
         {
           "id": 4,
           "file_path": "/img/Roti.png",
           "product_id": 4
         }
-      ]
+      ],
+      "hari_tersedia": []
     },
     {
-      "id": "4",
+      "id": 5,
       "nama": "Donuts Box (12 pcs)",
       "deskripsi": "Mixed flavors donut box",
       "harga": 60000,
@@ -101,26 +111,7 @@
       ]
     },
     {
-      "id": "5",
-      "nama": "Croissant",
-      "deskripsi": "Buttery French croissant",
-      "harga": 12000,
-      "stok": 0,
-      "created_at": "2024-01-15T00:00:00.000Z",
-      "updated_at": "2024-12-15T00:00:00.000Z",
-      "status": "inactive",
-      "rating": 4.2,
-      "sales": 156,
-      "jenis": [
-        {
-          "id": 3,
-          "nama": "Pastry"
-        }
-      ],
-      "gambars": []
-    },
-    {
-      "id": "6",
+      "id": 6,
       "nama": "Cheese Tart",
       "deskripsi": "Creamy cheese tart",
       "harga": 25000,
@@ -145,7 +136,7 @@
       ]
     },
     {
-      "id": "7",
+      "id": 7,
       "nama": "Apple Pie",
       "deskripsi": "Traditional apple pie",
       "harga": 45000,
@@ -160,17 +151,16 @@
           "id": 6,
           "nama": "Pie"
         }
-      ],
-      "gambars": []
+      ]
     },
     {
-      "id": "8",
+      "id": 8,
       "nama": "Bagel",
       "deskripsi": "Fresh baked bagel",
       "harga": 18000,
-      "stok": 20,
+      "stok": 69,
       "created_at": "2024-01-15T00:00:00.000Z",
-      "updated_at": "2024-12-15T00:00:00.000Z",
+      "updated_at": "2025-10-30T15:11:29.553Z",
       "status": "active",
       "rating": 4.3,
       "sales": 92,
@@ -189,14 +179,36 @@
       ]
     },
     {
-      "nama": "jhgjfjgffutfuyf",
-      "deskripsi": "jgfjgfgfgfu",
-      "harga": 20000,
-      "stok": 22,
-      "status": "inactive",
-      "jenis": [],
-      "updated_at": "2025-10-30T07:12:41.549Z",
-      "id": "1758878631382"
+      "nama": "uhuy",
+      "deskripsi": "uhuy",
+      "harga": 12000,
+      "stok": 12,
+      "status": "active",
+      "jenis": [
+        {
+          "id": "8",
+          "nama": "testing",
+          "created_at": "2024-01-01T00:00:00.000Z",
+          "updated_at": "2024-01-01T00:00:00.000Z"
+        }
+      ],
+      "hari_tersedia": [
+        "Senin",
+        "Rabu",
+        "Jumat"
+      ],
+      "gambars": [
+        {
+          "id": 1761837435196,
+          "file_path": "blob:http://localhost:3000/6eeaee7b-0e36-439f-b751-b72859aea9a4",
+          "product_id": 1761837435196
+        }
+      ],
+      "id": 9,
+      "created_at": "2025-10-30T15:17:15.232Z",
+      "updated_at": "2025-10-30T15:17:15.232Z",
+      "sales": 0,
+      "rating": 0
     }
   ],
   "categories": [
@@ -243,10 +255,10 @@
       "updated_at": "2024-01-01T00:00:00.000Z"
     },
     {
-      "id": "1758878589000",
+      "id": "8",
       "nama": "testing",
-      "created_at": "2025-09-26T09:23:09.000Z",
-      "updated_at": "2025-09-26T09:23:09.000Z"
+      "created_at": "2024-01-01T00:00:00.000Z",
+      "updated_at": "2024-01-01T00:00:00.000Z"
     }
   ]
 }

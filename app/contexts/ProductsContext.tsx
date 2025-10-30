@@ -23,6 +23,7 @@ export interface Product {
   sales?: number;
   rating?: number;
   status: 'active' | 'inactive';
+  hari_tersedia?: string[]; // Array of days: ['Senin', 'Selasa', etc.]
 }
 
 interface ProductsState {
@@ -180,27 +181,57 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
       try {
         // Check if API is available
         const isConnected = await checkApiConnection();
-        setState(prev => ({ ...prev, isApiConnected: isConnected }));
+        console.log('API Connection Status:', isConnected);
         
         if (isConnected) {
-          // Load from API
-          const products = await productsApi.getAll();
-          setState(prev => ({ 
-            ...prev, 
-            products, 
-            loading: false,
-            error: null 
-          }));
-        } else {
-          // Fallback to localStorage
-          const savedProducts = localStorage.getItem('bakesmart_products');
-          if (savedProducts) {
-            const products = JSON.parse(savedProducts);
+          try {
+            // Try to load from API (PRIMARY SOURCE)
+            const products = await productsApi.getAll();
             setState(prev => ({ 
               ...prev, 
               products, 
               loading: false,
-              error: 'API tidak tersedia - menggunakan data lokal' 
+              error: null,
+              isApiConnected: true
+            }));
+            // Backup to localStorage (cache only)
+            localStorage.setItem('bakesmart_products_cache', JSON.stringify(products));
+          } catch (apiError) {
+            console.warn('Failed to load from API, using cache:', apiError);
+            // If API fails, use localStorage cache
+            const cachedProducts = localStorage.getItem('bakesmart_products_cache');
+            if (cachedProducts) {
+              const products = JSON.parse(cachedProducts);
+              setState(prev => ({ 
+                ...prev, 
+                products, 
+                loading: false,
+                error: 'API tidak tersedia. Menggunakan data lokal/demo.',
+                isApiConnected: false
+              }));
+            } else {
+              // Use mock data as fallback
+              setState(prev => ({ 
+                ...prev, 
+                products: mockProducts, 
+                loading: false,
+                error: 'API tidak tersedia. Menggunakan data lokal/demo.',
+                isApiConnected: false
+              }));
+              localStorage.setItem('bakesmart_products_cache', JSON.stringify(mockProducts));
+            }
+          }
+        } else {
+          // Fallback to localStorage cache
+          const cachedProducts = localStorage.getItem('bakesmart_products_cache');
+          if (cachedProducts) {
+            const products = JSON.parse(cachedProducts);
+            setState(prev => ({ 
+              ...prev, 
+              products, 
+              loading: false,
+              error: 'API tidak tersedia. Menggunakan data lokal/demo.',
+              isApiConnected: false
             }));
           } else {
             // Use mock data as last resort
@@ -208,23 +239,66 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
               ...prev, 
               products: mockProducts, 
               loading: false,
-              error: 'API tidak tersedia - menggunakan data demo' 
+              error: 'API tidak tersedia. Menggunakan data lokal/demo.',
+              isApiConnected: false
             }));
-            localStorage.setItem('bakesmart_products', JSON.stringify(mockProducts));
+            localStorage.setItem('bakesmart_products_cache', JSON.stringify(mockProducts));
           }
         }
       } catch (error) {
         console.error('Error initializing data:', error);
-        setState(prev => ({ 
-          ...prev, 
-          loading: false, 
-          error: 'Gagal memuat data produk' 
-        }));
+        // Final fallback - use cache or mock data
+        const cachedProducts = localStorage.getItem('bakesmart_products_cache');
+        if (cachedProducts) {
+          const products = JSON.parse(cachedProducts);
+          setState(prev => ({ 
+            ...prev, 
+            products, 
+            loading: false,
+            error: 'Menggunakan data lokal',
+            isApiConnected: false
+          }));
+        } else {
+          setState(prev => ({ 
+            ...prev, 
+            products: mockProducts,
+            loading: false, 
+            error: 'Menggunakan data demo',
+            isApiConnected: false
+          }));
+          localStorage.setItem('bakesmart_products_cache', JSON.stringify(mockProducts));
+        }
       }
     };
 
     initializeData();
   }, []);
+
+  // Auto-sync: Poll API setiap 5 detik untuk sinkronisasi antar browser
+  useEffect(() => {
+    if (!state.isApiConnected) return;
+
+    const syncInterval = setInterval(async () => {
+      try {
+        const products = await productsApi.getAll();
+        setState(prev => {
+          // Only update if data has changed (prevent unnecessary re-renders)
+          const hasChanges = JSON.stringify(prev.products) !== JSON.stringify(products);
+          if (hasChanges) {
+            console.log('Data synced from API');
+            localStorage.setItem('bakesmart_products_cache', JSON.stringify(products));
+            return { ...prev, products };
+          }
+          return prev;
+        });
+      } catch (error) {
+        console.warn('Auto-sync failed:', error);
+        setState(prev => ({ ...prev, isApiConnected: false }));
+      }
+    }, 5000); // Sync every 5 seconds
+
+    return () => clearInterval(syncInterval);
+  }, [state.isApiConnected]);
 
   // Helper function to save products to localStorage
   const saveProductsToStorage = (products: Product[]) => {
@@ -240,17 +314,24 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
       setState(prev => ({ ...prev, loading: true, error: null }));
       
       if (state.isApiConnected) {
-        // Use API
+        // API is available - use API as primary (ID generated in mockApi.ts)
         const newProduct = await productsApi.create(productData);
         setState(prev => ({
           ...prev,
           products: [newProduct, ...prev.products],
           loading: false,
         }));
+        // Update cache
+        const updatedProducts = [newProduct, ...state.products];
+        localStorage.setItem('bakesmart_products_cache', JSON.stringify(updatedProducts));
       } else {
-        // Fallback to localStorage
+        // API offline - create locally with safe ID generation
+        const existingIds = state.products.map(p => p.id);
+        const maxId = existingIds.length > 0 ? Math.max(...existingIds) : 0;
+        const nextId = maxId + 1;
+        
         const newProduct: Product = {
-          id: Date.now(),
+          id: nextId, // Use auto-increment instead of timestamp
           ...productData,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
@@ -260,8 +341,7 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
 
         setState(prev => {
           const updatedProducts = [newProduct, ...prev.products];
-          // Save to localStorage as backup
-          localStorage.setItem('bakesmart_products', JSON.stringify(updatedProducts));
+          localStorage.setItem('bakesmart_products_cache', JSON.stringify(updatedProducts));
           return {
             ...prev,
             products: updatedProducts,
@@ -282,27 +362,42 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
 
   const updateProduct = async (id: number, productData: Partial<Omit<Product, 'id' | 'created_at' | 'updated_at'>>): Promise<void> => {
     try {
-      setState(prev => ({ ...prev, loading: true, error: null }));
+      console.log('Updating product:', id, 'with data:', productData);
+      setState(prev => ({ ...prev, error: null }));
       
       if (state.isApiConnected) {
-        // Use API
-        const updatedProduct = await productsApi.update(id, productData);
-        setState(prev => ({
-          ...prev,
-          products: prev.products.map(product =>
-            product.id === id ? updatedProduct : product
-          ),
-          loading: false,
-        }));
-      } else {
-        // Fallback to localStorage
+        // API is available - update API first
+        await productsApi.update(id, productData);
+        console.log('Product updated in API successfully');
+        
+        // Update local state
         setState(prev => {
           const updatedProducts = prev.products.map(product =>
             product.id === id
               ? { ...product, ...productData, updated_at: new Date().toISOString() }
               : product
           );
-          localStorage.setItem('bakesmart_products', JSON.stringify(updatedProducts));
+          
+          // Update cache
+          localStorage.setItem('bakesmart_products_cache', JSON.stringify(updatedProducts));
+          
+          return {
+            ...prev,
+            products: updatedProducts,
+            loading: false,
+          };
+        });
+      } else {
+        // API offline - update locally only
+        setState(prev => {
+          const updatedProducts = prev.products.map(product =>
+            product.id === id
+              ? { ...product, ...productData, updated_at: new Date().toISOString() }
+              : product
+          );
+          
+          localStorage.setItem('bakesmart_products_cache', JSON.stringify(updatedProducts));
+          
           return {
             ...prev,
             products: updatedProducts,
@@ -312,6 +407,7 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
       }
       
     } catch (error) {
+      console.error('Error in updateProduct:', error);
       setState(prev => ({
         ...prev,
         loading: false,
@@ -326,18 +422,24 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
       setState(prev => ({ ...prev, loading: true, error: null }));
       
       if (state.isApiConnected) {
-        // Use API
+        // API is available - delete from API first
         await productsApi.delete(id);
-        setState(prev => ({
-          ...prev,
-          products: prev.products.filter(product => product.id !== id),
-          loading: false,
-        }));
-      } else {
-        // Fallback to localStorage
+        console.log('Product deleted from API successfully');
+        
         setState(prev => {
           const updatedProducts = prev.products.filter(product => product.id !== id);
-          localStorage.setItem('bakesmart_products', JSON.stringify(updatedProducts));
+          localStorage.setItem('bakesmart_products_cache', JSON.stringify(updatedProducts));
+          return {
+            ...prev,
+            products: updatedProducts,
+            loading: false,
+          };
+        });
+      } else {
+        // API offline - delete locally only
+        setState(prev => {
+          const updatedProducts = prev.products.filter(product => product.id !== id);
+          localStorage.setItem('bakesmart_products_cache', JSON.stringify(updatedProducts));
           return {
             ...prev,
             products: updatedProducts,
@@ -360,28 +462,38 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
     try {
       setState(prev => ({ ...prev, loading: true, error: null }));
       
-      if (state.isApiConnected) {
+      // Always try to reconnect to API
+      const isConnected = await checkApiConnection();
+      
+      if (isConnected) {
         // Refresh from API
         const products = await productsApi.getAll();
         setState(prev => ({
           ...prev,
           products,
           loading: false,
+          isApiConnected: true,
+          error: null,
         }));
+        localStorage.setItem('bakesmart_products_cache', JSON.stringify(products));
       } else {
-        // Refresh from localStorage
-        const savedProducts = localStorage.getItem('bakesmart_products');
-        if (savedProducts) {
-          const products = JSON.parse(savedProducts);
+        // Refresh from cache
+        const cachedProducts = localStorage.getItem('bakesmart_products_cache');
+        if (cachedProducts) {
+          const products = JSON.parse(cachedProducts);
           setState(prev => ({
             ...prev,
             products,
             loading: false,
+            isApiConnected: false,
+            error: 'API tidak tersedia. Menggunakan data lokal/demo.',
           }));
         } else {
           setState(prev => ({
             ...prev,
             loading: false,
+            isApiConnected: false,
+            error: 'Tidak ada data tersimpan',
           }));
         }
       }

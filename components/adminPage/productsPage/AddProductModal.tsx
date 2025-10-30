@@ -24,6 +24,7 @@ interface Product {
   sales?: number;
   rating?: number;
   status: 'active' | 'inactive';
+  hari_tersedia?: string[];
 }
 
 interface AddProductModalProps {
@@ -40,6 +41,7 @@ interface FormData {
   kategori: string;
   status: 'active' | 'inactive';
   images: File[];
+  hari_tersedia: string[];
 }
 
 export function AddProductModal({ isOpen, onClose, onAddProduct }: AddProductModalProps) {
@@ -51,12 +53,15 @@ export function AddProductModal({ isOpen, onClose, onAddProduct }: AddProductMod
     stok: '',
     kategori: '',
     status: 'active',
-    images: []
+    images: [],
+    hari_tersedia: []
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+
+  const daysOfWeek = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -99,6 +104,15 @@ export function AddProductModal({ isOpen, onClose, onAddProduct }: AddProductMod
       images: prev.images.filter((_, i) => i !== index)
     }));
     setImagePreviews(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const toggleDay = (day: string) => {
+    setFormData(prev => ({
+      ...prev,
+      hari_tersedia: prev.hari_tersedia.includes(day)
+        ? prev.hari_tersedia.filter(d => d !== day)
+        : [...prev.hari_tersedia, day]
+    }));
   };
 
   const validateForm = (): boolean => {
@@ -146,6 +160,7 @@ export function AddProductModal({ isOpen, onClose, onAddProduct }: AddProductMod
         stok: parseInt(formData.stok),
         status: formData.status,
         jenis: selectedCategory ? [selectedCategory] : [],
+        hari_tersedia: formData.hari_tersedia,
         gambars: formData.images.map((file, index) => ({
           id: Date.now() + index,
           file_path: URL.createObjectURL(file),
@@ -172,7 +187,8 @@ export function AddProductModal({ isOpen, onClose, onAddProduct }: AddProductMod
       stok: '',
       kategori: '',
       status: 'active',
-      images: []
+      images: [],
+      hari_tersedia: []
     });
     setImagePreviews([]);
     setErrors({});
@@ -285,6 +301,36 @@ export function AddProductModal({ isOpen, onClose, onAddProduct }: AddProductMod
                     />
                     {errors.stok && <p className="mt-1 text-sm text-red-600">{errors.stok}</p>}
                   </div>
+                </div>
+
+                {/* Hari Ketersediaan */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    Hari Ketersediaan
+                  </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+                    {daysOfWeek.map((day) => (
+                      <button
+                        key={day}
+                        type="button"
+                        onClick={() => toggleDay(day)}
+                        disabled={isSubmitting}
+                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors border ${
+                          formData.hari_tersedia.includes(day)
+                            ? 'bg-orange-500 text-white border-orange-500'
+                            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                        } disabled:opacity-50 disabled:cursor-not-allowed`}
+                      >
+                        {day}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">
+                    {formData.hari_tersedia.length === 0 
+                      ? 'Tidak ada hari dipilih (produk tidak tersedia)'
+                      : `Tersedia di: ${formData.hari_tersedia.join(', ')}`
+                    }
+                  </p>
                 </div>
 
                 {/* Category and Status */}

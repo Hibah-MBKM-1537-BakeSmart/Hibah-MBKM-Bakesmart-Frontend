@@ -30,6 +30,25 @@ async function apiRequest<T>(
   }
 }
 
+// Helper function to generate safe auto-increment ID
+async function getNextProductId(): Promise<number> {
+  try {
+    const products = await apiRequest<any[]>('/products');
+    if (products.length === 0) return 1;
+    
+    // Find the highest ID and add 1
+    const maxId = Math.max(...products.map(p => {
+      const id = typeof p.id === 'string' ? parseInt(p.id) : p.id;
+      return isNaN(id) ? 0 : id;
+    }));
+    
+    return maxId + 1;
+  } catch (error) {
+    console.warn('Failed to get next ID, using fallback');
+    return Date.now(); // Fallback to timestamp if API fails
+  }
+}
+
 // Product API functions
 export const productsApi = {
   // Get all products
@@ -39,21 +58,24 @@ export const productsApi = {
   getById: (id: number) => apiRequest<any>(`/products/${id}`),
   
   // Create new product
-  create: (product: any) => apiRequest<any>('/products', {
-    method: 'POST',
-    body: JSON.stringify({
-      ...product,
-      id: Date.now(), // Generate ID for new product
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      sales: 0,
-      rating: 0,
-    }),
-  }),
+  create: async (product: any) => {
+    const nextId = await getNextProductId();
+    return apiRequest<any>('/products', {
+      method: 'POST',
+      body: JSON.stringify({
+        ...product,
+        id: nextId, // Use auto-increment ID instead of timestamp
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        sales: 0,
+        rating: 0,
+      }),
+    });
+  },
   
   // Update product
   update: (id: number, product: Partial<any>) => apiRequest<any>(`/products/${id}`, {
-    method: 'PUT',
+    method: 'PATCH', // Changed from PUT to PATCH for partial updates
     body: JSON.stringify({
       ...product,
       updated_at: new Date().toISOString(),
@@ -66,6 +88,25 @@ export const productsApi = {
   }),
 };
 
+// Helper function to generate safe auto-increment ID for categories
+async function getNextCategoryId(): Promise<string> {
+  try {
+    const categories = await apiRequest<any[]>('/categories');
+    if (categories.length === 0) return "1";
+    
+    // Find the highest numeric ID and add 1
+    const maxId = Math.max(...categories.map(c => {
+      const id = typeof c.id === 'string' ? parseInt(c.id) : c.id;
+      return isNaN(id) ? 0 : id;
+    }));
+    
+    return String(maxId + 1);
+  } catch (error) {
+    console.warn('Failed to get next category ID, using fallback');
+    return String(Date.now()); // Fallback to timestamp if API fails
+  }
+}
+
 // Categories API functions
 export const categoriesApi = {
   // Get all categories
@@ -75,15 +116,18 @@ export const categoriesApi = {
   getById: (id: number) => apiRequest<any>(`/categories/${id}`),
   
   // Create new category
-  create: (category: any) => apiRequest<any>('/categories', {
-    method: 'POST',
-    body: JSON.stringify({
-      ...category,
-      id: Date.now(), // Generate ID for new category
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    }),
-  }),
+  create: async (category: any) => {
+    const nextId = await getNextCategoryId();
+    return apiRequest<any>('/categories', {
+      method: 'POST',
+      body: JSON.stringify({
+        ...category,
+        id: nextId, // Use auto-increment ID (as string for categories)
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }),
+    });
+  },
   
   // Update category
   update: (id: number, category: Partial<any>) => apiRequest<any>(`/categories/${id}`, {
