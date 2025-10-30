@@ -11,7 +11,10 @@ import {
   Package,
   MoreHorizontal,
   Settings,
-  Minus
+  Minus,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown
 } from 'lucide-react';
 import { AddProductModal } from '@/components/adminPage/productsPage/AddProductModal';
 import { CategoryManager } from '@/components/adminPage/productsPage/CategoryManager';
@@ -27,6 +30,11 @@ import { useProducts, Product } from '@/app/contexts/ProductsContext';
 export default function ProductsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedStatus, setSelectedStatus] = useState<'all' | 'active' | 'inactive'>('all');
+  const [sortField, setSortField] = useState<'nama' | 'harga' | 'stok' | 'sales'>('nama');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [priceRange, setPriceRange] = useState<{ min: number; max: number }>({ min: 0, max: 1000000 });
+  const [stockRange, setStockRange] = useState<{ min: number; max: number }>({ min: 0, max: 1000 });
   const [showAddModal, setShowAddModal] = useState(false);
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [showProductDetail, setShowProductDetail] = useState(false);
@@ -41,15 +49,72 @@ export default function ProductsPage() {
   // Combine 'all' with actual category names
   const categoryOptions = ['all', ...categories.map(cat => cat.nama)];
 
-  const filteredProducts = products.filter(product => {
-    // Add safety checks for undefined values
-    if (!product || !product.nama) return false;
-    
-    const matchesSearch = product.nama.toLowerCase().includes(searchTerm.toLowerCase());
-    const productCategory = product.jenis?.[0]?.nama || '';
-    const matchesCategory = selectedCategory === 'all' || productCategory === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
+  // Sort and filter products
+  const filteredProducts = products
+    .filter(product => {
+      // Add safety checks for undefined values
+      if (!product || !product.nama) return false;
+      
+      // Search filter
+      const matchesSearch = product.nama.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      // Category filter
+      const productCategory = product.jenis?.[0]?.nama || '';
+      const matchesCategory = selectedCategory === 'all' || productCategory === selectedCategory;
+      
+      // Status filter
+      const matchesStatus = selectedStatus === 'all' || product.status === selectedStatus;
+      
+      // Price range filter
+      const matchesPrice = product.harga >= priceRange.min && product.harga <= priceRange.max;
+      
+      // Stock range filter
+      const matchesStock = (product.stok ?? 0) >= stockRange.min && (product.stok ?? 0) <= stockRange.max;
+      
+      return matchesSearch && matchesCategory && matchesStatus && matchesPrice && matchesStock;
+    })
+    .sort((a, b) => {
+      let comparison = 0;
+      
+      switch (sortField) {
+        case 'nama':
+          comparison = a.nama.localeCompare(b.nama);
+          break;
+        case 'harga':
+          comparison = a.harga - b.harga;
+          break;
+        case 'stok':
+          comparison = (a.stok ?? 0) - (b.stok ?? 0);
+          break;
+        case 'sales':
+          comparison = (a.sales ?? 0) - (b.sales ?? 0);
+          break;
+        default:
+          comparison = 0;
+      }
+      
+      return sortDirection === 'asc' ? comparison : -comparison;
+    });
+
+  // Toggle sort
+  const handleSort = (field: 'nama' | 'harga' | 'stok' | 'sales') => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  // Get sort icon
+  const getSortIcon = (field: 'nama' | 'harga' | 'stok' | 'sales') => {
+    if (sortField !== field) {
+      return <ArrowUpDown className="w-4 h-4 ml-1 opacity-50" />;
+    }
+    return sortDirection === 'asc' 
+      ? <ArrowUp className="w-4 h-4 ml-1" />
+      : <ArrowDown className="w-4 h-4 ml-1" />;
+  };
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -67,32 +132,32 @@ export default function ProductsPage() {
       // Show success notification
       addToast({
         type: 'success',
-        title: 'Produk berhasil ditambahkan!',
-        message: `${newProductData.nama} telah ditambahkan ke katalog produk.`,
+        title: 'Product added successfully!',
+        message: `${newProductData.nama} has been added to product catalog.`,
       });
     } catch (error) {
       addToast({
         type: 'error',
-        title: 'Gagal menambahkan produk',
-        message: error instanceof Error ? error.message : 'Terjadi kesalahan yang tidak diketahui',
+        title: 'Failed to add product',
+        message: error instanceof Error ? error.message : 'An unknown error occurred',
       });
     }
   };
 
   const handleDeleteProduct = async (productId: number, productName: string) => {
-    if (window.confirm(`Apakah Anda yakin ingin menghapus produk "${productName}"?`)) {
+    if (window.confirm(`Are you sure you want to delete product "${productName}"?`)) {
       try {
         await deleteProduct(productId);
         addToast({
           type: 'success',
-          title: 'Produk berhasil dihapus!',
-          message: `${productName} telah dihapus dari katalog produk.`,
+          title: 'Product deleted successfully!',
+          message: `${productName} has been removed from product catalog.`,
         });
       } catch (error) {
         addToast({
           type: 'error',
-          title: 'Gagal menghapus produk',
-          message: error instanceof Error ? error.message : 'Terjadi kesalahan yang tidak diketahui',
+          title: 'Failed to delete product',
+          message: error instanceof Error ? error.message : 'An unknown error occurred',
         });
       }
     }
@@ -117,14 +182,14 @@ export default function ProductsPage() {
       // Show success notification
       addToast({
         type: 'success',
-        title: 'Produk berhasil diupdate!',
-        message: `${productData.nama || selectedProduct.nama} telah diperbarui.`,
+        title: 'Product updated successfully!',
+        message: `${productData.nama || selectedProduct.nama} has been updated.`,
       });
     } catch (error) {
       addToast({
         type: 'error',
-        title: 'Gagal mengupdate produk',
-        message: error instanceof Error ? error.message : 'Terjadi kesalahan yang tidak diketahui',
+        title: 'Failed to update product',
+        message: error instanceof Error ? error.message : 'An unknown error occurred',
       });
     }
   };
@@ -188,16 +253,16 @@ export default function ProductsPage() {
       setTempStock('');
       addToast({
         type: 'success',
-        title: 'Stok berhasil diupdate!',
-        message: `Stok telah diperbarui menjadi ${stockValue}.`,
+        title: 'Stock updated successfully!',
+        message: `Stock has been updated to ${stockValue}.`,
       });
     } catch (error) {
       console.error('Error in saveStockEdit:', error);
       // Don't reset editingStockId so user can try again
       addToast({
         type: 'error',
-        title: 'Gagal mengupdate stok',
-        message: error instanceof Error ? error.message : 'Terjadi kesalahan',
+        title: 'Failed to update stock',
+        message: error instanceof Error ? error.message : 'An error occurred',
       });
     }
   };
@@ -226,7 +291,7 @@ export default function ProductsPage() {
             className="flex items-center justify-center space-x-2 bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors whitespace-nowrap"
           >
             <Settings className="w-4 h-4" />
-            <span className="text-sm lg:text-base">Kelola Kategori</span>
+            <span className="text-sm lg:text-base">Manage Categories</span>
           </button>
           <button
             onClick={() => setShowAddModal(true)}
@@ -240,41 +305,120 @@ export default function ProductsPage() {
 
       {/* Filters */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 lg:p-6">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-          <div className="flex flex-col sm:flex-row gap-3 lg:gap-4 flex-1">
-            {/* Search */}
-            <div className="relative flex-1 sm:max-w-xs">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search className="h-5 w-5 text-gray-400" />
+        <div className="space-y-4">
+          {/* Search and Category Row */}
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div className="flex flex-col sm:flex-row gap-3 lg:gap-4 flex-1">
+              {/* Search */}
+              <div className="relative flex-1 sm:max-w-xs">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Search className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  type="text"
+                  placeholder="Search products..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-orange-500 focus:border-orange-500 text-sm"
+                />
               </div>
-              <input
-                type="text"
-                placeholder="Search products..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-orange-500 focus:border-orange-500 text-sm"
-              />
-            </div>
 
-            {/* Category Filter */}
-            <div className="flex items-center space-x-2">
-              <Filter className="w-4 h-4 text-gray-400 flex-shrink-0" />
+              {/* Category Filter */}
+              <div className="flex items-center space-x-2">
+                <Filter className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                <select
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500 text-sm w-full sm:w-auto"
+                >
+                  {categoryOptions.map(category => (
+                    <option key={category} value={category}>
+                      {category === 'all' ? 'All Categories' : category}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Status Filter */}
               <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
+                value={selectedStatus}
+                onChange={(e) => setSelectedStatus(e.target.value as 'all' | 'active' | 'inactive')}
                 className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500 text-sm w-full sm:w-auto"
               >
-                {categoryOptions.map(category => (
-                  <option key={category} value={category}>
-                    {category === 'all' ? 'All Categories' : category}
-                  </option>
-                ))}
+                <option value="all">All Status</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
               </select>
+            </div>
+
+            <div className="text-sm text-gray-600 text-center lg:text-right">
+              {filteredProducts.length} of {products.length} products
             </div>
           </div>
 
-          <div className="text-sm text-gray-600 text-center lg:text-right">
-            {filteredProducts.length} of {products.length} products
+          {/* Advanced Filters Row */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-gray-200">
+            {/* Price Range */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">Price Range</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  placeholder="Min"
+                  value={priceRange.min || ''}
+                  onChange={(e) => setPriceRange(prev => ({ ...prev, min: Number(e.target.value) || 0 }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-orange-500"
+                />
+                <span className="text-gray-400">-</span>
+                <input
+                  type="number"
+                  placeholder="Max"
+                  value={priceRange.max || ''}
+                  onChange={(e) => setPriceRange(prev => ({ ...prev, max: Number(e.target.value) || 1000000 }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-orange-500"
+                />
+              </div>
+            </div>
+
+            {/* Stock Range */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">Stock Range</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  placeholder="Min"
+                  value={stockRange.min || ''}
+                  onChange={(e) => setStockRange(prev => ({ ...prev, min: Number(e.target.value) || 0 }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-orange-500"
+                />
+                <span className="text-gray-400">-</span>
+                <input
+                  type="number"
+                  placeholder="Max"
+                  value={stockRange.max || ''}
+                  onChange={(e) => setStockRange(prev => ({ ...prev, max: Number(e.target.value) || 1000 }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-orange-500"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Reset Filters Button */}
+          <div className="flex justify-end pt-2">
+            <button
+              onClick={() => {
+                setSearchTerm('');
+                setSelectedCategory('all');
+                setSelectedStatus('all');
+                setPriceRange({ min: 0, max: 1000000 });
+                setStockRange({ min: 0, max: 1000 });
+                setSortField('nama');
+                setSortDirection('asc');
+              }}
+              className="text-sm text-orange-600 hover:text-orange-700 font-medium"
+            >
+              Reset All Filters
+            </button>
           </div>
         </div>
       </div>
@@ -328,20 +472,44 @@ export default function ProductsPage() {
           <table className="min-w-full divide-y divide-gray-200 w-full">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-3 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                  Product
+                <th className="px-3 lg:px-6 py-3 text-left whitespace-nowrap">
+                  <button
+                    onClick={() => handleSort('nama')}
+                    className="flex items-center space-x-1 text-xs font-medium text-gray-500 uppercase tracking-wider hover:text-gray-700"
+                  >
+                    <span>Product</span>
+                    {getSortIcon('nama')}
+                  </button>
                 </th>
                 <th className="px-3 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
                   Category
                 </th>
-                <th className="px-3 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                  Price
+                <th className="px-3 lg:px-6 py-3 text-left whitespace-nowrap">
+                  <button
+                    onClick={() => handleSort('harga')}
+                    className="flex items-center space-x-1 text-xs font-medium text-gray-500 uppercase tracking-wider hover:text-gray-700"
+                  >
+                    <span>Price</span>
+                    {getSortIcon('harga')}
+                  </button>
                 </th>
-                <th className="px-3 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                  Stock
+                <th className="px-3 lg:px-6 py-3 text-left whitespace-nowrap">
+                  <button
+                    onClick={() => handleSort('stok')}
+                    className="flex items-center space-x-1 text-xs font-medium text-gray-500 uppercase tracking-wider hover:text-gray-700"
+                  >
+                    <span>Stock</span>
+                    {getSortIcon('stok')}
+                  </button>
                 </th>
-                <th className="px-3 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                  Sales
+                <th className="px-3 lg:px-6 py-3 text-left whitespace-nowrap">
+                  <button
+                    onClick={() => handleSort('sales')}
+                    className="flex items-center space-x-1 text-xs font-medium text-gray-500 uppercase tracking-wider hover:text-gray-700"
+                  >
+                    <span>Sales</span>
+                    {getSortIcon('sales')}
+                  </button>
                 </th>
                 <th className="px-3 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
                   Status
@@ -420,52 +588,54 @@ export default function ProductsPage() {
                               cancelStockEdit();
                             }
                           }}
-                          className="w-16 px-2 py-1 border border-orange-500 rounded text-center focus:outline-none focus:ring-2 focus:ring-orange-500"
+                          className="w-20 px-3 py-2 border-2 border-orange-500 rounded-lg text-center focus:outline-none focus:ring-2 focus:ring-orange-500 font-semibold"
                           autoFocus
                           placeholder="0"
                         />
                         <button
                           onClick={() => saveStockEdit(product.id)}
-                          className="text-green-600 hover:text-green-700 text-xs font-medium"
+                          className="p-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors shadow-sm"
+                          title="Save"
                         >
-                          ✓
+                          <span className="text-base font-bold">✓</span>
                         </button>
                         <button
                           onClick={cancelStockEdit}
-                          className="text-red-600 hover:text-red-700 text-xs font-medium"
+                          className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors shadow-sm"
+                          title="Cancel"
                         >
-                          ✕
+                          <span className="text-base font-bold">✕</span>
                         </button>
                       </div>
                     ) : (
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1.5">
                         <button
                           onClick={() => handleStockDecrement(product.id)}
-                          className="p-1 hover:bg-gray-100 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="p-1.5 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent border border-gray-200 hover:border-red-300"
                           disabled={!product.stok || product.stok === 0}
-                          title="Kurangi stok"
+                          title="Decrease stock"
                         >
-                          <Minus className="w-3 h-3 text-gray-600" />
+                          <Minus className="w-4 h-4 text-gray-600 hover:text-red-600" />
                         </button>
                         <button
                           onClick={() => startEditingStock(product.id, product.stok || 0)}
-                          className={`min-w-[40px] px-2 py-1 rounded text-xs font-medium transition-colors ${
+                          className={`min-w-[45px] px-3 py-1.5 rounded-lg text-sm font-semibold transition-all shadow-sm ${
                             !product.stok || product.stok === 0 
-                              ? 'bg-red-100 text-red-800 hover:bg-red-200'
+                              ? 'bg-red-100 text-red-800 hover:bg-red-200 border border-red-200'
                               : product.stok < 10 
-                              ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
-                              : 'bg-green-100 text-green-800 hover:bg-green-200'
+                              ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200 border border-yellow-200'
+                              : 'bg-green-100 text-green-800 hover:bg-green-200 border border-green-200'
                           }`}
-                          title="Klik untuk edit stok"
+                          title="Click to edit stock"
                         >
                           {product.stok ?? 0}
                         </button>
                         <button
                           onClick={() => handleStockIncrement(product.id)}
-                          className="p-1 hover:bg-gray-100 rounded transition-colors"
-                          title="Tambah stok"
+                          className="p-1.5 hover:bg-green-50 rounded-lg transition-colors border border-gray-200 hover:border-green-300"
+                          title="Increase stock"
                         >
-                          <Plus className="w-3 h-3 text-gray-600" />
+                          <Plus className="w-4 h-4 text-gray-600 hover:text-green-600" />
                         </button>
                       </div>
                     )}
@@ -483,30 +653,27 @@ export default function ProductsPage() {
                     </span>
                   </td>
                   <td className="px-3 lg:px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <div className="flex items-center justify-end space-x-1 lg:space-x-2">
+                    <div className="flex items-center justify-end gap-2">
                       <button 
                         onClick={() => handleViewProduct(product.id)}
-                        className="text-gray-400 hover:text-gray-600 p-1"
-                        title="Lihat Detail"
+                        className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700 transition-colors"
+                        title="View Details"
                       >
-                        <Eye className="w-4 h-4" />
+                        <Eye className="w-4 h-4 lg:w-5 lg:h-5" />
                       </button>
                       <button 
-                        onClick={() => handleEditProduct(product.id, product.nama || 'Produk')}
-                        className="text-gray-400 hover:text-orange-600 p-1"
-                        title="Edit Produk"
+                        onClick={() => handleEditProduct(product.id, product.nama || 'Product')}
+                        className="p-2 rounded-lg bg-orange-50 text-orange-600 hover:bg-orange-100 hover:text-orange-700 transition-colors"
+                        title="Edit Product"
                       >
-                        <Edit className="w-4 h-4" />
+                        <Edit className="w-4 h-4 lg:w-5 lg:h-5" />
                       </button>
                       <button 
-                        onClick={() => handleDeleteProduct(product.id, product.nama || 'Produk')}
-                        className="text-gray-400 hover:text-red-600 p-1"
-                        title="Hapus Produk"
+                        onClick={() => handleDeleteProduct(product.id, product.nama || 'Product')}
+                        className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 transition-colors"
+                        title="Delete Product"
                       >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                      <button className="text-gray-400 hover:text-gray-600 p-1">
-                        <MoreHorizontal className="w-4 h-4" />
+                        <Trash2 className="w-4 h-4 lg:w-5 lg:h-5" />
                       </button>
                     </div>
                   </td>

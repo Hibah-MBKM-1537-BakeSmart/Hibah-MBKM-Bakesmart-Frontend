@@ -51,41 +51,6 @@
       ]
     },
     {
-      "id": 3,
-      "nama": "Croissant",
-      "deskripsi": "Buttery French croissant",
-      "harga": 12000,
-      "stok": 21,
-      "created_at": "2024-01-15T00:00:00.000Z",
-      "updated_at": "2025-10-30T15:11:47.504Z",
-      "status": "active",
-      "rating": 4.2,
-      "sales": 156,
-      "jenis": [],
-      "hari_tersedia": []
-    },
-    {
-      "id": 4,
-      "nama": "Birthday Cake",
-      "deskripsi": "Custom birthday cake with decoration",
-      "harga": 200000,
-      "stok": 8,
-      "created_at": "2024-01-15T00:00:00.000Z",
-      "updated_at": "2025-10-30T15:12:28.184Z",
-      "status": "inactive",
-      "rating": 4.9,
-      "sales": 67,
-      "jenis": [],
-      "gambars": [
-        {
-          "id": 4,
-          "file_path": "/img/Roti.png",
-          "product_id": 4
-        }
-      ],
-      "hari_tersedia": []
-    },
-    {
       "id": 5,
       "nama": "Donuts Box (12 pcs)",
       "deskripsi": "Mixed flavors donut box",
@@ -115,9 +80,9 @@
       "nama": "Cheese Tart",
       "deskripsi": "Creamy cheese tart",
       "harga": 25000,
-      "stok": 12,
+      "stok": 0,
       "created_at": "2024-01-15T00:00:00.000Z",
-      "updated_at": "2024-12-15T00:00:00.000Z",
+      "updated_at": "2025-10-30T15:38:05.477Z",
       "status": "active",
       "rating": 4.5,
       "sales": 78,
@@ -140,9 +105,9 @@
       "nama": "Apple Pie",
       "deskripsi": "Traditional apple pie",
       "harga": 45000,
-      "stok": 6,
+      "stok": 2,
       "created_at": "2024-01-15T00:00:00.000Z",
-      "updated_at": "2024-12-15T00:00:00.000Z",
+      "updated_at": "2025-10-30T15:32:20.602Z",
       "status": "active",
       "rating": 4.7,
       "sales": 45,
