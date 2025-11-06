@@ -22,8 +22,8 @@ export function ProductCustomizationModal({ product, isOpen, onClose }: ProductC
   const [selectedAttributes, setSelectedAttributes] = useState<number[]>([]);
   const [customNote, setCustomNote] = useState('');
 
-  // Mock attributes untuk demo - dalam implementasi nyata ini akan dari API
-  const mockAttributes: ProductAttribute[] = [
+  // Get active addons from product or use mock data for demo
+  const availableAttributes: ProductAttribute[] = product?.addons?.filter((addon: any) => addon.is_active) || [
     { id: 1, nama: 'Extra Keju', harga_tambahan: 5000 },
     { id: 2, nama: 'Extra Coklat', harga_tambahan: 3000 },
     { id: 3, nama: 'Tanpa Gula', harga_tambahan: 0 },
@@ -52,14 +52,14 @@ export function ProductCustomizationModal({ product, isOpen, onClose }: ProductC
   const calculateTotalPrice = () => {
     const basePrice = product.harga || 0;
     const attributePrice = selectedAttributes.reduce((total, attrId) => {
-      const attr = mockAttributes.find(a => a.id === attrId);
+      const attr = availableAttributes.find(a => a.id === attrId);
       return total + (attr?.harga_tambahan || 0);
     }, 0);
     return (basePrice + attributePrice) * quantity;
   };
 
   const handleAddToCart = () => {
-    const selectedAttrDetails = mockAttributes.filter(attr => 
+    const selectedAttrDetails = availableAttributes.filter(attr => 
       selectedAttributes.includes(attr.id)
     );
 
@@ -172,7 +172,7 @@ export function ProductCustomizationModal({ product, isOpen, onClose }: ProductC
                 Pilihan Kustomisasi
               </label>
               <div className="space-y-2">
-                {mockAttributes.map((attribute) => (
+                {availableAttributes.map((attribute) => (
                   <div
                     key={attribute.id}
                     className={`p-3 border rounded-lg cursor-pointer transition-colors ${
@@ -234,7 +234,7 @@ export function ProductCustomizationModal({ product, isOpen, onClose }: ProductC
                     <span style={{ color: '#8b6f47' }}>Kustomisasi</span>
                     <span style={{ color: '#8b6f47' }}>
                       +{formatPrice(selectedAttributes.reduce((total, attrId) => {
-                        const attr = mockAttributes.find(a => a.id === attrId);
+                        const attr = availableAttributes.find(a => a.id === attrId);
                         return total + (attr?.harga_tambahan || 0);
                       }, 0) * quantity)}
                     </span>

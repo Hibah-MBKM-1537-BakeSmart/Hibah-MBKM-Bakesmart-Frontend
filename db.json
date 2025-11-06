@@ -105,16 +105,20 @@
       "nama": "Apple Pie",
       "deskripsi": "Traditional apple pie",
       "harga": 45000,
-      "stok": 2,
+      "stok": 7,
       "created_at": "2024-01-15T00:00:00.000Z",
-      "updated_at": "2025-10-30T15:32:20.602Z",
+      "updated_at": "2025-11-06T07:48:36.521Z",
       "status": "active",
       "rating": 4.7,
       "sales": 45,
-      "jenis": [
+      "jenis": [],
+      "hari_tersedia": [],
+      "addons": [
         {
-          "id": 6,
-          "nama": "Pie"
+          "id": 1762415220429,
+          "nama": "udin",
+          "harga_tambahan": 66666,
+          "is_active": true
         }
       ]
     },

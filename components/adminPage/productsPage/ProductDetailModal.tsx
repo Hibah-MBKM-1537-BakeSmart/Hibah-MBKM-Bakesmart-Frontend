@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { X, Package, Star } from 'lucide-react';
+import { X, Package, Star, CheckCircle, XCircle } from 'lucide-react';
 import { Product } from '@/app/contexts/ProductsContext';
 
 interface ProductDetailModalProps {
@@ -80,6 +80,54 @@ export function ProductDetailModal({ isOpen, onClose, product }: ProductDetailMo
               </div>
             </div>
           </div>
+
+          {/* Product Addons Section */}
+          {product.addons && product.addons.length > 0 && (
+            <div className="rounded-lg border border-gray-200">
+              <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 rounded-t-lg">
+                <h4 className="text-sm font-semibold text-gray-900">Product Addons</h4>
+                <p className="text-xs text-gray-600 mt-0.5">
+                  {product.addons.length} addon(s) • {product.addons.filter(a => a.is_active).length} active
+                </p>
+              </div>
+              <div className="p-4">
+                <div className="space-y-2">
+                  {product.addons.map((addon) => (
+                    <div 
+                      key={addon.id} 
+                      className={`flex items-center justify-between p-3 rounded-lg ${
+                        addon.is_active ? 'bg-green-50 border border-green-200' : 'bg-gray-50 border border-gray-200'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        {addon.is_active ? (
+                          <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
+                        ) : (
+                          <XCircle className="w-5 h-5 text-gray-400 flex-shrink-0" />
+                        )}
+                        <div>
+                          <p className={`font-medium ${addon.is_active ? 'text-gray-900' : 'text-gray-500'}`}>
+                            {addon.nama}
+                          </p>
+                          <p className="text-xs text-gray-600">
+                            {addon.is_active ? 'Active' : 'Inactive'}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className={`font-semibold ${addon.is_active ? 'text-gray-900' : 'text-gray-500'}`}>
+                          {addon.harga_tambahan > 0 
+                            ? `+${formatPrice(addon.harga_tambahan)}`
+                            : 'Free'
+                          }
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Footer */}

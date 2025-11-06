@@ -20,6 +20,12 @@ export interface Product {
     id: number;
     nama: string;
   }>;
+  addons?: Array<{
+    id: number;
+    nama: string;
+    harga_tambahan: number;
+    is_active: boolean;
+  }>;
   sales?: number;
   rating?: number;
   status: 'active' | 'inactive';
