@@ -7,9 +7,12 @@ import { Menu } from "@/components/homePage/Menu";
 import { AboutUs } from "@/components/homePage/AboutUs";
 import { Advertisement } from "@/components/homePage/Advertisement";
 import { DailyBreadStock } from "@/components/homePage/DailyBreadStock";
+import { StoreClosedModal } from "@/components/homePage/StoreClosedModal";
+
 export default function Home() {
   return (
     <div className="relative w-full">
+      <StoreClosedModal />
       <Navbar />
       <main>
         <HeroSection />

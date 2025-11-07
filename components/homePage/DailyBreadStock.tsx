@@ -5,19 +5,33 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useCart } from "@/app/contexts/CartContext";
 import { MenuModal } from "@/components/menuPage/MenuModal";
-import { useState } from "react";
+// [PERUBAHAN] Impor useState dan useEffect
+import { useState, useEffect } from "react";
 import { useTranslation } from "@/app/contexts/TranslationContext";
-import { useMenuData } from "@/app/hooks/useMenuData";
-import type { MenuItem } from "@/lib/api/mockData";
+// [PERUBAHAN] Hapus impor useMenuData
+// import { useMenuData } from "@/app/hooks/useMenuData";
+
+// [PERUBAHAN] Ganti path impor agar konsisten dengan MenuGrid.tsx
+import type { MenuItem, ApiProduct } from "@/lib/types";
 import { AlertCircle, Flame } from "lucide-react";
+import { useStoreClosure } from "@/app/contexts/StoreClosureContext";
+
+// [PERUBAHAN] Tipe untuk respons API (sama seperti di MenuGrid)
+interface ApiResponse {
+  message: string;
+  data: ApiProduct[];
+}
 
 function BreadStockCard(item: MenuItem) {
   const { addToCart } = useCart();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { t, language } = useTranslation();
+  const { isStoreClosed } = useStoreClosure();
+  const storeIsClosed = isStoreClosed();
 
   const name = language === "id" ? item.nama_id : item.nama_en;
   const description = language === "id" ? item.deskripsi_id : item.deskripsi_en;
+  // Card ini secara spesifik menggunakan 'stok'
   const stock = item.stok;
   const isLowStock = stock > 0 && stock <= 5;
   const isOutOfStock = stock <= 0;
@@ -35,7 +49,10 @@ function BreadStockCard(item: MenuItem) {
     <>
       <Card className="overflow-hidden bg-white shadow-lg transition-all hover:shadow-xl hover:scale-105">
         <div className="relative">
-          <div className="aspect-square overflow-hidden relative cursor-pointer">
+          <div
+            className="aspect-square overflow-hidden relative cursor-pointer"
+            onClick={handleOrderClick} // [SARAN] Klik gambar juga buka modal
+          >
             <Image
               src={image || "/placeholder.svg"}
               alt={name}
@@ -85,17 +102,29 @@ function BreadStockCard(item: MenuItem) {
               className="font-semibold text-base"
               style={{ color: "#5D4037" }}
             >
+              {/* Card ini tidak menampilkan harga diskon, hanya harga normal */}
               Rp {item.harga.toLocaleString("id-ID")}
             </span>
             <Button
               size="sm"
               className={`px-3 py-1 text-xs font-medium text-white hover:opacity-90 ${
-                isOutOfStock ? "opacity-50 cursor-not-allowed" : ""
+                isOutOfStock || storeIsClosed
+                  ? "opacity-50 cursor-not-allowed"
+                  : ""
               }`}
-              style={{ backgroundColor: isOutOfStock ? "#9CA3AF" : "#8B6F47" }}
+              style={{
+                backgroundColor:
+                  isOutOfStock || storeIsClosed ? "#9CA3AF" : "#8B6F47",
+              }}
               onClick={handleOrderClick}
-              disabled={isOutOfStock}
-              title={isOutOfStock ? t("menu.outOfStock") : t("menu.addToCart")}
+              disabled={isOutOfStock || storeIsClosed}
+              title={
+                isOutOfStock
+                  ? t("menu.outOfStock")
+                  : storeIsClosed
+                  ? "Toko sedang tutup"
+                  : t("menu.addToCart")
+              }
             >
               {t("menu.order") || "Pesan"}
             </Button>
@@ -114,10 +143,92 @@ function BreadStockCard(item: MenuItem) {
 
 export function DailyBreadStock() {
   const { t } = useTranslation();
-  const { menuItems, loading, error } = useMenuData();
+  // [PERUBAHAN] Hapus hook lama
+  // const { menuItems, loading, error } = useMenuData();
 
-  // Filter items that are available today and have stock
-  const todaysBread = menuItems.filter((item) => item.stok > 0);
+  // [PERUBAHAN] Tambahkan state lokal
+  const [todaysBread, setTodaysBread] = useState<MenuItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const { isStoreClosed } = useStoreClosure();
+  const storeIsClosed = isStoreClosed();
+
+  // [PERUBAHAN] Tambahkan useEffect untuk fetch data
+  useEffect(() => {
+    const fetchDailyBread = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        console.log("[DailyBreadStock] Fetching products from /api/products");
+
+        // 1. Panggil API internal
+        const response = await fetch("/api/products");
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || `API error: ${response.status}`);
+        }
+
+        const data: ApiResponse = await response.json();
+
+        // 2. Transformasi data (logika disalin dari MenuGrid)
+        const allProducts: MenuItem[] = (data.data || []).map(
+          (product: ApiProduct) => ({
+            id: product.id,
+            nama_id: product.nama_id,
+            nama_en: product.nama_en,
+            deskripsi_id: product.deskripsi_id || "",
+            deskripsi_en: product.deskripsi_en || "",
+            harga: product.harga,
+            harga_diskon: product.harga_diskon || null,
+            stok: product.stok || 0, // Card menggunakan stok ini
+            isBestSeller: product.isBestSeller || false,
+            isDaily: product.isDaily || false, // Kita akan filter berdasarkan ini
+            dailyStock: product.daily_stock || 0, // Data ini ada, tapi card-nya tidak pakai
+            created_at: product.created_at || "",
+            updated_at: product.updated_at || "",
+            gambars: (product.gambars || [])
+              .filter((g): g is { id: number; file_path: string } => g !== null)
+              .map((g) => ({
+                ...g,
+                product_id: product.id,
+                created_at: "",
+                updated_at: "",
+              })),
+            jenis: product.jenis || [],
+            hari: product.hari || [],
+            attributes: product.attributes || [],
+            bahans: product.bahans || [],
+          })
+        );
+
+        // 3. Filter HANYA untuk roti harian (isDaily) DAN yang masih ada stok
+        const filteredDailyBread = allProducts.filter(
+          (item) => item.isDaily && item.stok > 0
+        );
+
+        console.log(
+          "[DailyBreadStock] Filtered daily bread:",
+          filteredDailyBread
+        );
+        setTodaysBread(filteredDailyBread);
+      } catch (err) {
+        console.error("[DailyBreadStock] Error fetching products:", err);
+        setError(
+          err instanceof Error ? err.message : "Failed to fetch products"
+        );
+        setTodaysBread([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDailyBread();
+  }, []); // <-- Dependency array kosong, fetch sekali saat mount
+
+  // [PERUBAHAN] Hapus filter lama, karena data di state 'todaysBread' sudah difilter
+  // const todaysBread = menuItems.filter((item) => item.stok > 0);
 
   if (loading) {
     return (
@@ -162,7 +273,9 @@ export function DailyBreadStock() {
 
   return (
     <section
-      className="w-full py-16 md:py-24"
+      className={`w-full py-16 md:py-24 ${
+        storeIsClosed ? "opacity-50 pointer-events-none" : ""
+      }`}
       style={{ backgroundColor: "#FFF8F3" }}
     >
       <div className="container mx-auto px-4 sm:px-6 lg:px-16">
@@ -177,45 +290,14 @@ export function DailyBreadStock() {
               >
                 {t("stock.todaysBread") || "Roti Hari Ini"}
               </h2>
-              {/* <p className="text-gray-600 text-base md:text-lg leading-relaxed">
-                {t("stock.description") ||
-                  "Roti segar yang baru dibuat hari ini. Pembuat roti kami sering membuat stok ekstra untuk memastikan Anda mendapatkan roti terbaik. Pesan sekarang sebelum kehabisan!"}
-              </p> */}
             </div>
-
-            {/* Info Box
-            <div
-              className="p-6 rounded-lg border-2"
-              style={{
-                backgroundColor: "#FFF8F3",
-                borderColor: "#8B6F47",
-              }}
-            >
-              <div className="flex gap-3">
-                <AlertCircle
-                  className="w-6 h-6 flex-shrink-0"
-                  style={{ color: "#8B6F47" }}
-                />
-                <div>
-                  <h3
-                    className="font-semibold mb-2"
-                    style={{ color: "#5D4037" }}
-                  >
-                    {t("stock.freshBaked") || "Baru Dipanggang"}
-                  </h3>
-                  <p className="text-sm text-gray-600">
-                    {t("stock.extraStock") ||
-                      "Pembuat roti kami sering membuat stok ekstra untuk memenuhi permintaan. Semua roti dijamin segar dan berkualitas tinggi."}
-                  </p>
-                </div>
-              </div>
-            </div> */}
           </div>
         </div>
 
         {/* Bread Grid */}
         {todaysBread.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
+            {/* Render dari state 'todaysBread' yang sudah difilter */}
             {todaysBread.map((bread) => (
               <BreadStockCard key={bread.id} {...bread} />
             ))}

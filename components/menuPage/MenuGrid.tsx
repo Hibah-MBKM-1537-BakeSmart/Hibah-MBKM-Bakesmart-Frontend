@@ -1,14 +1,22 @@
 "use client";
 
 import { useState, useEffect } from "react";
+// Impor ini mengasumsikan file-file ini ada di struktur proyek kamu
+// Kompilator di sini tidak bisa melihatnya, tapi ini seharusnya bekerja di app kamu
 import { MenuCard } from "./MenuCard";
 import { MenuModal } from "./MenuModal";
 import { ExistingCustomizationModal } from "./ExistingCustomModal";
 import { RemoveCustomizationModal } from "./RemoveCustomizationModal";
 import { useCart } from "@/app/contexts/CartContext";
 import { useTranslation } from "@/app/contexts/TranslationContext";
-import { useMenuData } from "@/app/hooks/useMenuData";
-import type { MenuItem, ProductType } from "@/lib/api/mockData";
+// Import tipe data dari file terpusat
+import type { MenuItem, ApiProduct } from "@/lib/types";
+
+// Tipe untuk respons API yang baru
+interface ApiResponse {
+  message: string;
+  data: ApiProduct[];
+}
 
 export function MenuGrid() {
   const [activeDay, setActiveDay] = useState("all");
@@ -22,13 +30,101 @@ export function MenuGrid() {
   const [isRemoveCustomizationModalOpen, setIsRemoveCustomizationModalOpen] =
     useState(false);
 
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [categories, setCategories] = useState<
+    Array<{ id: number; nama_id: string; nama_en: string }>
+  >([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   const { selectedOrderDay, setSelectedOrderDay } = useCart();
   const { t, language } = useTranslation();
 
-  const { menuItems, categories, loading, error } = useMenuData({
-    category: activeCategory,
-    day: activeDay,
-  });
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        // [PERUBAHAN] Memanggil API internal Next.js
+        console.log("[v2] Fetching products from /api/products");
+
+        const response = await fetch("/api/products"); // <-- PERUBAHAN DI SINI
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || `API error: ${response.status}`);
+        }
+
+        const data: ApiResponse = await response.json();
+        console.log("[v2] API Response (from /api/products):", data);
+
+        // Transform API response to MenuItem format
+        const products: MenuItem[] = (data.data || []).map(
+          (product: ApiProduct) => ({
+            id: product.id,
+            nama_id: product.nama_id,
+            nama_en: product.nama_en,
+            deskripsi_id: product.deskripsi_id || "",
+            deskripsi_en: product.deskripsi_en || "",
+            harga: product.harga,
+            harga_diskon: product.harga_diskon || null,
+            stok: product.stok || 0,
+            isBestSeller: product.isBestSeller || false,
+            // Sesuaikan dengan data dari API (berdasarkan contoh JSON kamu)
+            isDaily: product.isDaily || false,
+            dailyStock: product.daily_stock || 0,
+            created_at: product.created_at || "",
+            updated_at: product.updated_at || "",
+            gambars: (product.gambars || [])
+              .filter((g): g is { id: number; file_path: string } => g !== null)
+              .map((g) => ({
+                ...g,
+                product_id: product.id,
+                created_at: "", // Sesuaikan jika ada datanya
+                updated_at: "", // Sesuaikan jika ada datanya
+              })),
+            jenis: product.jenis || [],
+            hari: product.hari || [],
+            attributes: product.attributes || [],
+            bahans: product.bahans || [],
+          })
+        );
+
+        setMenuItems(products);
+
+        // Extract unique categories from products
+        const categoryMap = new Map<
+          number,
+          { id: number; nama_id: string; nama_en: string }
+        >();
+        products.forEach((p) => {
+          p.jenis.forEach((j) => {
+            if (!categoryMap.has(j.id)) {
+              categoryMap.set(j.id, {
+                id: j.id,
+                nama_id: j.nama_id,
+                nama_en: j.nama_en,
+              });
+            }
+          });
+        });
+        const uniqueCategories = Array.from(categoryMap.values());
+
+        setCategories(uniqueCategories);
+        console.log("[v2] Categories extracted:", uniqueCategories);
+      } catch (err) {
+        console.error("[v2] Error fetching products:", err);
+        setError(
+          err instanceof Error ? err.message : "Failed to fetch products"
+        );
+        setMenuItems([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, []);
 
   const dayFilters = [
     { id: "all", name: t("menuGrid.allDays"), active: activeDay === "all" },
@@ -47,60 +143,39 @@ export function MenuGrid() {
       name: t("menuGrid.allProducts"),
       active: activeCategory === "all",
     },
-    ...categories
-      .filter((cat) => cat.id !== 0) // Filter out the "Semua Produk" category
-      .map((cat) => ({
-        id: cat.nama_id.toLowerCase().replace(/ /g, "-"),
-        name: language === "id" ? cat.nama_id : cat.nama_en,
-        active: activeCategory === cat.nama_id.toLowerCase().replace(/ /g, "-"),
-      })),
+    ...categories.map((cat) => ({
+      id: `cat-${cat.id}`,
+      name: language === "id" ? cat.nama_id : cat.nama_en,
+      active: activeCategory === `cat-${cat.id}`,
+    })),
   ];
 
-  useEffect(() => {
-    if (selectedOrderDay) {
-      setActiveDay(selectedOrderDay);
-      console.log(
-        "Updated active day from selectedOrderDay:",
-        selectedOrderDay
-      );
-    }
-  }, [selectedOrderDay]);
-
-  // Handle klik pada menu card (untuk lihat detail atau pilih customization pertama kali)
   const handleItemClick = (item: MenuItem) => {
     setSelectedItem(item);
     setIsModalOpen(true);
   };
 
-  // Handle ketika user klik tambah pada item yang sudah ada di cart dengan attributes
   const handleShowExistingCustomization = (item: MenuItem) => {
     setSelectedItem(item);
     setIsExistingCustomizationModalOpen(true);
   };
 
-  // Handle ketika user klik minus pada item yang sudah ada di cart dengan attributes
   const handleShowRemoveCustomization = (item: MenuItem) => {
     setSelectedItem(item);
     setIsRemoveCustomizationModalOpen(true);
   };
 
-  // Handle ketika user pilih "Tambah dengan kustomisasi baru" dari existing customization modal
   const handleAddNewCustomization = () => {
-    // Tutup existing modal dulu, lalu buka menu modal dengan delay
     setIsExistingCustomizationModalOpen(false);
-
-    // Gunakan setTimeout untuk memastikan existing modal sudah tertutup sepenuhnya
     setTimeout(() => {
       setIsModalOpen(true);
-    }, 100); // Delay kecil untuk transisi yang smooth
+    }, 100);
   };
 
-  // Close modals - pastikan semua modal tertutup
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setIsExistingCustomizationModalOpen(false);
     setIsRemoveCustomizationModalOpen(false);
-    // Reset selectedItem dengan delay kecil
     setTimeout(() => {
       setSelectedItem(null);
     }, 200);
@@ -110,7 +185,6 @@ export function MenuGrid() {
     setIsExistingCustomizationModalOpen(false);
     setIsModalOpen(false);
     setIsRemoveCustomizationModalOpen(false);
-    // Reset selectedItem dengan delay kecil
     setTimeout(() => {
       setSelectedItem(null);
     }, 200);
@@ -120,7 +194,6 @@ export function MenuGrid() {
     setIsRemoveCustomizationModalOpen(false);
     setIsModalOpen(false);
     setIsExistingCustomizationModalOpen(false);
-    // Reset selectedItem dengan delay kecil
     setTimeout(() => {
       setSelectedItem(null);
     }, 200);
@@ -128,9 +201,7 @@ export function MenuGrid() {
 
   const handleDayFilter = (dayId: string) => {
     console.log("Setting active day to:", dayId);
-    // Keep original case for day names
     setActiveDay(dayId);
-    // If this is a day selection for ordering, also update selectedOrderDay
     if (dayId !== "all") {
       setSelectedOrderDay(dayId);
     }
@@ -162,6 +233,13 @@ export function MenuGrid() {
       </div>
     );
   }
+
+  const filteredItems =
+    activeCategory === "all"
+      ? menuItems
+      : menuItems.filter((item) =>
+          item.jenis.some((j) => `cat-${j.id}` === activeCategory)
+        );
 
   return (
     <>
@@ -258,7 +336,7 @@ export function MenuGrid() {
           </div>
 
           <div className="divide-y divide-gray-100">
-            {menuItems.map((item) => (
+            {filteredItems.map((item) => (
               <MenuCard
                 key={item.id}
                 item={item}
@@ -269,7 +347,7 @@ export function MenuGrid() {
             ))}
           </div>
 
-          {menuItems.length === 0 && (
+          {filteredItems.length === 0 && (
             <div className="text-center py-16">
               <p className="text-gray-500 text-lg">
                 {t("menuGrid.noProductsAvailable")}
@@ -279,7 +357,6 @@ export function MenuGrid() {
         </div>
       </div>
 
-      {/* Main Menu Modal - untuk customization pertama kali atau customization baru */}
       {!isExistingCustomizationModalOpen && !isRemoveCustomizationModalOpen && (
         <MenuModal
           item={selectedItem}
@@ -288,7 +365,6 @@ export function MenuGrid() {
         />
       )}
 
-      {/* Existing Customization Modal - untuk konfirmasi item yang sudah ada di cart */}
       {!isModalOpen && !isRemoveCustomizationModalOpen && (
         <ExistingCustomizationModal
           item={selectedItem}
@@ -298,7 +374,6 @@ export function MenuGrid() {
         />
       )}
 
-      {/* Remove Customization Modal - untuk memilih customization yang ingin dikurangi */}
       {!isModalOpen && !isExistingCustomizationModalOpen && (
         <RemoveCustomizationModal
           item={selectedItem}

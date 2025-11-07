@@ -1,25 +1,33 @@
 "use client";
 
 import type React from "react";
-
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "@/app/contexts/TranslationContext";
-import { useMenuData } from "@/app/hooks/useMenuData";
+// [PERUBAHAN] Hapus impor useMenuData
+// import { useMenuData } from "@/app/hooks/useMenuData";
 import { useCart } from "@/app/contexts/CartContext";
 import { MenuModal } from "@/components/menuPage/MenuModal";
 import { ExistingCustomizationModal } from "@/components/menuPage/ExistingCustomModal";
 import { RemoveCustomizationModal } from "@/components/menuPage/RemoveCustomizationModal";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import type { MenuItem } from "@/lib/api/mockData";
+// [PERUBAHAN] Impor tipe yang konsisten dengan komponen lain
+import type { MenuItem, ApiProduct } from "@/lib/types";
+import { useStoreClosure } from "@/app/contexts/StoreClosureContext";
 
 const menuData = {
   hero: {
     backgroundImage: "/delicious-bread-and-pastries-on-wooden-table-with-.jpg",
   },
 };
+
+// [PERUBAHAN] Tipe untuk respons API (sama seperti di MenuGrid)
+interface ApiResponse {
+  message: string;
+  data: ApiProduct[];
+}
 
 export function Menu() {
   const [activeCategory, setActiveCategory] = useState("all");
@@ -34,11 +42,103 @@ export function Menu() {
   const [carouselIndex, setCarouselIndex] = useState(0);
   const { t, language } = useTranslation();
   const { addToCart, cartItems } = useCart();
+  const { isStoreClosed } = useStoreClosure();
+  const storeIsClosed = isStoreClosed();
   const carouselRef = useRef<HTMLDivElement>(null);
 
-  const { menuItems, categories, loading, error } = useMenuData({
-    category: activeCategory,
-  });
+  // [PERUBAHAN] Hapus hook useMenuData
+  // const { menuItems, categories, loading, error } = useMenuData({
+  //   category: activeCategory,
+  // });
+
+  // [PERUBAHAN] Tambahkan state lokal untuk data, loading, dan error
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]); // Akan menyimpan SEMUA item
+  const [categories, setCategories] = useState<
+    Array<{ id: number; nama_id: string; nama_en: string }>
+  >([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // [PERUBAHAN] Tambahkan useEffect untuk fetch data
+  useEffect(() => {
+    const fetchMenuData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        console.log("[Menu] Fetching products from /api/products");
+
+        const response = await fetch("/api/products");
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || `API error: ${response.status}`);
+        }
+
+        const data: ApiResponse = await response.json();
+
+        // Transformasi data (logika disalin dari MenuGrid)
+        const products: MenuItem[] = (data.data || []).map(
+          (product: ApiProduct) => ({
+            id: product.id,
+            nama_id: product.nama_id,
+            nama_en: product.nama_en,
+            deskripsi_id: product.deskripsi_id || "",
+            deskripsi_en: product.deskripsi_en || "",
+            harga: product.harga,
+            harga_diskon: product.harga_diskon || null,
+            stok: product.stok || 0,
+            isBestSeller: product.isBestSeller || false,
+            isDaily: product.isDaily || false,
+            dailyStock: product.daily_stock || 0,
+            created_at: product.created_at || "",
+            updated_at: product.updated_at || "",
+            gambars: (product.gambars || [])
+              .filter((g): g is { id: number; file_path: string } => g !== null)
+              .map((g) => ({
+                ...g,
+                product_id: product.id,
+                created_at: "", // Sesuaikan jika ada datanya
+                updated_at: "", // Sesuaikan jika ada datanya
+              })),
+            jenis: product.jenis || [],
+            hari: product.hari || [],
+            attributes: product.attributes || [],
+            bahans: product.bahans || [],
+          })
+        );
+        setMenuItems(products); // <-- Simpan SEMUA produk
+
+        // Ekstraksi kategori (logika disalin dari MenuGrid)
+        const categoryMap = new Map<
+          number,
+          { id: number; nama_id: string; nama_en: string }
+        >();
+        products.forEach((p) => {
+          p.jenis.forEach((j) => {
+            if (!categoryMap.has(j.id)) {
+              categoryMap.set(j.id, {
+                id: j.id,
+                nama_id: j.nama_id,
+                nama_en: j.nama_en,
+              });
+            }
+          });
+        });
+        const uniqueCategories = Array.from(categoryMap.values());
+        setCategories(uniqueCategories); // <-- Simpan SEMUA kategori
+
+        console.log("[Menu] Data fetched and processed.");
+      } catch (err) {
+        console.error("[Menu] Error fetching products:", err);
+        setError(
+          err instanceof Error ? err.message : "Failed to fetch products"
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMenuData();
+  }, []); // <-- Dependency array kosong, fetch sekali saat mount
 
   // Helper functions to replace missing context methods
   const getItemQuantityInCart = (itemId: number): number => {
@@ -57,6 +157,7 @@ export function Menu() {
       name: t("menuGrid.allProducts"),
       active: activeCategory === "all",
     },
+    // 'categories' dari state sekarang digunakan di sini
     ...categories
       .filter((cat) => cat.id !== 0)
       .map((cat) => ({
@@ -66,8 +167,22 @@ export function Menu() {
       })),
   ];
 
+  // [PERUBAHAN] Logika filtering sekarang terjadi di sini
+  const filteredItems =
+    activeCategory === "all"
+      ? menuItems
+      : menuItems.filter((item) =>
+          item.jenis.some(
+            (j) => j.nama_id.toLowerCase().replace(/ /g, "-") === activeCategory
+          )
+        );
+
   const itemsPerView = 4;
-  const maxIndex = Math.max(0, Math.ceil(menuItems.length / itemsPerView) - 1);
+  // [PERUBAHAN] Gunakan 'filteredItems' untuk kalkulasi carousel
+  const maxIndex = Math.max(
+    0,
+    Math.ceil(filteredItems.length / itemsPerView) - 1
+  );
 
   const handlePrevious = () => {
     setCarouselIndex((prev) => Math.max(0, prev - 1));
@@ -81,7 +196,8 @@ export function Menu() {
     setCarouselIndex(0);
   }, [activeCategory]);
 
-  const visibleItems = menuItems.slice(
+  // [PERUBAHAN] Gunakan 'filteredItems' untuk menentukan item yang terlihat
+  const visibleItems = filteredItems.slice(
     carouselIndex * itemsPerView,
     (carouselIndex + 1) * itemsPerView
   );
@@ -104,15 +220,18 @@ export function Menu() {
       handleItemClick(item);
     } else {
       // Add item without customizations
+      // Objek ini HARUS sesuai dengan tipe Omit<CartItem, "quantity" | "cartId">
       const itemToAdd = {
         id: item.id,
         name: language === "id" ? item.nama_id : item.nama_en,
-        discountPrice: item.harga_diskon
-          ? `Rp ${item.harga_diskon.toLocaleString("id-ID")}`
-          : `Rp ${item.harga.toLocaleString("id-ID")}`,
-        originalPrice: item.harga_diskon
-          ? `Rp ${item.harga.toLocaleString("id-ID")}`
-          : undefined,
+        discountPrice:
+          item.harga_diskon && item.harga_diskon < item.harga
+            ? `Rp ${item.harga_diskon.toLocaleString("id-ID")}`
+            : `Rp ${item.harga.toLocaleString("id-ID")}`,
+        originalPrice:
+          item.harga_diskon && item.harga_diskon < item.harga
+            ? `Rp ${item.harga.toLocaleString("id-ID")}`
+            : undefined,
         isDiscount: !!item.harga_diskon && item.harga_diskon < item.harga,
         image: item.gambars?.[0]?.file_path || "/placeholder.svg",
         category: item.jenis?.[0]
@@ -122,13 +241,17 @@ export function Menu() {
           : "",
         stock: item.stok,
         availableDays: item.hari.map((h) => h.nama_id),
-        orderDay: item.hari[0]?.nama_id || "Senin",
+        orderDay: item.hari[0]?.nama_id || "Senin", // CartContext akan menimpa ini jika hari sudah dipilih
         selectedAttributes: [],
+        note: "", // Asumsi 'note' adalah bagian dari tipe CartItem
       };
+
+      // Kirim objek yang sudah bersih
       addToCart(itemToAdd);
     }
   };
 
+  // ... (Sisa handler modal tetap sama) ...
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setIsExistingCustomizationModalOpen(false);
@@ -164,9 +287,11 @@ export function Menu() {
   };
 
   if (loading) {
+    // ... (JSX Loading state tidak berubah) ...
     return (
       <section className="w-full">
         <div className="relative h-[400px] md:h-[500px] lg:h-[600px] overflow-hidden">
+          {/* ... Hero content ... */}
           <Image
             src={menuData.hero.backgroundImage || "/placeholder.svg"}
             alt="Menu hero background"
@@ -205,9 +330,11 @@ export function Menu() {
   }
 
   if (error) {
+    // ... (JSX Error state tidak berubah) ...
     return (
       <section className="w-full">
         <div className="relative h-[400px] md:h-[500px] lg:h-[600px] overflow-hidden">
+          {/* ... Hero content ... */}
           <Image
             src={menuData.hero.backgroundImage || "/placeholder.svg"}
             alt="Menu hero background"
@@ -250,9 +377,11 @@ export function Menu() {
     );
   }
 
+  // ... (JSX Render state) ...
   return (
     <section className="w-full">
       <div className="relative h-[400px] md:h-[500px] lg:h-[600px] overflow-hidden">
+        {/* ... Hero content ... */}
         <Image
           src={menuData.hero.backgroundImage || "/placeholder.svg"}
           alt="Menu hero background"
@@ -287,15 +416,19 @@ export function Menu() {
           <div className="mb-12">
             <div className="overflow-x-auto pb-2">
               <div className="flex gap-3 justify-center min-w-max px-2">
+                {/* menuCategories dirender dari state 'categories' */}
                 {menuCategories.map((category) => (
                   <button
                     key={category.id}
-                    onClick={() => setActiveCategory(category.id)}
+                    onClick={() =>
+                      !storeIsClosed && setActiveCategory(category.id)
+                    }
                     className={`px-6 py-2.5 text-sm font-medium transition-all duration-200 whitespace-nowrap ${
                       activeCategory === category.id
                         ? "bg-[#8B6F47] text-white shadow-md"
                         : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-200"
-                    }`}
+                    } ${storeIsClosed ? "opacity-50 cursor-not-allowed" : ""}`}
+                    disabled={storeIsClosed}
                   >
                     {category.name}
                   </button>
@@ -310,20 +443,30 @@ export function Menu() {
                 onClick={handlePrevious}
                 className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10 bg-white rounded-full p-2 shadow-lg hover:bg-gray-50 transition-colors"
                 aria-label="Previous"
+                disabled={storeIsClosed}
               >
-                <ChevronLeft className="w-6 h-6 text-gray-700" />
+                <ChevronLeft
+                  className={`w-6 h-6 ${
+                    storeIsClosed ? "text-gray-400" : "text-gray-700"
+                  }`}
+                />
               </button>
             )}
 
             <div ref={carouselRef} className="overflow-hidden">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {/* [PERUBAHAN] Render 'visibleItems' */}
                 {visibleItems.map((item) => {
                   const quantity = getItemQuantityInCart(item.id);
                   return (
                     <div
                       key={item.id}
-                      className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow cursor-pointer"
-                      onClick={() => handleItemClick(item)}
+                      className={`bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow ${
+                        storeIsClosed
+                          ? "cursor-not-allowed opacity-60"
+                          : "cursor-pointer"
+                      }`}
+                      onClick={() => !storeIsClosed && handleItemClick(item)}
                     >
                       <div className="relative h-48 w-full">
                         <Image
@@ -346,11 +489,31 @@ export function Menu() {
                         </p>
                         <div className="flex items-center justify-between">
                           <span className="text-lg font-bold text-gray-900">
-                            Rp{item.harga.toLocaleString("id-ID")}
+                            {/* [FIX] Tampilkan harga diskon jika ada */}
+                            {item.harga_diskon &&
+                            item.harga_diskon < item.harga ? (
+                              <>
+                                <span className="text-red-600">
+                                  Rp{item.harga_diskon.toLocaleString("id-ID")}
+                                </span>
+                                <span className="text-sm line-through text-gray-500 ml-2">
+                                  Rp{item.harga.toLocaleString("id-ID")}
+                                </span>
+                              </>
+                            ) : (
+                              `Rp${item.harga.toLocaleString("id-ID")}`
+                            )}
                           </span>
                           <Button
-                            onClick={(e) => handleQuickAdd(item, e)}
-                            className="bg-[#5D4037] hover:bg-[#4E342E] text-white px-4 py-2 text-sm"
+                            onClick={(e) =>
+                              !storeIsClosed && handleQuickAdd(item, e)
+                            }
+                            disabled={storeIsClosed}
+                            className={`text-white px-4 py-2 text-sm ${
+                              storeIsClosed
+                                ? "opacity-50 cursor-not-allowed bg-gray-400"
+                                : "bg-[#5D4037] hover:bg-[#4E342E]"
+                            }`}
                           >
                             {quantity > 0
                               ? `${t("menu.inCart")} (${quantity})`
@@ -364,18 +527,26 @@ export function Menu() {
               </div>
             </div>
 
+            {/* [PERUBAHAN] Gunakan 'maxIndex' */}
             {carouselIndex < maxIndex && (
               <button
                 onClick={handleNext}
                 className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10 bg-white rounded-full p-2 shadow-lg hover:bg-gray-50 transition-colors"
                 aria-label="Next"
+                disabled={storeIsClosed}
               >
-                <ChevronRight className="w-6 h-6 text-gray-700" />
+                <ChevronRight
+                  className={`w-6 h-6 ${
+                    storeIsClosed ? "text-gray-400" : "text-gray-700"
+                  }`}
+                />
               </button>
             )}
           </div>
 
-          {menuItems.length === 0 && (
+          {/* [PERUBAHAN] Gunakan 'filteredItems' untuk cek
+          jika tidak ada produk */}
+          {filteredItems.length === 0 && (
             <div className="text-center py-16">
               <p className="text-gray-500 text-lg">
                 {t("menuGrid.noProductsAvailable")}
@@ -388,18 +559,26 @@ export function Menu() {
               asChild
               variant="outline"
               size="lg"
-              className="border-2 px-8 py-3 text-base font-medium hover:bg-[#8B6F47] hover:text-white transition-colors bg-transparent"
+              className={`border-2 px-8 py-3 text-base font-medium hover:bg-[#8B6F47] hover:text-white transition-colors bg-transparent ${
+                storeIsClosed
+                  ? "opacity-50 cursor-not-allowed pointer-events-none"
+                  : ""
+              }`}
               style={{
                 borderColor: "#8B6F47",
                 color: "#8B6F47",
               }}
+              disabled={storeIsClosed}
             >
-              <Link href="/menu">{t("menu.viewAll")}</Link>
+              <Link href={storeIsClosed ? "#" : "/menu"}>
+                {t("menu.viewAll")}
+              </Link>
             </Button>
           </div>
         </div>
       </div>
 
+      {/* ... (Modal JSX tidak berubah) ... */}
       {!isExistingCustomizationModalOpen && !isRemoveCustomizationModalOpen && (
         <MenuModal
           item={selectedItem}

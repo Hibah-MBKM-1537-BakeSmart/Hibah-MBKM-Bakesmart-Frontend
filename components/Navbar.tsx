@@ -23,6 +23,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useCart } from "@/app/contexts/CartContext";
 import { useTranslation } from "@/app/contexts/TranslationContext";
+import { useStoreClosure } from "@/app/contexts/StoreClosureContext";
 
 // Komponen Logo (bisa diganti dengan komponen logo Anda sendiri atau tag <img>)
 const Logo = () => (
@@ -39,7 +40,9 @@ export function Navbar() {
   const pathname = usePathname();
   const { getTotalItems, showCartAnimation } = useCart();
   const { t, language, setLanguage } = useTranslation();
+  const { isStoreClosed } = useStoreClosure();
   const totalItems = getTotalItems();
+  const storeIsClosed = isStoreClosed();
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
 
@@ -95,10 +98,15 @@ export function Navbar() {
                       "bg-transparent hover:bg-transparent focus:bg-transparent shadow-none text-center text-[18px] font-[Poppins,sans-serif]",
                       pathname === link.href
                         ? "text-[#4A1D1F] font-bold"
-                        : "text-white font-normal"
+                        : "text-white font-normal",
+                      storeIsClosed
+                        ? "opacity-50 cursor-not-allowed pointer-events-none"
+                        : ""
                     )}
                   >
-                    <Link href={link.href}>{link.label}</Link>
+                    <Link href={storeIsClosed ? "#" : link.href}>
+                      {link.label}
+                    </Link>
                   </NavigationMenuLink>
                 </NavigationMenuItem>
               ))}
@@ -120,14 +128,18 @@ export function Navbar() {
             </span>
           </Button>
 
-          <Link href="/order">
+          <Link
+            href={storeIsClosed ? "#" : "/order"}
+            className={storeIsClosed ? "pointer-events-none" : ""}
+          >
             <Button
               variant="ghost"
               size="icon"
               aria-label="Keranjang Belanja"
+              disabled={storeIsClosed}
               className={`relative transition-all duration-300 ${
                 showCartAnimation ? "animate-bounce bg-white/20" : ""
-              }`}
+              } ${storeIsClosed ? "opacity-50 cursor-not-allowed" : ""}`}
             >
               <ShoppingCart className="h-5 w-5" />
               {totalItems > 0 && (
@@ -154,14 +166,18 @@ export function Navbar() {
             </span>
           </Button>
 
-          <Link href="/order">
+          <Link
+            href={storeIsClosed ? "#" : "/order"}
+            className={storeIsClosed ? "pointer-events-none" : ""}
+          >
             <Button
               variant="ghost"
               size="icon"
               aria-label="Keranjang Belanja"
+              disabled={storeIsClosed}
               className={`relative rounded-full bg-white/20 hover:bg-white/30 text-white transition-all duration-300 ${
                 showCartAnimation ? "animate-bounce bg-white/40" : ""
-              }`}
+              } ${storeIsClosed ? "opacity-50 cursor-not-allowed" : ""}`}
             >
               <ShoppingCart className="h-5 w-5" />
               {totalItems > 0 && (
@@ -201,9 +217,13 @@ export function Navbar() {
                 {navLinks.map((link) => (
                   <a
                     key={link.href}
-                    href={link.href}
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className="block rounded-md p-3 font-medium text-white hover:bg-[#7b5235]"
+                    href={storeIsClosed ? "#" : link.href}
+                    onClick={() => !storeIsClosed && setIsMobileMenuOpen(false)}
+                    className={`block rounded-md p-3 font-medium text-white hover:bg-[#7b5235] ${
+                      storeIsClosed
+                        ? "opacity-50 cursor-not-allowed pointer-events-none"
+                        : ""
+                    }`}
                   >
                     {link.label}
                   </a>

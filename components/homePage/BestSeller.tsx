@@ -6,16 +6,29 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useCart } from "@/app/contexts/CartContext";
 import { MenuModal } from "@/components/menuPage/MenuModal";
-import { useState } from "react";
+// [PERUBAHAN] Impor useState dan useEffect
+import { useState, useEffect } from "react";
 import { useTranslation } from "@/app/contexts/TranslationContext";
-import { useBestSellers } from "@/app/hooks/useMenuData";
-import type { MenuItem } from "@/lib/api/mockData";
+// [PERUBAHAN] Hapus impor useBestSellers
+// import { useBestSellers } from "@/app/hooks/useMenuData";
+
+// [PERUBAHAN] Ganti path impor agar konsisten dengan MenuGrid.tsx
+import type { MenuItem, ApiProduct } from "@/lib/types";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useStoreClosure } from "@/app/contexts/StoreClosureContext";
+
+// [PERUBAHAN] Tipe untuk respons API (sama seperti di MenuGrid)
+interface ApiResponse {
+  message: string;
+  data: ApiProduct[];
+}
 
 function ProductCard(item: MenuItem) {
   const { addToCart, selectedOrderDay } = useCart();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { t, language } = useTranslation();
+  const { isStoreClosed } = useStoreClosure();
+  const storeIsClosed = isStoreClosed();
 
   const name = language === "id" ? item.nama_id : item.nama_en;
   const description = language === "id" ? item.deskripsi_id : item.deskripsi_en;
@@ -120,12 +133,23 @@ function ProductCard(item: MenuItem) {
             <Button
               size="sm"
               className={`px-3 py-1 text-xs font-medium text-white hover:opacity-90 ${
-                isOutOfStock ? "opacity-50 cursor-not-allowed" : ""
+                isOutOfStock || storeIsClosed
+                  ? "opacity-50 cursor-not-allowed"
+                  : ""
               }`}
-              style={{ backgroundColor: isOutOfStock ? "#9CA3AF" : "#8B6F47" }}
+              style={{
+                backgroundColor:
+                  isOutOfStock || storeIsClosed ? "#9CA3AF" : "#8B6F47",
+              }}
               onClick={handleOrderClick}
-              disabled={isOutOfStock}
-              title={isOutOfStock ? t("menu.outOfStock") : t("menu.addToCart")}
+              disabled={isOutOfStock || storeIsClosed}
+              title={
+                isOutOfStock
+                  ? t("menu.outOfStock")
+                  : storeIsClosed
+                  ? "Toko sedang tutup"
+                  : t("menu.addToCart")
+              }
             >
               {t("menu.order")}
             </Button>
@@ -144,9 +168,89 @@ function ProductCard(item: MenuItem) {
 
 export function BestSeller() {
   const { t } = useTranslation();
-  const { bestSellers, loading, error } = useBestSellers();
+  // [PERUBAHAN] Hapus hook lama
+  // const { bestSellers, loading, error } = useBestSellers();
+
+  // [PERUBAHAN] Tambahkan state lokal untuk data, loading, dan error
+  const [bestSellers, setBestSellers] = useState<MenuItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const { isStoreClosed } = useStoreClosure();
+  const storeIsClosed = isStoreClosed();
   const [currentIndex, setCurrentIndex] = useState(0);
   const itemsPerPage = 4;
+
+  // [PERUBAHAN] Tambahkan useEffect untuk fetch data
+  useEffect(() => {
+    const fetchBestSellers = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        console.log("[BestSeller] Fetching products from /api/products");
+
+        // 1. Panggil API internal (sama seperti MenuGrid)
+        const response = await fetch("/api/products");
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || `API error: ${response.status}`);
+        }
+
+        const data: ApiResponse = await response.json();
+        console.log("[BestSeller] API Response (from /api/products):", data);
+
+        // 2. Transformasi data (logika disalin dari MenuGrid untuk konsistensi)
+        const allProducts: MenuItem[] = (data.data || []).map(
+          (product: ApiProduct) => ({
+            id: product.id,
+            nama_id: product.nama_id,
+            nama_en: product.nama_en,
+            deskripsi_id: product.deskripsi_id || "",
+            deskripsi_en: product.deskripsi_en || "",
+            harga: product.harga,
+            harga_diskon: product.harga_diskon || null,
+            stok: product.stok || 0,
+            isBestSeller: product.isBestSeller || false,
+            isDaily: product.isDaily || false,
+            dailyStock: product.daily_stock || 0,
+            created_at: product.created_at || "",
+            updated_at: product.updated_at || "",
+            gambars: (product.gambars || [])
+              .filter((g): g is { id: number; file_path: string } => g !== null)
+              .map((g) => ({
+                ...g,
+                product_id: product.id,
+                created_at: "", // Sesuaikan jika ada datanya
+                updated_at: "", // Sesuaikan jika ada datanya
+              })),
+            jenis: product.jenis || [],
+            hari: product.hari || [],
+            attributes: product.attributes || [],
+            bahans: product.bahans || [],
+          })
+        );
+
+        // 3. Filter HANYA untuk best seller
+        const filteredBestSellers = allProducts.filter(
+          (item) => item.isBestSeller
+        );
+
+        console.log("[BestSeller] Filtered best sellers:", filteredBestSellers);
+        setBestSellers(filteredBestSellers);
+      } catch (err) {
+        console.error("[BestSeller] Error fetching products:", err);
+        setError(
+          err instanceof Error ? err.message : "Failed to fetch products"
+        );
+        setBestSellers([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchBestSellers();
+  }, []); // <-- Dependency array kosong, fetch sekali saat mount
 
   const totalPages = Math.ceil(bestSellers.length / itemsPerPage);
   const visibleProducts = bestSellers.slice(
@@ -208,9 +312,33 @@ export function BestSeller() {
     );
   }
 
+  // [PERUBAHAN] Tambahkan kondisi jika tidak ada bestseller
+  if (!loading && bestSellers.length === 0) {
+    return (
+      <section
+        className="w-full py-16 md:py-24"
+        style={{ backgroundColor: "#F5F1EB" }}
+      >
+        <div className="container mx-auto px-4 sm:px-6 lg:px-16">
+          <div className="text-center">
+            <h2
+              className="font-serif text-3xl md:text-4xl lg:text-5xl font-bold mb-6"
+              style={{ color: "#5D4037" }}
+            >
+              {t("bestseller.title")}
+            </h2>
+            <p className="text-gray-600">{t("menuGrid.noProductsAvailable")}</p>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section
-      className="w-full py-16 md:py-24"
+      className={`w-full py-16 md:py-24 ${
+        storeIsClosed ? "opacity-50 pointer-events-none" : ""
+      }`}
       style={{ backgroundColor: "#F5F1EB" }}
     >
       <div className="container mx-auto px-4 sm:px-6 lg:px-16">
@@ -245,6 +373,7 @@ export function BestSeller() {
               className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10 bg-white rounded-full p-2 shadow-lg hover:bg-gray-50 transition-colors"
               style={{ color: "#5D4037" }}
               aria-label="Previous products"
+              disabled={storeIsClosed}
             >
               <ChevronLeft className="w-6 h-6" />
             </button>
@@ -264,6 +393,7 @@ export function BestSeller() {
               className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10 bg-white rounded-full p-2 shadow-lg hover:bg-gray-50 transition-colors"
               style={{ color: "#5D4037" }}
               aria-label="Next products"
+              disabled={storeIsClosed}
             >
               <ChevronRight className="w-6 h-6" />
             </button>
@@ -276,12 +406,15 @@ export function BestSeller() {
             asChild
             variant="outline"
             size="lg"
-            className="border-2 px-8 py-3 text-base font-medium hover:opacity-90 bg-transparent"
+            className={`border-2 px-8 py-3 text-base font-medium hover:opacity-90 bg-transparent ${
+              storeIsClosed ? "opacity-50 cursor-not-allowed" : ""
+            }`}
             style={{
               borderColor: "#8B6F47",
               color: "#8B6F47",
               backgroundColor: "transparent",
             }}
+            disabled={storeIsClosed}
           >
             <Link href="/menu">{t("bestseller.viewAll")}</Link>
           </Button>

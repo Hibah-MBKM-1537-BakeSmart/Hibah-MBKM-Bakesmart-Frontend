@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import { Button, Input, Select, Textarea } from '@/components/adminPage';
+import { useState } from "react";
+import { Button, Input, Select, Textarea } from "@/components/adminPage";
 import {
   Save,
   Upload,
@@ -12,8 +12,9 @@ import {
   Mail,
   Smartphone,
   Clock,
-  DollarSign
-} from 'lucide-react';
+  AlertCircle,
+} from "lucide-react";
+import { useStoreClosure } from "@/app/contexts/StoreClosureContext";
 
 interface Settings {
   general: {
@@ -53,14 +54,14 @@ interface Settings {
 
 const initialSettings: Settings = {
   general: {
-    businessName: 'BakeSmart',
-    description: 'Premium bakery with fresh and delicious baked goods',
-    email: 'admin@bakesmart.com',
-    phone: '+62 812-3456-7890',
-    address: 'Jl. Raya No. 123, Jakarta, Indonesia',
-    timezone: 'Asia/Jakarta',
-    currency: 'IDR',
-    language: 'id'
+    businessName: "BakeSmart",
+    description: "Premium bakery with fresh and delicious baked goods",
+    email: "admin@bakesmart.com",
+    phone: "+62 812-3456-7890",
+    address: "Jl. Raya No. 123, Jakarta, Indonesia",
+    timezone: "Asia/Jakarta",
+    currency: "IDR",
+    language: "id",
   },
   notifications: {
     emailNotifications: true,
@@ -68,11 +69,11 @@ const initialSettings: Settings = {
     pushNotifications: true,
     orderNotifications: true,
     lowStockNotifications: true,
-    userRegistrationNotifications: false
+    userRegistrationNotifications: false,
   },
   appearance: {
-    theme: 'light',
-    primaryColor: '#f97316'
+    theme: "light",
+    primaryColor: "#f97316",
   },
   security: {
     twoFactorAuth: false,
@@ -80,91 +81,93 @@ const initialSettings: Settings = {
       minLength: 8,
       requireUppercase: true,
       requireNumbers: true,
-      requireSymbols: false
+      requireSymbols: false,
     },
-    sessionTimeout: 30
-  }
+    sessionTimeout: 30,
+  },
 };
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState<Settings>(initialSettings);
-  const [activeTab, setActiveTab] = useState('general');
+  const [activeTab, setActiveTab] = useState("general");
   const [saving, setSaving] = useState(false);
+  const { closure, updateClosure } = useStoreClosure();
 
   const tabs = [
-    { id: 'general', label: 'General', icon: Globe },
-    { id: 'notifications', label: 'Notifications', icon: Bell },
-    { id: 'appearance', label: 'Appearance', icon: Palette },
-    { id: 'security', label: 'Security', icon: Shield }
+    { id: "general", label: "General", icon: Globe },
+    { id: "notifications", label: "Notifications", icon: Bell },
+    { id: "appearance", label: "Appearance", icon: Palette },
+    { id: "security", label: "Security", icon: Shield },
+    { id: "store-closure", label: "Store Closure", icon: AlertCircle },
   ];
 
   const timezoneOptions = [
-    { value: 'Asia/Jakarta', label: 'Asia/Jakarta (WIB)' },
-    { value: 'Asia/Makassar', label: 'Asia/Makassar (WITA)' },
-    { value: 'Asia/Jayapura', label: 'Asia/Jayapura (WIT)' }
+    { value: "Asia/Jakarta", label: "Asia/Jakarta (WIB)" },
+    { value: "Asia/Makassar", label: "Asia/Makassar (WITA)" },
+    { value: "Asia/Jayapura", label: "Asia/Jayapura (WIT)" },
   ];
 
   const currencyOptions = [
-    { value: 'IDR', label: 'Indonesian Rupiah (IDR)' },
-    { value: 'USD', label: 'US Dollar (USD)' }
+    { value: "IDR", label: "Indonesian Rupiah (IDR)" },
+    { value: "USD", label: "US Dollar (USD)" },
   ];
 
   const languageOptions = [
-    { value: 'id', label: 'Bahasa Indonesia' },
-    { value: 'en', label: 'English' }
+    { value: "id", label: "Bahasa Indonesia" },
+    { value: "en", label: "English" },
   ];
 
   const themeOptions = [
-    { value: 'light', label: 'Light' },
-    { value: 'dark', label: 'Dark' },
-    { value: 'auto', label: 'Auto' }
+    { value: "light", label: "Light" },
+    { value: "dark", label: "Dark" },
+    { value: "auto", label: "Auto" },
   ];
 
   const handleSave = async () => {
     setSaving(true);
     // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise((resolve) => setTimeout(resolve, 1000));
     setSaving(false);
-    alert('Settings saved successfully!');
+    alert("Settings saved successfully!");
   };
 
   const updateGeneralSettings = (field: string, value: string) => {
-    setSettings(prev => ({
+    setSettings((prev) => ({
       ...prev,
       general: {
         ...prev.general,
-        [field]: value
-      }
+        [field]: value,
+      },
     }));
   };
 
   const updateNotificationSettings = (field: string, value: boolean) => {
-    setSettings(prev => ({
+    setSettings((prev) => ({
       ...prev,
       notifications: {
         ...prev.notifications,
-        [field]: value
-      }
+        [field]: value,
+      },
     }));
   };
 
   const updateAppearanceSettings = (field: string, value: string) => {
-    setSettings(prev => ({
+    setSettings((prev) => ({
       ...prev,
       appearance: {
         ...prev.appearance,
-        [field]: value
-      }
+        [field]: value,
+      },
     }));
   };
 
   const updateSecuritySettings = (field: string, value: any) => {
-    setSettings(prev => ({
+    setSettings((prev) => ({
       ...prev,
       security: {
         ...prev.security,
-        [field]: value
-      }
+        [field]: value,
+      },
     }));
   };
 
@@ -174,13 +177,11 @@ export default function SettingsPage() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
-          <p className="text-gray-600">Manage your application settings and preferences</p>
+          <p className="text-gray-600">
+            Manage your application settings and preferences
+          </p>
         </div>
-        <Button
-          onClick={handleSave}
-          loading={saving}
-          icon={Save}
-        >
+        <Button onClick={handleSave} loading={saving} icon={Save}>
           Save Changes
         </Button>
       </div>
@@ -197,11 +198,15 @@ export default function SettingsPage() {
                   onClick={() => setActiveTab(tab.id)}
                   className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors ${
                     activeTab === tab.id
-                      ? 'bg-orange-500 text-white'
-                      : 'text-gray-700 hover:bg-gray-100'
+                      ? "bg-orange-500 text-white"
+                      : "text-gray-700 hover:bg-gray-100"
                   }`}
                 >
-                  <Icon className={`w-5 h-5 ${activeTab === tab.id ? 'text-white' : 'text-gray-500'}`} />
+                  <Icon
+                    className={`w-5 h-5 ${
+                      activeTab === tab.id ? "text-white" : "text-gray-500"
+                    }`}
+                  />
                   <span className="font-medium">{tab.label}</span>
                 </button>
               );
@@ -213,45 +218,59 @@ export default function SettingsPage() {
         <div className="flex-1">
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             {/* General Settings */}
-            {activeTab === 'general' && (
+            {activeTab === "general" && (
               <div className="space-y-6">
                 <div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">General Settings</h3>
+                  <h3 className="text-lg font-medium text-gray-900 mb-4">
+                    General Settings
+                  </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <Input
                       label="Business Name"
                       value={settings.general.businessName}
-                      onChange={(e) => updateGeneralSettings('businessName', e.target.value)}
+                      onChange={(e) =>
+                        updateGeneralSettings("businessName", e.target.value)
+                      }
                     />
                     <Input
                       label="Email"
                       type="email"
                       value={settings.general.email}
-                      onChange={(e) => updateGeneralSettings('email', e.target.value)}
+                      onChange={(e) =>
+                        updateGeneralSettings("email", e.target.value)
+                      }
                       icon={Mail}
                     />
                     <Input
                       label="Phone"
                       value={settings.general.phone}
-                      onChange={(e) => updateGeneralSettings('phone', e.target.value)}
+                      onChange={(e) =>
+                        updateGeneralSettings("phone", e.target.value)
+                      }
                       icon={Smartphone}
                     />
                     <Select
                       label="Timezone"
                       value={settings.general.timezone}
-                      onChange={(e) => updateGeneralSettings('timezone', e.target.value)}
+                      onChange={(e) =>
+                        updateGeneralSettings("timezone", e.target.value)
+                      }
                       options={timezoneOptions}
                     />
                     <Select
                       label="Currency"
                       value={settings.general.currency}
-                      onChange={(e) => updateGeneralSettings('currency', e.target.value)}
+                      onChange={(e) =>
+                        updateGeneralSettings("currency", e.target.value)
+                      }
                       options={currencyOptions}
                     />
                     <Select
                       label="Language"
                       value={settings.general.language}
-                      onChange={(e) => updateGeneralSettings('language', e.target.value)}
+                      onChange={(e) =>
+                        updateGeneralSettings("language", e.target.value)
+                      }
                       options={languageOptions}
                     />
                   </div>
@@ -259,7 +278,9 @@ export default function SettingsPage() {
                     <Textarea
                       label="Business Description"
                       value={settings.general.description}
-                      onChange={(e) => updateGeneralSettings('description', e.target.value)}
+                      onChange={(e) =>
+                        updateGeneralSettings("description", e.target.value)
+                      }
                       rows={3}
                     />
                   </div>
@@ -267,7 +288,9 @@ export default function SettingsPage() {
                     <Textarea
                       label="Address"
                       value={settings.general.address}
-                      onChange={(e) => updateGeneralSettings('address', e.target.value)}
+                      onChange={(e) =>
+                        updateGeneralSettings("address", e.target.value)
+                      }
                       rows={2}
                     />
                   </div>
@@ -276,80 +299,138 @@ export default function SettingsPage() {
             )}
 
             {/* Notification Settings */}
-            {activeTab === 'notifications' && (
+            {activeTab === "notifications" && (
               <div className="space-y-6">
                 <div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">Notification Settings</h3>
+                  <h3 className="text-lg font-medium text-gray-900 mb-4">
+                    Notification Settings
+                  </h3>
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <h4 className="text-sm font-medium text-gray-900">Email Notifications</h4>
-                        <p className="text-sm text-gray-500">Receive notifications via email</p>
+                        <h4 className="text-sm font-medium text-gray-900">
+                          Email Notifications
+                        </h4>
+                        <p className="text-sm text-gray-500">
+                          Receive notifications via email
+                        </p>
                       </div>
                       <input
                         type="checkbox"
                         checked={settings.notifications.emailNotifications}
-                        onChange={(e) => updateNotificationSettings('emailNotifications', e.target.checked)}
+                        onChange={(e) =>
+                          updateNotificationSettings(
+                            "emailNotifications",
+                            e.target.checked
+                          )
+                        }
                         className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
                       />
                     </div>
                     <div className="flex items-center justify-between">
                       <div>
-                        <h4 className="text-sm font-medium text-gray-900">SMS Notifications</h4>
-                        <p className="text-sm text-gray-500">Receive notifications via SMS</p>
+                        <h4 className="text-sm font-medium text-gray-900">
+                          SMS Notifications
+                        </h4>
+                        <p className="text-sm text-gray-500">
+                          Receive notifications via SMS
+                        </p>
                       </div>
                       <input
                         type="checkbox"
                         checked={settings.notifications.smsNotifications}
-                        onChange={(e) => updateNotificationSettings('smsNotifications', e.target.checked)}
+                        onChange={(e) =>
+                          updateNotificationSettings(
+                            "smsNotifications",
+                            e.target.checked
+                          )
+                        }
                         className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
                       />
                     </div>
                     <div className="flex items-center justify-between">
                       <div>
-                        <h4 className="text-sm font-medium text-gray-900">Push Notifications</h4>
-                        <p className="text-sm text-gray-500">Receive browser push notifications</p>
+                        <h4 className="text-sm font-medium text-gray-900">
+                          Push Notifications
+                        </h4>
+                        <p className="text-sm text-gray-500">
+                          Receive browser push notifications
+                        </p>
                       </div>
                       <input
                         type="checkbox"
                         checked={settings.notifications.pushNotifications}
-                        onChange={(e) => updateNotificationSettings('pushNotifications', e.target.checked)}
+                        onChange={(e) =>
+                          updateNotificationSettings(
+                            "pushNotifications",
+                            e.target.checked
+                          )
+                        }
                         className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
                       />
                     </div>
                     <div className="flex items-center justify-between">
                       <div>
-                        <h4 className="text-sm font-medium text-gray-900">Order Notifications</h4>
-                        <p className="text-sm text-gray-500">Get notified about new orders</p>
+                        <h4 className="text-sm font-medium text-gray-900">
+                          Order Notifications
+                        </h4>
+                        <p className="text-sm text-gray-500">
+                          Get notified about new orders
+                        </p>
                       </div>
                       <input
                         type="checkbox"
                         checked={settings.notifications.orderNotifications}
-                        onChange={(e) => updateNotificationSettings('orderNotifications', e.target.checked)}
+                        onChange={(e) =>
+                          updateNotificationSettings(
+                            "orderNotifications",
+                            e.target.checked
+                          )
+                        }
                         className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
                       />
                     </div>
                     <div className="flex items-center justify-between">
                       <div>
-                        <h4 className="text-sm font-medium text-gray-900">Low Stock Notifications</h4>
-                        <p className="text-sm text-gray-500">Get notified when products are low in stock</p>
+                        <h4 className="text-sm font-medium text-gray-900">
+                          Low Stock Notifications
+                        </h4>
+                        <p className="text-sm text-gray-500">
+                          Get notified when products are low in stock
+                        </p>
                       </div>
                       <input
                         type="checkbox"
                         checked={settings.notifications.lowStockNotifications}
-                        onChange={(e) => updateNotificationSettings('lowStockNotifications', e.target.checked)}
+                        onChange={(e) =>
+                          updateNotificationSettings(
+                            "lowStockNotifications",
+                            e.target.checked
+                          )
+                        }
                         className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
                       />
                     </div>
                     <div className="flex items-center justify-between">
                       <div>
-                        <h4 className="text-sm font-medium text-gray-900">User Registration Notifications</h4>
-                        <p className="text-sm text-gray-500">Get notified when new users register</p>
+                        <h4 className="text-sm font-medium text-gray-900">
+                          User Registration Notifications
+                        </h4>
+                        <p className="text-sm text-gray-500">
+                          Get notified when new users register
+                        </p>
                       </div>
                       <input
                         type="checkbox"
-                        checked={settings.notifications.userRegistrationNotifications}
-                        onChange={(e) => updateNotificationSettings('userRegistrationNotifications', e.target.checked)}
+                        checked={
+                          settings.notifications.userRegistrationNotifications
+                        }
+                        onChange={(e) =>
+                          updateNotificationSettings(
+                            "userRegistrationNotifications",
+                            e.target.checked
+                          )
+                        }
                         className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
                       />
                     </div>
@@ -359,15 +440,19 @@ export default function SettingsPage() {
             )}
 
             {/* Appearance Settings */}
-            {activeTab === 'appearance' && (
+            {activeTab === "appearance" && (
               <div className="space-y-6">
                 <div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">Appearance Settings</h3>
+                  <h3 className="text-lg font-medium text-gray-900 mb-4">
+                    Appearance Settings
+                  </h3>
                   <div className="space-y-6">
                     <Select
                       label="Theme"
                       value={settings.appearance.theme}
-                      onChange={(e) => updateAppearanceSettings('theme', e.target.value)}
+                      onChange={(e) =>
+                        updateAppearanceSettings("theme", e.target.value)
+                      }
                       options={themeOptions}
                     />
                     <div>
@@ -377,7 +462,12 @@ export default function SettingsPage() {
                       <input
                         type="color"
                         value={settings.appearance.primaryColor}
-                        onChange={(e) => updateAppearanceSettings('primaryColor', e.target.value)}
+                        onChange={(e) =>
+                          updateAppearanceSettings(
+                            "primaryColor",
+                            e.target.value
+                          )
+                        }
                         className="h-10 w-20 border border-gray-300 rounded cursor-pointer"
                       />
                     </div>
@@ -389,7 +479,9 @@ export default function SettingsPage() {
                         <Button variant="outline" icon={Upload}>
                           Upload Logo
                         </Button>
-                        <span className="text-sm text-gray-500">Recommended size: 200x60px</span>
+                        <span className="text-sm text-gray-500">
+                          Recommended size: 200x60px
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -398,35 +490,52 @@ export default function SettingsPage() {
             )}
 
             {/* Security Settings */}
-            {activeTab === 'security' && (
+            {activeTab === "security" && (
               <div className="space-y-6">
                 <div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">Security Settings</h3>
+                  <h3 className="text-lg font-medium text-gray-900 mb-4">
+                    Security Settings
+                  </h3>
                   <div className="space-y-6">
                     <div className="flex items-center justify-between">
                       <div>
-                        <h4 className="text-sm font-medium text-gray-900">Two-Factor Authentication</h4>
-                        <p className="text-sm text-gray-500">Add an extra layer of security to your account</p>
+                        <h4 className="text-sm font-medium text-gray-900">
+                          Two-Factor Authentication
+                        </h4>
+                        <p className="text-sm text-gray-500">
+                          Add an extra layer of security to your account
+                        </p>
                       </div>
                       <input
                         type="checkbox"
                         checked={settings.security.twoFactorAuth}
-                        onChange={(e) => updateSecuritySettings('twoFactorAuth', e.target.checked)}
+                        onChange={(e) =>
+                          updateSecuritySettings(
+                            "twoFactorAuth",
+                            e.target.checked
+                          )
+                        }
                         className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
                       />
                     </div>
-                    
+
                     <div>
-                      <h4 className="text-sm font-medium text-gray-900 mb-3">Password Requirements</h4>
+                      <h4 className="text-sm font-medium text-gray-900 mb-3">
+                        Password Requirements
+                      </h4>
                       <div className="space-y-3">
                         <Input
                           label="Minimum Length"
                           type="number"
-                          value={settings.security.passwordRequirements.minLength}
-                          onChange={(e) => updateSecuritySettings('passwordRequirements', {
-                            ...settings.security.passwordRequirements,
-                            minLength: parseInt(e.target.value)
-                          })}
+                          value={
+                            settings.security.passwordRequirements.minLength
+                          }
+                          onChange={(e) =>
+                            updateSecuritySettings("passwordRequirements", {
+                              ...settings.security.passwordRequirements,
+                              minLength: Number.parseInt(e.target.value),
+                            })
+                          }
                           min="6"
                           max="20"
                         />
@@ -434,38 +543,59 @@ export default function SettingsPage() {
                           <div className="flex items-center">
                             <input
                               type="checkbox"
-                              checked={settings.security.passwordRequirements.requireUppercase}
-                              onChange={(e) => updateSecuritySettings('passwordRequirements', {
-                                ...settings.security.passwordRequirements,
-                                requireUppercase: e.target.checked
-                              })}
+                              checked={
+                                settings.security.passwordRequirements
+                                  .requireUppercase
+                              }
+                              onChange={(e) =>
+                                updateSecuritySettings("passwordRequirements", {
+                                  ...settings.security.passwordRequirements,
+                                  requireUppercase: e.target.checked,
+                                })
+                              }
                               className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded mr-2"
                             />
-                            <label className="text-sm text-gray-700">Require uppercase letters</label>
+                            <label className="text-sm text-gray-700">
+                              Require uppercase letters
+                            </label>
                           </div>
                           <div className="flex items-center">
                             <input
                               type="checkbox"
-                              checked={settings.security.passwordRequirements.requireNumbers}
-                              onChange={(e) => updateSecuritySettings('passwordRequirements', {
-                                ...settings.security.passwordRequirements,
-                                requireNumbers: e.target.checked
-                              })}
+                              checked={
+                                settings.security.passwordRequirements
+                                  .requireNumbers
+                              }
+                              onChange={(e) =>
+                                updateSecuritySettings("passwordRequirements", {
+                                  ...settings.security.passwordRequirements,
+                                  requireNumbers: e.target.checked,
+                                })
+                              }
                               className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded mr-2"
                             />
-                            <label className="text-sm text-gray-700">Require numbers</label>
+                            <label className="text-sm text-gray-700">
+                              Require numbers
+                            </label>
                           </div>
                           <div className="flex items-center">
                             <input
                               type="checkbox"
-                              checked={settings.security.passwordRequirements.requireSymbols}
-                              onChange={(e) => updateSecuritySettings('passwordRequirements', {
-                                ...settings.security.passwordRequirements,
-                                requireSymbols: e.target.checked
-                              })}
+                              checked={
+                                settings.security.passwordRequirements
+                                  .requireSymbols
+                              }
+                              onChange={(e) =>
+                                updateSecuritySettings("passwordRequirements", {
+                                  ...settings.security.passwordRequirements,
+                                  requireSymbols: e.target.checked,
+                                })
+                              }
                               className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded mr-2"
                             />
-                            <label className="text-sm text-gray-700">Require special characters</label>
+                            <label className="text-sm text-gray-700">
+                              Require special characters
+                            </label>
                           </div>
                         </div>
                       </div>
@@ -475,11 +605,109 @@ export default function SettingsPage() {
                       label="Session Timeout (minutes)"
                       type="number"
                       value={settings.security.sessionTimeout}
-                      onChange={(e) => updateSecuritySettings('sessionTimeout', parseInt(e.target.value))}
+                      onChange={(e) =>
+                        updateSecuritySettings(
+                          "sessionTimeout",
+                          Number.parseInt(e.target.value)
+                        )
+                      }
                       min="5"
                       max="120"
                       icon={Clock}
                     />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === "store-closure" && (
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-4">
+                    Store Closure Settings
+                  </h3>
+                  <p className="text-sm text-gray-600 mb-6">
+                    Set a period when your store will be closed (e.g., for
+                    vacation or holidays)
+                  </p>
+
+                  <div className="space-y-6">
+                    {/* Active Toggle */}
+                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+                      <div>
+                        <h4 className="text-sm font-medium text-gray-900">
+                          Enable Store Closure
+                        </h4>
+                        <p className="text-sm text-gray-500">
+                          Activate closure period
+                        </p>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={closure.isActive}
+                        onChange={(e) =>
+                          updateClosure({
+                            ...closure,
+                            isActive: e.target.checked,
+                          })
+                        }
+                        className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                      />
+                    </div>
+
+                    {/* Closure Details */}
+                    {closure.isActive && (
+                      <div className="space-y-4 p-4 bg-red-50 rounded-lg border border-red-200">
+                        <Input
+                          label="Start Date"
+                          type="date"
+                          value={closure.startDate}
+                          onChange={(e) =>
+                            updateClosure({
+                              ...closure,
+                              startDate: e.target.value,
+                            })
+                          }
+                        />
+                        <Input
+                          label="End Date"
+                          type="date"
+                          value={closure.endDate}
+                          onChange={(e) =>
+                            updateClosure({
+                              ...closure,
+                              endDate: e.target.value,
+                            })
+                          }
+                        />
+                        <Textarea
+                          label="Closure Reason (optional)"
+                          value={closure.reason}
+                          onChange={(e) =>
+                            updateClosure({
+                              ...closure,
+                              reason: e.target.value,
+                            })
+                          }
+                          placeholder="e.g., Annual vacation, Renovation, etc."
+                          rows={3}
+                        />
+                        {closure.startDate && closure.endDate && (
+                          <div className="p-3 bg-white rounded border border-red-200">
+                            <p className="text-sm text-gray-600">
+                              <strong>Store will be closed from:</strong>{" "}
+                              {new Date(closure.startDate).toLocaleDateString(
+                                "id-ID"
+                              )}{" "}
+                              to{" "}
+                              {new Date(closure.endDate).toLocaleDateString(
+                                "id-ID"
+                              )}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

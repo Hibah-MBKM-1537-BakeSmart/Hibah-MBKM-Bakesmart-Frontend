@@ -4,9 +4,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/app/contexts/TranslationContext";
+import { useStoreClosure } from "@/app/contexts/StoreClosureContext";
 
 export function Advertisement() {
   const { t } = useTranslation();
+  const { isStoreClosed } = useStoreClosure();
+  const storeIsClosed = isStoreClosed();
 
   const AdvertisementData = {
     title: t("advertisement.title"),
@@ -30,7 +33,7 @@ export function Advertisement() {
           className="object-cover"
           priority
         />
-        {/* Dark overlay for text readability */}
+        {/* Dark overlay */}
         <div className="absolute inset-0 bg-black/60" />
       </div>
 
@@ -44,16 +47,22 @@ export function Advertisement() {
             </h2>
 
             {/* CTA Button */}
-            <Button
-              asChild
-              size="lg"
-              className="px-8 py-4 text-base md:text-lg font-bold text-white hover:opacity-90 transition-opacity shadow-lg"
-              style={{ backgroundColor: "#8B6F47" }}
+            <div
+              className={`${
+                storeIsClosed ? "pointer-events-none opacity-50" : ""
+              }`}
             >
-              <Link href={AdvertisementData.ctaLink}>
-                {AdvertisementData.ctaText}
-              </Link>
-            </Button>
+              <Button
+                asChild
+                size="lg"
+                className="px-8 py-4 text-base md:text-lg font-bold text-white hover:opacity-90 transition-opacity shadow-lg"
+                style={{ backgroundColor: "#8b6f47" }}
+              >
+                <Link href={AdvertisementData.ctaLink}>
+                  {AdvertisementData.ctaText}
+                </Link>
+              </Button>
+            </div>
           </div>
         </div>
       </div>

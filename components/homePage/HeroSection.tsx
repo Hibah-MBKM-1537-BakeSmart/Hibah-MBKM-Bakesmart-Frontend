@@ -4,9 +4,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/app/contexts/TranslationContext";
+import { useStoreClosure } from "@/app/contexts/StoreClosureContext";
 
 export function HeroSection() {
   const { t } = useTranslation();
+  const { isStoreClosed } = useStoreClosure();
+  const storeIsClosed = isStoreClosed();
 
   return (
     <section className="w-full" style={{ backgroundColor: "#f5f1eb" }}>
@@ -37,13 +40,17 @@ export function HeroSection() {
               {t("hero.subtitle")}
             </p>
 
-            {/* CTA Buttons - Stacked on Mobile */}
-            <div className="flex w-full flex-col gap-3 pt-4">
+            <div
+              className={`flex w-full flex-col gap-3 pt-4 ${
+                storeIsClosed ? "opacity-50 pointer-events-none" : ""
+              }`}
+            >
               <Button
                 asChild
                 size="lg"
                 className="w-full px-6 py-3 text-sm font-medium text-white hover:opacity-90"
                 style={{ backgroundColor: "#8b6f47" }}
+                disabled={storeIsClosed}
               >
                 <Link href="/menu">{t("hero.cta")}</Link>
               </Button>
@@ -57,6 +64,7 @@ export function HeroSection() {
                   color: "#8b6f47",
                   backgroundColor: "transparent",
                 }}
+                disabled={storeIsClosed}
               >
                 <Link href="/menu">{t("menu.viewAll")}</Link>
               </Button>
@@ -81,13 +89,17 @@ export function HeroSection() {
               {t("hero.subtitle")}
             </p>
 
-            {/* CTA Buttons - Side by Side on Tablet/Desktop */}
-            <div className="flex flex-col gap-4 pt-6 sm:flex-row sm:items-center">
+            <div
+              className={`flex flex-col gap-4 pt-6 sm:flex-row sm:items-center ${
+                storeIsClosed ? "opacity-50 pointer-events-none" : ""
+              }`}
+            >
               <Button
                 asChild
                 size="lg"
                 className="px-8 py-4 text-base font-medium text-white hover:opacity-90"
                 style={{ backgroundColor: "#8b6f47" }}
+                disabled={storeIsClosed}
               >
                 <Link href="/menu">{t("hero.cta")}</Link>
               </Button>
@@ -101,6 +113,7 @@ export function HeroSection() {
                   color: "#8b6f47",
                   backgroundColor: "transparent",
                 }}
+                disabled={storeIsClosed}
               >
                 <Link href="/menu">{t("menu.viewAll")}</Link>
               </Button>
