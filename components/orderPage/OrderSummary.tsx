@@ -62,9 +62,13 @@ export function OrderSummary({
     if (!currentOrderDay || cartItems.length === 0)
       return { isValid: true, invalidItems: [] };
 
+    // MODIFIKASI DISINI: Gunakan .some() dan .toLowerCase()
     const invalidItems = cartItems.filter(
       (item) =>
-        !item.availableDays || !item.availableDays.includes(currentOrderDay)
+        !item.availableDays ||
+        !item.availableDays.some(
+          (day) => day.toLowerCase() === currentOrderDay.toLowerCase()
+        )
     );
 
     return {
@@ -256,7 +260,9 @@ export function OrderSummary({
                 className={`flex items-center gap-3 p-3 rounded-lg border ${
                   currentOrderDay &&
                   item.availableDays &&
-                  !item.availableDays.includes(currentOrderDay)
+                  !item.availableDays.some(
+                    (day) => day.toLowerCase() === currentOrderDay.toLowerCase()
+                  ) 
                     ? "bg-red-50 border-red-200"
                     : "bg-[#F5F1EB] border-[#E8DDD4]"
                 }`}

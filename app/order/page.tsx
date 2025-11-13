@@ -10,7 +10,8 @@ import { VoucherSection } from "@/components/orderPage/VoucherSection";
 import { useCart } from "@/app/contexts/CartContext";
 
 export default function OrderPage() {
-  const { selectedOrderDay } = useCart();
+  // 1. AMBIL 'getTotalPrice' DARI USECART
+  const { selectedOrderDay, getTotalPrice } = useCart();
 
   const [deliveryMode, setDeliveryMode] = useState<string>("");
   const [deliveryFee, setDeliveryFee] = useState<number>(0);
@@ -68,15 +69,34 @@ export default function OrderPage() {
     setVoucherDiscount(0);
   };
 
+  // =================================================================
+  // 2. LAKUKAN PERHITUNGAN GRAND TOTAL DI SINI (PARENT)
+  // =================================================================
+  const subtotal = getTotalPrice();
+  const tax = subtotal * 0.1; // Pajak 10%
+
+  // Pastikan ongkir 0 jika mode pickup
+  const finalDeliveryFee = deliveryMode === "pickup" ? 0 : deliveryFee;
+
+  // Hitung total akhir (Pastikan tidak minus)
+  const grandTotal = Math.max(
+    0,
+    subtotal + tax + finalDeliveryFee - voucherDiscount
+  );
+
   console.log(
     "[v0] Order page render - deliveryMode:",
     deliveryMode,
     "deliveryFee:",
     deliveryFee,
+    "finalDeliveryFee:",
+    finalDeliveryFee,
     "orderDay:",
     orderDay,
     "voucherDiscount:",
-    voucherDiscount
+    voucherDiscount,
+    "GRAND TOTAL:",
+    grandTotal
   );
 
   return (
@@ -104,7 +124,14 @@ export default function OrderPage() {
                 onVoucherApplied={handleVoucherApplied}
                 onVoucherRemoved={handleVoucherRemoved}
               />
-              <PaymentMethods formData={orderFormData} />
+
+              {/* 3. KIRIM HASIL HITUNGAN KE PAYMENTMETHODS */}
+              <PaymentMethods
+                formData={orderFormData}
+                finalTotalAmount={grandTotal}
+                deliveryFee={finalDeliveryFee}
+                voucherCode={voucherCode}
+              />
             </div>
 
             <div className="lg:col-span-1">

@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import React from 'react';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { useAdmin } from '@/app/contexts/AdminContext';
+import type React from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useAdmin } from "@/app/contexts/AdminContext";
 import {
   LayoutDashboard,
   Package,
@@ -16,8 +16,10 @@ import {
   Store,
   Factory,
   History,
-  UserCheck
-} from 'lucide-react';
+  UserCheck,
+  Ticket,
+  TrendingUp,
+} from "lucide-react";
 
 interface MenuItem {
   id: string;
@@ -28,53 +30,65 @@ interface MenuItem {
 
 const menuItems: MenuItem[] = [
   {
-    id: 'dashboard',
-    label: 'Dashboard',
-    href: '/admin/dashboard',
-    icon: LayoutDashboard
+    id: "dashboard",
+    label: "Dashboard",
+    href: "/admin/dashboard",
+    icon: LayoutDashboard,
   },
   {
-    id: 'products',
-    label: 'Products',
-    href: '/admin/products',
-    icon: Package
+    id: "statistics",
+    label: "Statistics",
+    href: "/admin/statistics",
+    icon: TrendingUp,
   },
   {
-    id: 'production',
-    label: 'Production',
-    href: '/admin/production',
-    icon: Factory
+    id: "products",
+    label: "Products",
+    href: "/admin/products",
+    icon: Package,
   },
   {
-    id: 'kasir',
-    label: 'Kasir',
-    href: '/admin/kasir',
-    icon: Calculator
+    id: "production",
+    label: "Production",
+    href: "/admin/production",
+    icon: Factory,
   },
   {
-    id: 'history',
-    label: 'History',
-    href: '/admin/history',
-    icon: History
+    id: "kasir",
+    label: "Kasir",
+    href: "/admin/kasir",
+    icon: Calculator,
   },
   {
-    id: 'customers',
-    label: 'Customers',
-    href: '/admin/customers',
-    icon: UserCheck
+    id: "history",
+    label: "History",
+    href: "/admin/history",
+    icon: History,
   },
   {
-    id: 'users',
-    label: 'Users',
-    href: '/admin/users',
-    icon: Users
+    id: "customers",
+    label: "Customers",
+    href: "/admin/customers",
+    icon: UserCheck,
   },
   {
-    id: 'settings',
-    label: 'Settings',
-    href: '/admin/settings',
-    icon: Settings
-  }
+    id: "vouchers",
+    label: "Vouchers",
+    href: "/admin/vouchers",
+    icon: Ticket,
+  },
+  {
+    id: "users",
+    label: "Users",
+    href: "/admin/users",
+    icon: Users,
+  },
+  {
+    id: "settings",
+    label: "Settings",
+    href: "/admin/settings",
+    icon: Settings,
+  },
 ];
 
 export function AdminSidebar() {
@@ -82,20 +96,33 @@ export function AdminSidebar() {
   const pathname = usePathname();
 
   return (
-    <div className={`shadow-lg transition-all duration-300 flex flex-col h-full ${
-      state.sidebarCollapsed ? 'w-16' : 'w-64'
-    }`} style={{ backgroundColor: '#9B6D49' }}>
+    <div
+      className={`shadow-lg transition-all duration-300 flex flex-col h-full ${
+        state.sidebarCollapsed ? "w-16" : "w-64"
+      }`}
+      style={{ backgroundColor: "#9B6D49" }}
+    >
       {/* Logo Section */}
-      <div className="p-4 border-b flex-shrink-0" style={{ borderColor: '#7b5235' }}>
+      <div
+        className="p-4 border-b flex-shrink-0"
+        style={{ borderColor: "#7b5235" }}
+      >
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#8b6f47' }}>
+            <div
+              className="w-8 h-8 rounded-lg flex items-center justify-center"
+              style={{ backgroundColor: "#8b6f47" }}
+            >
               <Store className="w-5 h-5 text-white" />
             </div>
             {!state.sidebarCollapsed && (
               <div>
-                <h1 className="text-lg font-bold text-white font-admin-heading">BakeSmart</h1>
-                <p className="text-xs text-gray-200 font-admin-body">Admin Panel</p>
+                <h1 className="text-lg font-bold text-white font-admin-heading">
+                  BakeSmart
+                </h1>
+                <p className="text-xs text-gray-200 font-admin-body">
+                  Admin Panel
+                </p>
               </div>
             )}
           </div>
@@ -117,21 +144,27 @@ export function AdminSidebar() {
         {menuItems.map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.href;
-          
+
           return (
             <Link
               key={item.id}
               href={item.href}
               className={`flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors group ${
                 isActive
-                  ? 'text-white font-medium'
-                  : 'text-gray-200 hover:bg-white/10 hover:text-white'
+                  ? "text-white font-medium"
+                  : "text-gray-200 hover:bg-white/10 hover:text-white"
               }`}
-              style={isActive ? { backgroundColor: '#8b6f47' } : {}}
+              style={isActive ? { backgroundColor: "#8b6f47" } : {}}
             >
-              <Icon className={`w-5 h-5 ${isActive ? 'text-white' : 'text-gray-200'}`} />
+              <Icon
+                className={`w-5 h-5 ${
+                  isActive ? "text-white" : "text-gray-200"
+                }`}
+              />
               {!state.sidebarCollapsed && (
-                <span className="font-medium font-admin-body">{item.label}</span>
+                <span className="font-medium font-admin-body">
+                  {item.label}
+                </span>
               )}
             </Link>
           );
@@ -139,12 +172,21 @@ export function AdminSidebar() {
       </nav>
 
       {/* Bottom Section - User Info and Logout */}
-      <div className="flex-shrink-0 border-t" style={{ borderColor: '#7b5235' }}>
+      <div
+        className="flex-shrink-0 border-t"
+        style={{ borderColor: "#7b5235" }}
+      >
         {/* User Info */}
         {!state.sidebarCollapsed && state.user && (
           <div className="p-4">
-            <div className="flex items-center space-x-3 p-3 rounded-lg" style={{ backgroundColor: '#7b5235' }}>
-              <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: '#8b6f47' }}>
+            <div
+              className="flex items-center space-x-3 p-3 rounded-lg"
+              style={{ backgroundColor: "#7b5235" }}
+            >
+              <div
+                className="w-8 h-8 rounded-full flex items-center justify-center"
+                style={{ backgroundColor: "#8b6f47" }}
+              >
                 <span className="text-white text-sm font-medium">
                   {state.user.name.charAt(0)}
                 </span>
@@ -166,7 +208,7 @@ export function AdminSidebar() {
           <button
             onClick={logout}
             className={`flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors text-red-300 hover:bg-red-500/20 hover:text-red-200 w-full font-admin-body ${
-              state.sidebarCollapsed ? 'justify-center' : ''
+              state.sidebarCollapsed ? "justify-center" : ""
             }`}
           >
             <LogOut className="w-5 h-5" />

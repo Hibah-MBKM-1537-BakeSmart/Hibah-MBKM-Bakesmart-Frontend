@@ -37,24 +37,13 @@ export function VoucherSection({
   const [isProcessingImage, setIsProcessingImage] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const validateVoucher = async (
-    code: string
-  ): Promise<{ valid: boolean; discount?: number; message?: string }> => {
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+  // ======================================================
+  // === MODIFIKASI DIMULAI DISINI ===
+  // ======================================================
 
-    const mockVouchers: { [key: string]: number } = {
-      DISKON10: 10000,
-      DISKON20: 20000,
-      HEMAT50: 50000,
-      GRATIS15: 15000,
-    };
-
-    if (mockVouchers[code.toUpperCase()]) {
-      return { valid: true, discount: mockVouchers[code.toUpperCase()] };
-    }
-
-    return { valid: false, message: "Kode voucher tidak valid" };
-  };
+  // HAPUS FUNGSI 'validateVoucher' YANG LAMA
+  // const validateVoucher = async (...) => { ... }
+  // Logika ini sudah dipindahkan ke /api/vouchers/validate/route.ts
 
   const handleApplyVoucher = async () => {
     if (!voucherCode.trim()) {
@@ -66,31 +55,59 @@ export function VoucherSection({
     setError("");
 
     try {
-      const result = await validateVoucher(voucherCode);
+      // Panggil API Route Next.js kita
+      const response = await fetch("/api/vouchers/validate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ voucherCode: voucherCode.trim() }),
+      });
 
-      if (result.valid && result.discount) {
-        setAppliedVoucher({
-          code: voucherCode.toUpperCase(),
-          discount: result.discount,
-        });
-        onVoucherApplied?.(voucherCode.toUpperCase(), result.discount);
-        setVoucherCode("");
-        setError("");
-      } else {
-        setError(result.message || "Kode voucher tidak valid");
+      const result = await response.json();
+
+      if (!response.ok) {
+        // Tangani error dari API (misal: 404 Not Found)
+        throw new Error(result.message || "Kode voucher tidak valid");
       }
+
+      // Jika sukses (status 200)
+      setAppliedVoucher({
+        code: result.code,
+        discount: result.discount,
+      });
+      // Kirim data ke komponen parent
+      onVoucherApplied?.(result.code, result.discount);
+      setVoucherCode("");
+      setError("");
     } catch (err) {
-      setError("Terjadi kesalahan saat memvalidasi voucher");
+      // Tangani error (voucher salah, server mati, dll)
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : "Terjadi kesalahan saat memvalidasi voucher";
+      setError(errorMessage);
+      setAppliedVoucher(null); // Pastikan voucher dihapus jika ada error
+      onVoucherRemoved?.(); // Beri tahu parent bahwa voucher dihapus
     } finally {
       setIsValidating(false);
     }
   };
+
+  // ======================================================
+  // === MODIFIKASI BERAKHIR DISINI ===
+  // ======================================================
 
   const handleRemoveVoucher = () => {
     setAppliedVoucher(null);
     onVoucherRemoved?.();
     setError("");
   };
+
+  // Fungsi-fungsi di bawah ini (handleImageUpload, handleQrScan, dll)
+  // TIDAK PERLU DIUBAH.
+  // Logikanya sudah benar: mereka mengisi state 'voucherCode',
+  // dan 'handleApplyVoucher' akan membaca state tsb saat tombol "Terapkan" diklik.
 
   const handleImageUpload = async (
     event: React.ChangeEvent<HTMLInputElement>
@@ -128,10 +145,12 @@ export function VoucherSection({
 
             console.log("[v0] Processing uploaded QR code image...");
 
+            // Logika mock untuk membaca QR code
+            // Nanti Anda bisa ganti dengan library QR scanner (contoh: jsQR)
             await new Promise((resolve) => setTimeout(resolve, 1500));
-
             const mockExtractedCode = "HEMAT50";
 
+            // Mengisi kotak input
             setVoucherCode(mockExtractedCode);
             setIsProcessingImage(false);
 
@@ -203,9 +222,11 @@ export function VoucherSection({
         scannerContainer.appendChild(video);
       }
 
+      // Logika mock untuk scan QR code
+      // Nanti Anda bisa ganti dengan library QR scanner
       setTimeout(() => {
         const mockScannedCode = "DISKON20";
-        setVoucherCode(mockScannedCode);
+        setVoucherCode(mockScannedCode); // Mengisi kotak input
         setShowQrScanner(false);
         setIsScanning(false);
 

@@ -35,13 +35,18 @@ export function OrderForm({
   maxDaysAhead = 30,
 }: OrderFormProps) {
   const { t } = useTranslation();
-  const { selectedOrderDay: cartOrderDay, isCartLockedToDay } = useCart();
+  const {
+    selectedOrderDay: cartOrderDay,
+    isCartLockedToDay,
+    cartItems,
+  } = useCart();
 
   const [formData, setFormData] = useState({
     namaPenerima: "",
     nomorTelepon: "",
     deliveryMode: "",
     orderDay: cartOrderDay || "",
+    tanggalPemesanan: "",
     alamat: "",
     kodePos: "",
     catatan: "",
@@ -70,7 +75,13 @@ export function OrderForm({
         targetDate.setDate(today.getDate() + daysToAdd);
 
         setSelectedDate(targetDate);
-        setFormData((prev) => ({ ...prev, orderDay: cartOrderDay }));
+        const dateString = format(targetDate, "yyyy-MM-dd");
+
+        setFormData((prev) => ({
+          ...prev,
+          orderDay: cartOrderDay,
+          tanggalPemesanan: dateString,
+        }));
         onOrderDayChange?.(cartOrderDay);
       }
     }
@@ -90,6 +101,7 @@ export function OrderForm({
       onDeliveryModeChange?.(value);
       if (value === "pickup") {
         onDeliveryFeeChange?.(0);
+        setDeliveryOptions([]);
       }
     }
 
@@ -98,52 +110,136 @@ export function OrderForm({
     }
   };
 
+  // ======================================================
+  // === LOGIKA HITUNG ONGKIR FINAL ===
+  // ======================================================
   const calculateDeliveryFee = async () => {
-    if (!formData.alamat || !formData.kodePos) return;
+    if (!formData.latitude || !formData.longitude || cartItems.length === 0) {
+      console.warn("[OrderForm] Menunggu koordinat lokasi...");
+      return;
+    }
 
     setIsCalculatingDelivery(true);
+    setDeliveryOptions([]);
+
     try {
-      console.log("[v0] Calculating delivery fee...");
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      console.log("[v0] Menghitung ongkir Instant (Gojek/Grab)...");
 
-      const mockDeliveryOptions = [
-        { service: "Regular", price: 15000, duration: "2-3 hari" },
-        { service: "Express", price: 25000, duration: "1-2 hari" },
-        { service: "Same Day", price: 35000, duration: "Hari ini" },
-      ];
+      // 1. Mapping Items sesuai contoh JSON yang BERHASIL
+      const itemsPayload = cartItems.map((item) => ({
+        name: item.name,
+        description: item.category || "Makanan", // Deskripsi default
+        value: Number.parseInt(item.discountPrice.replace(/\D/g, "")), // Harga per item
 
-      console.log("[v0] Delivery options loaded:", mockDeliveryOptions);
-      setDeliveryOptions(mockDeliveryOptions);
+        // Hardcode dimensi & berat sesuai contoh sukses backend
+        length: 30,
+        width: 15,
+        height: 20,
+        weight: 200, // gram
+
+        quantity: item.quantity,
+      }));
+
+      // 2. Koordinat Toko (Origin) - Sesuai payload sukses Anda
+      const STORE_LAT = -7.5644564;
+      const STORE_LNG = 110.8384643;
+
+      const ratesPayload = {
+        origin_latitude: STORE_LAT,
+        origin_longitude: STORE_LNG,
+
+        destination_latitude: parseFloat(formData.latitude),
+        destination_longitude: parseFloat(formData.longitude),
+
+        // Hanya Gojek & Grab sesuai permintaan "dekat"
+        couriers: "gojek,grab",
+        items: itemsPayload,
+      };
+
       console.log(
-        "[v0] Setting default delivery fee:",
-        mockDeliveryOptions[0].price
+        "[v0] Payload Ongkir:",
+        JSON.stringify(ratesPayload, null, 2)
       );
-      onDeliveryFeeChange?.(mockDeliveryOptions[0].price);
-    } catch (error) {
+
+      const response = await fetch("/api/orders/rates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(ratesPayload),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || "Gagal mengambil data ongkir");
+      }
+
+      console.log("[v0] Hasil Ongkir:", result);
+
+      // Parsing hasil response biteship
+      // Struktur biasanya result.pricing atau result.data.pricing
+      const pricingData = result.pricing || result.data?.pricing || [];
+
+      if (Array.isArray(pricingData) && pricingData.length > 0) {
+        const newDeliveryOptions = pricingData.map((opt: any) => ({
+          service: `${opt.courier_name} - ${opt.courier_service_name}`, // misal: Gojek - Instant
+          price: opt.price,
+          duration: "Instant (Langsung Sampai)",
+        }));
+
+        setDeliveryOptions(newDeliveryOptions);
+        // Pilih opsi pertama otomatis
+        onDeliveryFeeChange?.(newDeliveryOptions[0].price);
+      } else {
+        console.warn("Tidak ada layanan tersedia untuk rute ini.");
+        setDeliveryOptions([]);
+        onDeliveryFeeChange?.(0);
+        alert(
+          "Layanan Gojek/Grab tidak tersedia di lokasi ini atau toko sedang tutup."
+        );
+      }
+    } catch (error: any) {
       console.error("Error calculating delivery fee:", error);
+      alert(`Gagal cek ongkir: ${error.message}`);
+      onDeliveryFeeChange?.(0);
     } finally {
       setIsCalculatingDelivery(false);
     }
   };
 
+  // Trigger cek ongkir otomatis saat koordinat berubah
   useEffect(() => {
     if (
       formData.deliveryMode === "delivery" &&
-      formData.alamat &&
-      formData.kodePos
+      formData.latitude &&
+      formData.longitude
     ) {
       const timer = setTimeout(() => {
         calculateDeliveryFee();
-      }, 1000);
+      }, 1500);
       return () => clearTimeout(timer);
     }
-  }, [formData.alamat, formData.kodePos, formData.deliveryMode]);
+  }, [formData.latitude, formData.longitude, formData.deliveryMode, cartItems]);
 
   const getCurrentLocation = () => {
     if (navigator.geolocation) {
+      // OPSI KHUSUS: Paksa browser mencari lokasi terakurat
+      const options = {
+        enableHighAccuracy: true, // Wajib true agar tidak pakai IP Address
+        timeout: 10000, // Tunggu 10 detik
+        maximumAge: 0, // Jangan pakai cache lokasi lama
+      };
+
+      // Tampilkan status loading (opsional, bisa pakai state isCalculatingDelivery jika mau)
+      console.log("[OrderForm] Mencari lokasi akurat...");
+
       navigator.geolocation.getCurrentPosition(
         async (position) => {
           const { latitude, longitude } = position.coords;
+
+          console.log(
+            `[OrderForm] Lokasi Ditemukan: ${latitude}, ${longitude} (Akurasi: ${position.coords.accuracy}m)`
+          );
+
           setFormData((prev) => ({
             ...prev,
             latitude: latitude.toString(),
@@ -169,8 +265,18 @@ export function OrderForm({
         },
         (error) => {
           console.error("Error getting location:", error);
-          alert(t("order.locationAccessError"));
-        }
+          let msg = t("order.locationAccessError");
+
+          // Pesan error yang lebih jelas
+          if (error.code === 1)
+            msg = "Izin lokasi ditolak. Cek pengaturan browser/Windows.";
+          if (error.code === 2)
+            msg = "Sinyal lokasi tidak ditemukan. Pastikan Wi-Fi menyala.";
+          if (error.code === 3) msg = "Waktu habis mencari lokasi.";
+
+          alert(msg);
+        },
+        options // <--- PENTING: Masukkan options di sini
       );
     } else {
       alert(t("order.geolocationNotSupported"));
@@ -207,13 +313,13 @@ export function OrderForm({
 
   const getIndonesianDayName = (date: Date): string => {
     const dayNames = [
-      "minggu",
-      "senin",
-      "selasa",
-      "rabu",
-      "kamis",
-      "jumat",
-      "sabtu",
+      "Minggu",
+      "Senin",
+      "Selasa",
+      "Rabu",
+      "Kamis",
+      "Jumat",
+      "Sabtu",
     ];
     return dayNames[date.getDay()];
   };
@@ -260,27 +366,23 @@ export function OrderForm({
                     if (date) {
                       setSelectedDate(date);
                       const dayName = getIndonesianDayName(date);
+                      const dateString = format(date, "yyyy-MM-dd");
+
                       handleInputChange("orderDay", dayName);
-                      console.log(
-                        "[v0] Date selected:",
-                        date,
-                        "Day name:",
-                        dayName
-                      );
+                      handleInputChange("tanggalPemesanan", dateString);
                     }
                   }}
                   disabled={(date: Date) => {
                     const today = new Date();
+                    today.setHours(0, 0, 0, 0);
                     const maxDate = new Date(today);
                     maxDate.setDate(today.getDate() + maxDaysAhead);
-
                     return date < today || date > maxDate;
                   }}
                   initialFocus
                 />
               </PopoverContent>
             </Popover>
-
             {formData.orderDay && selectedDate && (
               <div className="mt-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
                 <p className="text-sm text-blue-800">
@@ -288,15 +390,7 @@ export function OrderForm({
                   {t("order.orderSelectedFor")}{" "}
                   <span className="font-semibold">
                     {format(selectedDate, "EEEE, dd MMMM yyyy", { locale: id })}
-                    {getDayLabel(selectedDate)}
                   </span>
-                  {isCartLockedToDay() && cartOrderDay && (
-                    <span className="block text-xs mt-1 text-blue-600">
-                      Pesanan untuk hari:{" "}
-                      {cartOrderDay.charAt(0).toUpperCase() +
-                        cartOrderDay.slice(1)}
-                    </span>
-                  )}
                 </p>
               </div>
             )}
@@ -417,6 +511,12 @@ export function OrderForm({
                 placeholder={t("order.fullAddressPlaceholder")}
                 rows={3}
               />
+              {!formData.latitude && (
+                <p className="text-xs text-red-500">
+                  * Klik "Gunakan Lokasi Saat Ini" untuk menghitung ongkir
+                  Gojek/Grab
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -452,10 +552,6 @@ export function OrderForm({
                   onValueChange={(value) => {
                     const selectedOption =
                       deliveryOptions[Number.parseInt(value)];
-                    console.log(
-                      "[v0] Delivery option selected:",
-                      selectedOption
-                    );
                     onDeliveryFeeChange?.(selectedOption.price);
                   }}
                   className="space-y-2"

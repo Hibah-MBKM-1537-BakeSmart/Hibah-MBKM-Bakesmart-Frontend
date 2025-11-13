@@ -8,12 +8,12 @@ import { Label } from "@/components/ui/label";
 import { useTranslation } from "@/app/contexts/TranslationContext";
 import { useCart } from "@/app/contexts/CartContext";
 
-// NEW: Add interface for form data
 interface FormData {
   namaPenerima: string;
   nomorTelepon: string;
   deliveryMode: string;
   orderDay: string;
+  tanggalPemesanan?: string; // <--- Tambahkan Optional
   alamat: string;
   kodePos: string;
   catatan: string;
@@ -21,12 +21,19 @@ interface FormData {
   longitude: string;
 }
 
-// UPDATED: Add formData prop
 interface PaymentMethodsProps {
   formData?: FormData;
+  finalTotalAmount: number;
+  deliveryFee: number;
+  voucherCode?: string;
 }
 
-export function PaymentMethods({ formData }: PaymentMethodsProps) {
+export function PaymentMethods({
+  formData,
+  finalTotalAmount,
+  deliveryFee,
+  voucherCode,
+}: PaymentMethodsProps) {
   const [selectedPayment, setSelectedPayment] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [orderComplete, setOrderComplete] = useState(false);
@@ -44,32 +51,16 @@ export function PaymentMethods({ formData }: PaymentMethodsProps) {
       label: t("payment.transfer"),
       description: t("payment.transferDesc"),
     },
-    {
-      value: "gopay",
-      label: t("payment.gopay"),
-      description: t("payment.gopayDesc"),
-    },
-    {
-      value: "ovo",
-      label: t("payment.ovo"),
-      description: t("payment.ovoDesc"),
-    },
-    {
-      value: "dana",
-      label: t("payment.dana"),
-      description: t("payment.danaDesc"),
-    },
   ];
 
   const handleProcessOrder = async () => {
-    if (!selectedPayment || cartItems.length === 0) return;
+    if (!selectedPayment || cartItems.length === 0 || !formData) return;
 
     setIsProcessing(true);
 
     try {
       console.log("[v0] ===== ORDER SUBMISSION DATA =====");
 
-      // Order summary data
       const orderData = {
         orderId: `ORDER_${Date.now()}_${Math.random()
           .toString(36)
@@ -82,18 +73,21 @@ export function PaymentMethods({ formData }: PaymentMethodsProps) {
         totalItems: cartItems.reduce((sum, item) => sum + item.quantity, 0),
         subtotal: getTotalPrice(),
         tax: getTotalPrice() * 0.1,
-        deliveryFee: 0, // This would come from parent component
-        totalAmount: getTotalPrice() + getTotalPrice() * 0.1,
+        deliveryFee: deliveryFee,
+        totalAmount: finalTotalAmount,
         currency: "IDR",
+        voucherCode: voucherCode || null,
       };
 
-      console.log("[v0] Order Summary:", orderData);
-
-      // UPDATED: Use real form data instead of hardcoded strings
       const customerData = {
         recipientName: formData?.namaPenerima || "Not provided",
         phoneNumber: formData?.nomorTelepon || "Not provided",
         deliveryMode: formData?.deliveryMode || "Not provided",
+
+        // FIELD PENTING: orderDate (YYYY-MM-DD)
+        orderDate:
+          formData?.tanggalPemesanan || new Date().toISOString().split("T")[0],
+
         orderDay: formData?.orderDay || "Not provided",
         address: formData?.alamat || "Not provided",
         postalCode: formData?.kodePos || "Not provided",
@@ -106,7 +100,6 @@ export function PaymentMethods({ formData }: PaymentMethodsProps) {
 
       console.log("[v0] Customer Data:", customerData);
 
-      // Cart items with detailed breakdown
       const itemsData = cartItems.map((item) => ({
         productId: item.id,
         productName: item.name,
@@ -129,25 +122,10 @@ export function PaymentMethods({ formData }: PaymentMethodsProps) {
         image: item.image,
       }));
 
-      console.log("[v0] Cart Items Data:", itemsData);
-
-      // Stock management data
-      const stockUpdates = cartItems.map((item) => ({
-        productId: item.id,
-        productName: item.name,
-        quantityToDecrease: item.quantity,
-        currentStock: item.stock,
-        newStock: item.stock - item.quantity,
-      }));
-
-      console.log("[v0] Stock Updates Required:", stockUpdates);
-
-      // Complete backend payload
-      const backendPayload = {
+      const frontendPayload = {
         order: orderData,
         customer: customerData,
         items: itemsData,
-        stockUpdates: stockUpdates,
         metadata: {
           source: "web_order_form",
           userAgent: navigator.userAgent,
@@ -156,45 +134,45 @@ export function PaymentMethods({ formData }: PaymentMethodsProps) {
         },
       };
 
-      console.log(
-        "[v0] COMPLETE BACKEND PAYLOAD:",
-        JSON.stringify(backendPayload, null, 2)
-      );
-      console.log("[v0] =====================================");
+      const response = await fetch("/api/orders", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(frontendPayload),
+      });
 
-      console.log("[v0] Processing order with payment:", selectedPayment);
-      console.log("[v0] Cart items:", cartItems);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(
+          errorData.message || "Gagal mengirim pesanan ke backend"
+        );
+      }
 
-      // Simulate payment processing with stages
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      console.log("[v0] Payment validated...");
+      const responseData = await response.json();
+      console.log("[v0] Backend response:", responseData);
 
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      console.log("[v0] Stock checking...");
-
-      // Complete order and decrease stock
       const success = completeOrder();
 
       if (success) {
-        console.log("[v0] Order completed successfully");
         setOrderComplete(true);
         setTimeout(() => {
           alert(
             `Pesanan berhasil diproses dengan ${
               paymentOptions.find((p) => p.value === selectedPayment)?.label
-            }! Stock telah diperbarui.`
+            }!`
           );
           setOrderComplete(false);
           setSelectedPayment("");
         }, 1000);
-      } else {
-        alert(
-          "Gagal memproses pesanan. Stock tidak mencukupi atau terjadi kesalahan."
-        );
       }
     } catch (error) {
       console.log("[v0] Order processing error:", error);
-      alert("Terjadi kesalahan saat memproses pesanan.");
+      alert(
+        `Terjadi kesalahan: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
     } finally {
       setIsProcessing(false);
     }
@@ -208,11 +186,19 @@ export function PaymentMethods({ formData }: PaymentMethodsProps) {
           <h3 className="text-lg font-semibold text-green-800 mb-2">
             Pesanan Berhasil!
           </h3>
-          <p className="text-green-700">Stock telah diperbarui</p>
+          <p className="text-green-700">Terima kasih atas pesanan Anda.</p>
         </CardContent>
       </Card>
     );
   }
+
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+      minimumFractionDigits: 0,
+    }).format(price);
+  };
 
   return (
     <Card className="bg-white shadow-lg">
@@ -221,7 +207,7 @@ export function PaymentMethods({ formData }: PaymentMethodsProps) {
           {t("payment.title")}
         </CardTitle>
         <div className="text-sm text-gray-600">
-          Total: Rp {getTotalPrice().toLocaleString()} ({cartItems.length} item)
+          Total: {formatPrice(finalTotalAmount)} ({cartItems.length} item)
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -262,7 +248,12 @@ export function PaymentMethods({ formData }: PaymentMethodsProps) {
 
         <Button
           className="w-full bg-[#8B6F47] hover:bg-[#5D4037] text-white font-semibold py-3 mt-6 transition-colors duration-300 disabled:opacity-50"
-          disabled={!selectedPayment || isProcessing || cartItems.length === 0}
+          disabled={
+            !selectedPayment ||
+            isProcessing ||
+            cartItems.length === 0 ||
+            !formData?.namaPenerima
+          }
           onClick={handleProcessOrder}
         >
           {isProcessing ? (
@@ -271,9 +262,9 @@ export function PaymentMethods({ formData }: PaymentMethodsProps) {
               <span>Memproses Pesanan...</span>
             </div>
           ) : (
-            `${t(
-              "payment.processOrder"
-            )} - Rp ${getTotalPrice().toLocaleString()}`
+            `${t("payment.processOrder")} - ${formatPrice(
+              Number(finalTotalAmount) || 0
+            )}`
           )}
         </Button>
       </CardContent>

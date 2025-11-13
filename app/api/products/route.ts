@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 // Alamat API eksternal kamu.
 // Jika alamat ini berubah, kamu CUKUP ganti di satu tempat ini saja.
-const EXTERNAL_API_URL = "http://192.168.68.116:5000/products";
+const EXTERNAL_API_URL = "http://172.20.10.2:5000/products";
 
 /**
  * Ini adalah Route Handler (API internal di Next.js).
