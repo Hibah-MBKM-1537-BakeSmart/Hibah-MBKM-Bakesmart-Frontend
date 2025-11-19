@@ -2,17 +2,20 @@
 
 import React, { useState } from 'react';
 import { useAdmin } from '@/app/contexts/AdminContext';
+import { useAuth } from '@/app/contexts/AuthContext';
 import {
   Bell,
   Search,
   Menu,
   User,
   Settings,
-  LogOut
+  LogOut,
+  Shield
 } from 'lucide-react';
 
 export function AdminHeader() {
-  const { state, toggleSidebar, logout, markNotificationAsRead } = useAdmin();
+  const { state, toggleSidebar, markNotificationAsRead } = useAdmin();
+  const { user, logout } = useAuth();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
 
@@ -104,25 +107,19 @@ export function AdminHeader() {
               onClick={() => setShowUserMenu(!showUserMenu)}
               className="flex items-center space-x-3 p-2 rounded-lg hover:bg-white/50 transition-colors"
             >
-              <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: '#8b6f47' }}>
-                {state.user?.avatar ? (
-                  <img
-                    src={state.user.avatar}
-                    alt={state.user.name}
-                    className="w-8 h-8 rounded-full"
-                  />
+              <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: user?.role === 'super_admin' ? '#7b1fa2' : '#8b6f47' }}>
+                {user?.role === 'super_admin' ? (
+                  <Shield className="w-4 h-4 text-white" />
                 ) : (
-                  <span className="text-white text-sm font-medium">
-                    {state.user?.name.charAt(0)}
-                  </span>
+                  <User className="w-4 h-4 text-white" />
                 )}
               </div>
               <div className="hidden md:block text-left">
                 <p className="text-sm font-medium font-admin-heading" style={{ color: '#5d4037' }}>
-                  {state.user?.name}
+                  {user?.username}
                 </p>
                 <p className="text-xs" style={{ color: '#8b6f47' }}>
-                  {state.user?.role}
+                  {user?.role === 'super_admin' ? 'Super Admin' : 'Admin'}
                 </p>
               </div>
             </button>

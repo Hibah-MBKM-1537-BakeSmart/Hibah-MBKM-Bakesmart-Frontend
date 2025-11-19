@@ -70,40 +70,40 @@ export function OrderList() {
   return (
     <div className="space-y-4">
       {/* Summary Stats */}
-      <div className="bg-white rounded-lg shadow-sm border p-4" style={{ borderColor: '#e0d5c7' }}>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="bg-white rounded-lg shadow-sm border p-4 lg:p-6" style={{ borderColor: '#e0d5c7' }}>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
           <div className="text-center">
-            <p className="text-2xl font-bold font-admin-heading" style={{ color: '#5d4037' }}>
+            <p className="text-2xl lg:text-3xl font-bold font-admin-heading" style={{ color: '#5d4037' }}>
               {state.filteredOrders.length}
             </p>
-            <p className="text-sm font-admin-body" style={{ color: '#8b6f47' }}>
+            <p className="text-xs lg:text-sm font-admin-body mt-1" style={{ color: '#8b6f47' }}>
               Total Pesanan
             </p>
           </div>
           <div className="text-center">
-            <p className="text-2xl font-bold font-admin-heading" style={{ color: '#5d4037' }}>
+            <p className="text-2xl lg:text-3xl font-bold font-admin-heading" style={{ color: '#5d4037' }}>
               {state.filteredOrders.filter(o => o.status === 'completed').length}
             </p>
-            <p className="text-sm font-admin-body" style={{ color: '#8b6f47' }}>
+            <p className="text-xs lg:text-sm font-admin-body mt-1" style={{ color: '#8b6f47' }}>
               Selesai
             </p>
           </div>
           <div className="text-center">
-            <p className="text-2xl font-bold font-admin-heading" style={{ color: '#5d4037' }}>
+            <p className="text-2xl lg:text-3xl font-bold font-admin-heading" style={{ color: '#5d4037' }}>
               {state.filteredOrders.filter(o => o.status === 'cancelled').length}
             </p>
-            <p className="text-sm font-admin-body" style={{ color: '#8b6f47' }}>
+            <p className="text-xs lg:text-sm font-admin-body mt-1" style={{ color: '#8b6f47' }}>
               Dibatalkan
             </p>
           </div>
-          <div className="text-center">
-            <p className="text-2xl font-bold font-admin-heading" style={{ color: '#5d4037' }}>
+          <div className="text-center col-span-2 lg:col-span-1">
+            <p className="text-2xl lg:text-3xl font-bold font-admin-heading" style={{ color: '#5d4037' }}>
               Rp {state.filteredOrders.reduce((sum, order) => {
                 const orderTotal = order.order_products?.reduce((itemSum, item) => itemSum + item.harga_beli, 0) || 0;
                 return sum + orderTotal;
               }, 0).toLocaleString('id-ID')}
             </p>
-            <p className="text-sm font-admin-body" style={{ color: '#8b6f47' }}>
+            <p className="text-xs lg:text-sm font-admin-body mt-1" style={{ color: '#8b6f47' }}>
               Total Nilai
             </p>
           </div>
@@ -111,7 +111,7 @@ export function OrderList() {
       </div>
 
       {/* Order Cards */}
-      <div className="grid gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {state.filteredOrders.map((order) => (
           <OrderCard key={order.id} order={order} />
         ))}

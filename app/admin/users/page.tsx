@@ -13,10 +13,14 @@ import {
   Mail,
   Phone,
   Calendar,
-  MoreHorizontal,
   UserCheck,
   UserX
 } from 'lucide-react';
+import { AddUserModal } from '@/components/adminPage/users/AddUserModal';
+import { ViewUserModal } from '@/components/adminPage/users/ViewUserModal';
+import { EditUserModal } from '@/components/adminPage/users/EditUserModal';
+import { ToastNotification, useToast } from '@/components/adminPage/users/Toast';
+import { ConfirmDialog } from '@/components/adminPage/users/ConfirmDialog';
 
 interface UserData {
   id: string;
@@ -124,6 +128,26 @@ export default function UsersPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRole, setSelectedRole] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<UserData | null>(null);
+  
+  // Toast and confirm dialog state
+  const { toasts, showSuccess, showError, showWarning, removeToast } = useToast();
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    type?: 'danger' | 'warning' | 'info';
+    confirmText?: string;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
 
   const roleOptions = ['all', 'customer', 'admin', 'super_admin'];
   const statusOptions = ['all', 'active', 'inactive', 'suspended'];
@@ -155,9 +179,136 @@ export default function UsersPage() {
   };
 
   const updateUserStatus = (userId: string, newStatus: UserData['status']) => {
+    const user = users.find(u => u.id === userId);
+    if (!user) return;
+
+    // Super admin tidak boleh disuspend
+    if (user.role === 'super_admin' && newStatus === 'suspended') {
+      showError(
+        'Tidak dapat menangguhkan Super Admin!',
+        'Super Admin memiliki privilege tertinggi dan tidak dapat ditangguhkan.'
+      );
+      return;
+    }
+
+    const doUpdateStatus = () => {
+      setUsers(users.map(u => 
+        u.id === userId ? { ...u, status: newStatus } : u
+      ));
+
+      // Success message
+      const statusMessages = {
+        active: 'diaktifkan',
+        suspended: 'ditangguhkan', 
+        inactive: 'dinonaktifkan'
+      };
+      
+      showSuccess(
+        `Status berhasil diperbarui!`,
+        `Akun ${user.name} berhasil ${statusMessages[newStatus]}.`
+      );
+    };
+
+    // Konfirmasi untuk suspend akun
+    if (newStatus === 'suspended') {
+      setConfirmDialog({
+        isOpen: true,
+        title: 'Tangguhkan Akun',
+        message: `Apakah Anda yakin ingin menangguhkan akun ${user.name}?\n\nUser tidak akan bisa mengakses sistem setelah akun ditangguhkan.`,
+        onConfirm: doUpdateStatus,
+        type: 'danger',
+        confirmText: 'Tangguhkan'
+      });
+      return;
+    }
+
+    // Konfirmasi untuk mengaktifkan kembali akun yang ditangguhkan
+    if (user.status === 'suspended' && newStatus === 'active') {
+      setConfirmDialog({
+        isOpen: true,
+        title: 'Aktifkan Akun',
+        message: `Apakah Anda yakin ingin mengaktifkan kembali akun ${user.name}?`,
+        onConfirm: doUpdateStatus,
+        type: 'info',
+        confirmText: 'Aktifkan'
+      });
+      return;
+    }
+
+    // Untuk perubahan status lainnya, langsung update
+    doUpdateStatus();
+  };
+
+  const handleAddUser = (userData: {
+    name: string;
+    email: string;
+    phone: string;
+    role: 'customer' | 'admin' | 'super_admin';
+    password: string;
+  }) => {
+    const newUser: UserData = {
+      id: (users.length + 1).toString(),
+      name: userData.name,
+      email: userData.email,
+      phone: userData.phone,
+      role: userData.role,
+      status: 'active',
+      joinDate: new Date(),
+      totalOrders: 0,
+      totalSpent: 0
+    };
+    
+    setUsers([...users, newUser]);
+    showSuccess('User berhasil ditambahkan!', `${userData.name} telah ditambahkan ke sistem.`);
+  };
+
+  const handleViewUser = (user: UserData) => {
+    setSelectedUser(user);
+    setShowViewModal(true);
+  };
+
+  const handleEditUser = (user: UserData) => {
+    setSelectedUser(user);
+    setShowEditModal(true);
+  };
+
+  const handleUpdateUser = (userId: string, userData: {
+    name: string;
+    email: string;
+    phone: string;
+    role: 'customer' | 'admin' | 'super_admin';
+    status: 'active' | 'inactive' | 'suspended';
+    password?: string;
+  }) => {
     setUsers(users.map(user => 
-      user.id === userId ? { ...user, status: newStatus } : user
+      user.id === userId ? { ...user, ...userData } : user
     ));
+    showSuccess('Data user berhasil diperbarui!', `Perubahan pada akun ${userData.name} telah disimpan.`);
+  };
+
+  const handleDeleteUser = (userId: string, userName: string) => {
+    const user = users.find(u => u.id === userId);
+    
+    // Super admin tidak boleh dihapus
+    if (user?.role === 'super_admin') {
+      showError(
+        'Tidak dapat menghapus Super Admin!',
+        'Super Admin memiliki privilege tertinggi dan tidak dapat dihapus dari sistem.'
+      );
+      return;
+    }
+
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Hapus User',
+      message: `Apakah Anda yakin ingin menghapus user ${userName}?\n\nTindakan ini tidak dapat dibatalkan dan semua data user akan hilang permanen.`,
+      onConfirm: () => {
+        setUsers(users.filter(user => user.id !== userId));
+        showSuccess('User berhasil dihapus!', `${userName} telah dihapus dari sistem.`);
+      },
+      type: 'danger',
+      confirmText: 'Hapus'
+    });
   };
 
   return (
@@ -168,7 +319,10 @@ export default function UsersPage() {
           <h1 className="text-2xl font-bold text-gray-900">Users</h1>
           <p className="text-gray-600">Manage customer accounts and admin users</p>
         </div>
-        <button className="flex items-center space-x-2 bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition-colors">
+        <button 
+          onClick={() => setShowAddModal(true)}
+          className="flex items-center space-x-2 bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition-colors"
+        >
           <Plus className="w-4 h-4" />
           <span>Add User</span>
         </button>
@@ -331,16 +485,30 @@ export default function UsersPage() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex items-center justify-end space-x-2">
-                      <button className="text-gray-400 hover:text-gray-600 p-1">
+                      <button 
+                        onClick={() => handleViewUser(user)}
+                        className="text-gray-400 hover:text-gray-600 p-1"
+                        title="Lihat Detail"
+                      >
                         <Eye className="w-4 h-4" />
                       </button>
-                      <button className="text-gray-400 hover:text-orange-600 p-1">
+                      <button 
+                        onClick={() => handleEditUser(user)}
+                        className="text-gray-400 hover:text-orange-600 p-1"
+                        title="Edit User"
+                      >
                         <Edit className="w-4 h-4" />
                       </button>
-                      {user.status === 'active' ? (
+                      {user.role === 'super_admin' ? (
+                        /* Super Admin tidak bisa disuspend */
+                        <div className="p-1 opacity-50" title="Super Admin tidak dapat ditangguhkan">
+                          <Shield className="w-4 h-4 text-purple-600" />
+                        </div>
+                      ) : user.status === 'active' ? (
                         <button 
                           onClick={() => updateUserStatus(user.id, 'suspended')}
                           className="text-gray-400 hover:text-red-600 p-1"
+                          title="Tangguhkan User"
                         >
                           <UserX className="w-4 h-4" />
                         </button>
@@ -348,16 +516,25 @@ export default function UsersPage() {
                         <button 
                           onClick={() => updateUserStatus(user.id, 'active')}
                           className="text-gray-400 hover:text-green-600 p-1"
+                          title="Aktifkan User"
                         >
                           <UserCheck className="w-4 h-4" />
                         </button>
                       )}
-                      <button className="text-gray-400 hover:text-red-600 p-1">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                      <button className="text-gray-400 hover:text-gray-600 p-1">
-                        <MoreHorizontal className="w-4 h-4" />
-                      </button>
+                      {user.role === 'super_admin' ? (
+                        /* Super Admin tidak bisa dihapus */
+                        <div className="p-1 opacity-50" title="Super Admin tidak dapat dihapus">
+                          <Shield className="w-4 h-4 text-purple-600" />
+                        </div>
+                      ) : (
+                        <button 
+                          onClick={() => handleDeleteUser(user.id, user.name)}
+                          className="text-gray-400 hover:text-red-600 p-1"
+                          title="Hapus User"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -431,6 +608,48 @@ export default function UsersPage() {
           </div>
         </div>
       </div>
+
+      {/* Add User Modal */}
+      <AddUserModal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        onAddUser={handleAddUser}
+      />
+
+      {/* View User Modal */}
+      <ViewUserModal
+        isOpen={showViewModal}
+        onClose={() => {
+          setShowViewModal(false);
+          setSelectedUser(null);
+        }}
+        user={selectedUser}
+      />
+
+      {/* Edit User Modal */}
+      <EditUserModal
+        isOpen={showEditModal}
+        onClose={() => {
+          setShowEditModal(false);
+          setSelectedUser(null);
+        }}
+        user={selectedUser}
+        onUpdateUser={handleUpdateUser}
+      />
+
+      {/* Toast Notifications */}
+      <ToastNotification toasts={toasts} onClose={removeToast} />
+
+      {/* Confirm Dialog */}
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        onClose={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmDialog.onConfirm}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        type={confirmDialog.type}
+        confirmText={confirmDialog.confirmText}
+      />
     </div>
   );
 }

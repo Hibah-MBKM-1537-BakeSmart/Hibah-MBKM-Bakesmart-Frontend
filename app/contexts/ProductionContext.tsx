@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
-export type ProductionStatus = 'pending' | 'verifying' | 'paid' | 'baked' | 'completed';
+export type ProductionStatus = 'pending' | 'verifying' | 'paid' | 'baked' | 'completed' | 'incompleted';
 
 // Based on orders table structure from backend
 export interface Order {
@@ -49,6 +49,7 @@ export interface ProductionSummary {
   paid: number;
   baked: number;
   completed: number;
+  incompleted: number;
 }
 
 interface ProductionContextType {
@@ -57,6 +58,7 @@ interface ProductionContextType {
   selectedDate: Date;
   dateRange: { start: Date; end: Date };
   updateOrderStatus: (orderId: number, status: ProductionStatus) => void;
+  deleteOrder: (orderId: number) => void;
   setSelectedDate: (date: Date) => void;
   setDateRange: (range: { start: Date; end: Date }) => void;
   getOrdersByDate: (date: Date) => Order[];
@@ -236,6 +238,39 @@ export function ProductionProvider({ children }: { children: React.ReactNode }) 
             }
           }
         ]
+      },
+      {
+        id: 6,
+        bukti_path: '/uploads/bukti_6.jpg',
+        status: 'incompleted',
+        waktu_ambil: new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString(),
+        user_id: 7,
+        created_at: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
+        updated_at: new Date().toISOString(),
+        user: {
+          id: 7,
+          nama: 'Emma Davis',
+          no_hp: '08123456796',
+          role: 'user'
+        },
+        order_products: [
+          {
+            id: 6,
+            jumlah: 6,
+            harga_beli: 150000,
+            note: 'Cheese tart with blueberry topping',
+            order_id: 6,
+            product_id: 6,
+            product: {
+              id: 6,
+              nama: 'Cheese Tart',
+              deskripsi: 'Creamy cheese tart',
+              harga: 25000,
+              stok: 12,
+              gambars: [{ id: 6, file_path: '/img/cheese-tart.jpg', product_id: 6 }]
+            }
+          }
+        ]
       }
     ];
 
@@ -249,6 +284,7 @@ export function ProductionProvider({ children }: { children: React.ReactNode }) 
     paid: orders.filter(order => order.status === 'paid').length,
     baked: orders.filter(order => order.status === 'baked').length,
     completed: orders.filter(order => order.status === 'completed').length,
+    incompleted: orders.filter(order => order.status === 'incompleted').length,
   };
 
   const updateOrderStatus = (orderId: number, status: ProductionStatus) => {
@@ -257,6 +293,10 @@ export function ProductionProvider({ children }: { children: React.ReactNode }) 
         order.id === orderId ? { ...order, status } : order
       )
     );
+  };
+
+  const deleteOrder = (orderId: number) => {
+    setOrders(prevOrders => prevOrders.filter(order => order.id !== orderId));
   };
 
   const getOrdersByDate = (date: Date) => {
@@ -282,6 +322,7 @@ export function ProductionProvider({ children }: { children: React.ReactNode }) 
     selectedDate,
     dateRange,
     updateOrderStatus,
+    deleteOrder,
     setSelectedDate,
     setDateRange,
     getOrdersByDate,

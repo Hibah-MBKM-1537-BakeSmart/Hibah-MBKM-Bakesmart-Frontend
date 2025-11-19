@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, Upload, Package } from 'lucide-react';
+import { X, Upload, Package, Settings } from 'lucide-react';
 import { Product } from '@/app/contexts/ProductsContext';
 import { useCategories } from '@/app/contexts/CategoriesContext';
+import { ProductAddonsManager, ProductAddon } from './ProductAddonsManager';
 
 interface EditProductModalProps {
   isOpen: boolean;
@@ -21,9 +22,14 @@ export function EditProductModal({ isOpen, onClose, onEditProduct, product }: Ed
     stok: 0,
     status: 'active' as 'active' | 'inactive',
     jenis: [] as Array<{ id: number; nama: string }>,
+    hari_tersedia: [] as string[],
+    addons: [] as ProductAddon[],
   });
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showAddonsManager, setShowAddonsManager] = useState(false);
+
+  const daysOfWeek = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
 
   // Reset form when product changes
   useEffect(() => {
@@ -35,6 +41,8 @@ export function EditProductModal({ isOpen, onClose, onEditProduct, product }: Ed
         stok: product.stok,
         status: product.status,
         jenis: product.jenis || [],
+        hari_tersedia: product.hari_tersedia || [],
+        addons: product.addons || [],
       });
       setSelectedCategoryId(product.jenis?.[0]?.id || null);
     }
@@ -77,9 +85,20 @@ export function EditProductModal({ isOpen, onClose, onEditProduct, product }: Ed
       stok: 0,
       status: 'active',
       jenis: [],
+      hari_tersedia: [],
+      addons: [],
     });
     setSelectedCategoryId(null);
     onClose();
+  };
+
+  const toggleDay = (day: string) => {
+    setFormData(prev => ({
+      ...prev,
+      hari_tersedia: prev.hari_tersedia.includes(day)
+        ? prev.hari_tersedia.filter(d => d !== day)
+        : [...prev.hari_tersedia, day]
+    }));
   };
 
   const formatPrice = (price: number) => {
@@ -185,7 +204,7 @@ export function EditProductModal({ isOpen, onClose, onEditProduct, product }: Ed
           </div>
 
           {/* Price and Stock */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4">
             <div>
               <label htmlFor="harga" className="block text-sm font-medium text-gray-700 mb-2">
                 Harga *
@@ -209,20 +228,79 @@ export function EditProductModal({ isOpen, onClose, onEditProduct, product }: Ed
                 </p>
               )}
             </div>
+          </div>
 
-            <div>
-              <label htmlFor="stok" className="block text-sm font-medium text-gray-700 mb-2">
-                Stok
-              </label>
-              <input
-                type="number"
-                id="stok"
-                value={formData.stok}
-                onChange={(e) => setFormData(prev => ({ ...prev, stok: Number(e.target.value) }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                placeholder="0"
-                min="0"
-              />
+          {/* Hari Ketersediaan */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-3">
+              Hari Ketersediaan
+            </label>
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+              {daysOfWeek.map((day) => (
+                <button
+                  key={day}
+                  type="button"
+                  onClick={() => toggleDay(day)}
+                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors border ${
+                    formData.hari_tersedia.includes(day)
+                      ? 'bg-orange-500 text-white border-orange-500'
+                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  {day}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-gray-500 mt-2">
+              {formData.hari_tersedia.length === 0 
+                ? 'Tidak ada hari dipilih (produk tidak tersedia)'
+                : `Tersedia di: ${formData.hari_tersedia.join(', ')}`
+              }
+            </p>
+          </div>
+
+          {/* Manage Addons */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Product Addons
+            </label>
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Settings className="w-5 h-5 text-gray-600" />
+                  <span className="text-sm text-gray-700">
+                    {formData.addons.length === 0 
+                      ? 'No addons configured' 
+                      : `${formData.addons.length} addon(s) • ${formData.addons.filter(a => a.is_active).length} active`
+                    }
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowAddonsManager(true)}
+                  className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors text-sm font-medium flex items-center gap-2"
+                >
+                  <Settings className="w-4 h-4" />
+                  Manage Addons
+                </button>
+              </div>
+              {formData.addons.length > 0 && (
+                <div className="space-y-1 max-h-24 overflow-y-auto">
+                  {formData.addons.filter(a => a.is_active).slice(0, 3).map((addon) => (
+                    <div key={addon.id} className="text-xs text-gray-600 flex items-center justify-between bg-white px-2 py-1 rounded">
+                      <span>{addon.nama}</span>
+                      <span className="text-gray-500">
+                        {addon.harga_tambahan > 0 ? `+Rp ${addon.harga_tambahan.toLocaleString('id-ID')}` : 'Free'}
+                      </span>
+                    </div>
+                  ))}
+                  {formData.addons.filter(a => a.is_active).length > 3 && (
+                    <p className="text-xs text-gray-500 italic px-2">
+                      +{formData.addons.filter(a => a.is_active).length - 3} more active addon(s)
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
@@ -260,6 +338,17 @@ export function EditProductModal({ isOpen, onClose, onEditProduct, product }: Ed
             </button>
           </div>
         </form>
+
+        {/* Product Addons Manager Modal */}
+        <ProductAddonsManager
+          isOpen={showAddonsManager}
+          onClose={() => setShowAddonsManager(false)}
+          productName={product?.nama || ''}
+          addons={formData.addons}
+          onSave={(updatedAddons) => {
+            setFormData(prev => ({ ...prev, addons: updatedAddons }));
+          }}
+        />
       </div>
     </div>
   );

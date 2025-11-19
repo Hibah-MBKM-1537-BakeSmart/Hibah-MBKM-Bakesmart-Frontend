@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { productsApi, categoriesApi, checkApiConnection } from '@/lib/api/mockApi';
 
 // Related entities interfaces based on ERD
 export interface Gambar {
@@ -43,6 +44,12 @@ export interface CartItem {
   product: Product;
   quantity: number;
   note?: string;
+  customizations?: Array<{
+    id: number;
+    nama: string;
+    harga_tambahan: number;
+  }>;
+  finalPrice?: number; // Price per item including customizations
 }
 
 export interface Transaction {
@@ -52,7 +59,7 @@ export interface Transaction {
   tax: number;
   discount: number;
   total: number;
-  paymentMethod: 'cash' | 'card' | 'digital';
+  paymentMethod: 'cash' | 'transfer' | 'gopay' | 'ovo' | 'dana';
   customerName?: string;
   timestamp: Date;
   status: 'pending' | 'completed' | 'cancelled';
@@ -62,29 +69,39 @@ interface KasirState {
   cart: CartItem[];
   currentTransaction: Transaction | null;
   products: Product[];
+  categories: RefJenis[];
   selectedCategory: string;
   showCart: boolean;
-  paymentMethod: 'cash' | 'card' | 'digital';
+  paymentMethod: 'cash' | 'transfer' | 'gopay' | 'ovo' | 'dana';
   customerName: string;
+  customerWhatsApp: string;
+  customerAddress: string;
   discount: number;
+  discountType: 'percentage' | 'nominal';
+  isLoadingProducts: boolean;
+  isApiConnected: boolean;
 }
 
 interface KasirContextType {
   state: KasirState;
-  addToCart: (product: Product, quantity?: number, note?: string) => void;
+  addToCart: (product: Product, quantity?: number, note?: string, customizations?: Array<{id: number; nama: string; harga_tambahan: number}>, finalPrice?: number) => void;
   removeFromCart: (productId: number) => void;
   updateCartItemQuantity: (productId: number, quantity: number) => void;
   updateCartItemNote: (productId: number, note: string) => void;
   clearCart: () => void;
   setSelectedCategory: (category: string) => void;
   toggleCart: () => void;
-  setPaymentMethod: (method: 'cash' | 'card' | 'digital') => void;
+  setPaymentMethod: (method: 'cash' | 'transfer' | 'gopay' | 'ovo' | 'dana') => void;
   setCustomerName: (name: string) => void;
+  setCustomerWhatsApp: (whatsapp: string) => void;
+  setCustomerAddress: (address: string) => void;
   setDiscount: (discount: number) => void;
+  setDiscountType: (type: 'percentage' | 'nominal') => void;
   processPayment: () => Promise<boolean>;
   calculateSubtotal: () => number;
   calculateTax: () => number;
   calculateTotal: () => number;
+  calculateDiscountAmount: () => number;
 }
 
 const KasirContext = createContext<KasirContextType | undefined>(undefined);
@@ -286,23 +303,164 @@ export function KasirProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<KasirState>({
     cart: [],
     currentTransaction: null,
-    products: sampleProducts,
+    products: [],
+    categories: [],
     selectedCategory: 'All',
     showCart: false,
     paymentMethod: 'cash',
     customerName: '',
-    discount: 0
+    customerWhatsApp: '',
+    customerAddress: '',
+    discount: 0,
+    discountType: 'nominal',
+    isLoadingProducts: true,
+    isApiConnected: false
   });
 
-  const addToCart = (product: Product, quantity: number = 1, note?: string) => {
+  // Load products from API on mount
+  useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        setState(prev => ({ ...prev, isLoadingProducts: true }));
+        
+        // Check API connection
+        const isConnected = await checkApiConnection();
+        setState(prev => ({ ...prev, isApiConnected: isConnected }));
+
+        if (isConnected) {
+          // Load from API
+          const [products, categories] = await Promise.all([
+            productsApi.getAll(),
+            categoriesApi.getAll()
+          ]);
+          
+          // Transform API data to match Product interface - only active products
+          const transformedProducts: Product[] = products
+            .filter((p: any) => p.status === 'active' && p.stok > 0) // Only show active products with stock
+            .map((p: any) => ({
+              id: p.id,
+              nama: p.nama,
+              harga: p.harga,
+              deskripsi: p.deskripsi || '',
+              stok: p.stok || 0,
+              gambars: p.gambars || [],
+              jenis: p.jenis || [],
+              hari: p.hari || [],
+              attributes: p.attributes || []
+            }));
+
+          setState(prev => ({
+            ...prev,
+            products: transformedProducts,
+            categories: categories || [],
+            isLoadingProducts: false
+          }));
+        } else {
+          // Use sample products if API not available
+          setState(prev => ({
+            ...prev,
+            products: sampleProducts,
+            categories: [],
+            isLoadingProducts: false
+          }));
+        }
+      } catch (error) {
+        console.error('Failed to load products:', error);
+        // Fallback to sample products on error
+        setState(prev => ({
+          ...prev,
+          products: sampleProducts,
+          categories: [],
+          isLoadingProducts: false,
+          isApiConnected: false
+        }));
+      }
+    };
+
+    loadProducts();
+  }, []);
+
+  // Auto-sync: Poll API every 5 seconds to sync with product changes
+  useEffect(() => {
+    if (!state.isApiConnected) return;
+
+    const syncInterval = setInterval(async () => {
+      try {
+        const products = await productsApi.getAll();
+        
+        // Transform and filter products
+        const transformedProducts: Product[] = products
+          .filter((p: any) => p.status === 'active' && p.stok > 0)
+          .map((p: any) => ({
+            id: p.id,
+            nama: p.nama,
+            harga: p.harga,
+            deskripsi: p.deskripsi || '',
+            stok: p.stok || 0,
+            gambars: p.gambars || [],
+            jenis: p.jenis || [],
+            hari: p.hari || [],
+            attributes: p.attributes || []
+          }));
+        
+        setState(prev => {
+          // Only update if data has changed
+          const hasChanges = JSON.stringify(prev.products) !== JSON.stringify(transformedProducts);
+          if (hasChanges) {
+            console.log('Kasir: Products synced from API');
+            return { ...prev, products: transformedProducts };
+          }
+          return prev;
+        });
+      } catch (error) {
+        console.warn('Kasir: Auto-sync failed:', error);
+        setState(prev => ({ ...prev, isApiConnected: false }));
+      }
+    }, 5000); // Sync every 5 seconds
+
+    return () => clearInterval(syncInterval);
+  }, [state.isApiConnected]);
+
+  const addToCart = (product: Product, quantity: number = 1, note?: string, customizations?: Array<{id: number; nama: string; harga_tambahan: number}>, finalPrice?: number) => {
     setState(prev => {
-      const existingItem = prev.cart.find(item => item.product.id === product.id);
+      // Check stock availability
+      const currentCartQuantity = prev.cart
+        .filter(item => item.product.id === product.id)
+        .reduce((sum, item) => sum + item.quantity, 0);
+      
+      const totalQuantity = currentCartQuantity + quantity;
+      
+      if (totalQuantity > product.stok) {
+        console.warn(`Insufficient stock for ${product.nama}. Available: ${product.stok}, Requested: ${totalQuantity}`);
+        alert(`Stok tidak cukup! Tersedia: ${product.stok}, Di keranjang: ${currentCartQuantity}`);
+        return prev; // Don't add to cart
+      }
+
+      // For customized products, always create a new cart item
+      if (customizations && customizations.length > 0) {
+        return {
+          ...prev,
+          cart: [...prev.cart, { 
+            product, 
+            quantity, 
+            note,
+            customizations,
+            finalPrice 
+          }]
+        };
+      }
+
+      // For regular products, check if item exists and update quantity
+      const existingItem = prev.cart.find(item => 
+        item.product.id === product.id && 
+        !item.customizations?.length
+      );
       
       if (existingItem) {
         return {
           ...prev,
           cart: prev.cart.map(item =>
-            item.product.id === product.id
+            item.product.id === product.id && !item.customizations?.length
               ? { ...item, quantity: item.quantity + quantity, note: note || item.note }
               : item
           )
@@ -329,14 +487,26 @@ export function KasirProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    setState(prev => ({
-      ...prev,
-      cart: prev.cart.map(item =>
-        item.product.id === productId
-          ? { ...item, quantity }
-          : item
-      )
-    }));
+    setState(prev => {
+      // Find the product to check stock
+      const product = prev.products.find(p => p.id === productId);
+      if (!product) return prev;
+
+      // Check if requested quantity exceeds stock
+      if (quantity > product.stok) {
+        alert(`Stok tidak cukup! Maksimal: ${product.stok}`);
+        return prev; // Don't update
+      }
+
+      return {
+        ...prev,
+        cart: prev.cart.map(item =>
+          item.product.id === productId
+            ? { ...item, quantity }
+            : item
+        )
+      };
+    });
   };
 
   const updateCartItemNote = (productId: number, note: string) => {
@@ -353,7 +523,10 @@ export function KasirProvider({ children }: { children: React.ReactNode }) {
       ...prev,
       cart: [],
       customerName: '',
-      discount: 0
+      customerWhatsApp: '',
+      customerAddress: '',
+      discount: 0,
+      discountType: 'nominal'
     }));
   };
 
@@ -365,7 +538,7 @@ export function KasirProvider({ children }: { children: React.ReactNode }) {
     setState(prev => ({ ...prev, showCart: !prev.showCart }));
   };
 
-  const setPaymentMethod = (method: 'cash' | 'card' | 'digital') => {
+  const setPaymentMethod = (method: 'cash' | 'transfer' | 'gopay' | 'ovo' | 'dana') => {
     setState(prev => ({ ...prev, paymentMethod: method }));
   };
 
@@ -373,13 +546,26 @@ export function KasirProvider({ children }: { children: React.ReactNode }) {
     setState(prev => ({ ...prev, customerName: name }));
   };
 
+  const setCustomerWhatsApp = (whatsapp: string) => {
+    setState(prev => ({ ...prev, customerWhatsApp: whatsapp }));
+  };
+
+  const setCustomerAddress = (address: string) => {
+    setState(prev => ({ ...prev, customerAddress: address }));
+  };
+
   const setDiscount = (discount: number) => {
     setState(prev => ({ ...prev, discount }));
   };
 
+  const setDiscountType = (type: 'percentage' | 'nominal') => {
+    setState(prev => ({ ...prev, discountType: type }));
+  };
+
   const calculateSubtotal = () => {
     return state.cart.reduce((total, item) => {
-      return total + (item.product.harga * item.quantity);
+      const itemPrice = item.finalPrice || item.product.harga;
+      return total + (itemPrice * item.quantity);
     }, 0);
   };
 
@@ -391,7 +577,22 @@ export function KasirProvider({ children }: { children: React.ReactNode }) {
   const calculateTotal = () => {
     const subtotal = calculateSubtotal();
     const tax = calculateTax();
-    return subtotal + tax - state.discount;
+    const discountAmount = calculateDiscountAmount();
+    const total = subtotal + tax - discountAmount;
+    return Math.max(0, total); // Pastikan total tidak negatif
+  };
+
+  const calculateDiscountAmount = () => {
+    const subtotal = calculateSubtotal();
+    const tax = calculateTax();
+    
+    if (state.discountType === 'percentage') {
+      // Diskon persentase dari subtotal + tax
+      return (subtotal + tax) * (state.discount / 100);
+    } else {
+      // Diskon nominal
+      return state.discount;
+    }
   };
 
   const processPayment = async (): Promise<boolean> => {
@@ -412,7 +613,23 @@ export function KasirProvider({ children }: { children: React.ReactNode }) {
       setState(prev => ({ ...prev, currentTransaction: transaction }));
       
       // Simulate payment processing
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Update stock in API after successful payment
+      if (state.isApiConnected) {
+        try {
+          for (const item of state.cart) {
+            const newStok = item.product.stok - item.quantity;
+            await productsApi.update(item.product.id, { 
+              stok: newStok 
+            });
+            console.log(`Updated stock for ${item.product.nama}: ${item.product.stok} → ${newStok}`);
+          }
+        } catch (error) {
+          console.error('Failed to update stock in API:', error);
+          // Don't fail the transaction, just log the error
+        }
+      }
       
       // Clear cart after successful payment
       clearCart();
@@ -435,11 +652,15 @@ export function KasirProvider({ children }: { children: React.ReactNode }) {
     toggleCart,
     setPaymentMethod,
     setCustomerName,
+    setCustomerWhatsApp,
+    setCustomerAddress,
     setDiscount,
+    setDiscountType,
     processPayment,
     calculateSubtotal,
     calculateTax,
-    calculateTotal
+    calculateTotal,
+    calculateDiscountAmount
   };
 
   return (

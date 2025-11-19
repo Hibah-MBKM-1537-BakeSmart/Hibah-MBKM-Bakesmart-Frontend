@@ -1,9 +1,11 @@
 "use client";
 
-import type React from "react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useAdmin } from "@/app/contexts/AdminContext";
+import React from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { useAdmin } from '@/app/contexts/AdminContext';
+import { useAuth } from '@/app/contexts/AuthContext';
+import { usePageTransition } from '@/hooks/usePageTransition';
 import {
   LayoutDashboard,
   Package,
@@ -92,7 +94,9 @@ const menuItems: MenuItem[] = [
 ];
 
 export function AdminSidebar() {
-  const { state, toggleSidebar, logout } = useAdmin();
+  const { state, toggleSidebar } = useAdmin();
+  const { logout } = useAuth();
+  const { startTransition } = usePageTransition();
   const pathname = usePathname();
 
   return (
@@ -149,22 +153,25 @@ export function AdminSidebar() {
             <Link
               key={item.id}
               href={item.href}
-              className={`flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors group ${
+              prefetch={true} // Enable prefetching for faster navigation
+              onClick={startTransition} // Start loading state
+              className={`flex items-center space-x-3 px-3 py-2 rounded-lg transition-all duration-200 group ${
                 isActive
-                  ? "text-white font-medium"
-                  : "text-gray-200 hover:bg-white/10 hover:text-white"
+                  ? 'text-white font-medium shadow-md'
+                  : 'text-gray-200 hover:bg-white/10 hover:text-white hover:shadow-sm'
               }`}
               style={isActive ? { backgroundColor: "#8b6f47" } : {}}
             >
-              <Icon
-                className={`w-5 h-5 ${
-                  isActive ? "text-white" : "text-gray-200"
-                }`}
-              />
+              <Icon className={`w-5 h-5 transition-transform duration-200 ${
+                isActive ? 'text-white scale-110' : 'text-gray-200 group-hover:scale-105'
+              }`} />
               {!state.sidebarCollapsed && (
-                <span className="font-medium font-admin-body">
+                <span className="font-medium font-admin-body transition-all duration-200">
                   {item.label}
                 </span>
+              )}
+              {isActive && !state.sidebarCollapsed && (
+                <div className="ml-auto w-1 h-1 bg-white rounded-full animate-pulse"></div>
               )}
             </Link>
           );
