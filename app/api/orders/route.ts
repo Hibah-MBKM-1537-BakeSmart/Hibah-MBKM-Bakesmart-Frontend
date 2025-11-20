@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 // Menggunakan 127.0.0.1 untuk menghindari masalah localhost di Node v18+
-const EXTERNAL_API_URL = "http://172.20.10.2:5000/orders";
+const EXTERNAL_API_URL = "http://192.168.0.196:5000/orders";
 
 function transformPayloadForBackend(payload: any) {
   const { order, customer, items } = payload;
@@ -35,7 +35,7 @@ function transformPayloadForBackend(payload: any) {
     // Mock Dimensi (Wajib ada untuk backend/biteship)
     height: 10,
     length: 10,
-    weight: 200,
+    weight: 50,
     width: 10,
 
     // Field Database Backend
