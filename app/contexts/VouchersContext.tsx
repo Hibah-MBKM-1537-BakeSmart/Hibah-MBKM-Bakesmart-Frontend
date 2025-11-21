@@ -47,8 +47,31 @@ export function VouchersProvider({ children }: { children: ReactNode }) {
   // Mapping function dari backend response ke frontend format
   const mapBackendToFrontend = (backendVoucher: any): Voucher => {
     const today = new Date();
-    const expiryDate = backendVoucher.expiryDate ? new Date(backendVoucher.expiryDate) : new Date();
-    const status: "active" | "inactive" | "expired" = expiryDate < today ? "expired" : "active";
+    today.setHours(0, 0, 0, 0); // Set to start of day for accurate comparison
+    
+    const expiryDate = backendVoucher.expiryDate ? new Date(backendVoucher.expiryDate) : null;
+    if (expiryDate) {
+      expiryDate.setHours(0, 0, 0, 0); // Set to start of day
+    }
+    
+    const usageCount = backendVoucher.usageCount || 0;
+    const maxUsage = backendVoucher.maxUsage || null;
+    
+    // Determine status based on expiry date and usage limit
+    let status: "active" | "inactive" | "expired";
+    
+    // Check if voucher is expired by date
+    if (expiryDate && expiryDate < today) {
+      status = "expired";
+    }
+    // Check if voucher has reached max usage
+    else if (maxUsage !== null && usageCount >= maxUsage) {
+      status = "inactive"; // or "expired" if you prefer
+    }
+    // Otherwise, it's active
+    else {
+      status = "active";
+    }
 
     return {
       id: backendVoucher.id?.toString() || "",
@@ -59,9 +82,9 @@ export function VouchersProvider({ children }: { children: ReactNode }) {
       persen: backendVoucher.persen || backendVoucher.discount || 0,
       discountType: "percentage", // Backend hanya support percentage
       expiryDate: backendVoucher.expiryDate || new Date().toISOString().split("T")[0],
-      usageCount: backendVoucher.usageCount || 0,
-      maxUsage: backendVoucher.maxUsage || null,
-      status: backendVoucher.status || status,
+      usageCount: usageCount,
+      maxUsage: maxUsage,
+      status: status,
       createdAt: backendVoucher.created_at || backendVoucher.createdAt || new Date().toISOString().split("T")[0],
       created_at: backendVoucher.created_at,
       updated_at: backendVoucher.updated_at,
@@ -271,11 +294,43 @@ export function VouchersProvider({ children }: { children: ReactNode }) {
 
   const incrementUsage = async (id: string) => {
     // This would need backend support
-    // For now, just update locally
+    // For now, just update locally and recalculate status
     setVouchers(
-      vouchers.map((v) =>
-        v.id === id ? { ...v, usageCount: v.usageCount + 1 } : v
-      )
+      vouchers.map((v) => {
+        if (v.id === id) {
+          const newUsageCount = v.usageCount + 1;
+          
+          // Recalculate status after incrementing usage
+          let newStatus: "active" | "inactive" | "expired" = v.status;
+          
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          const expiryDate = v.expiryDate ? new Date(v.expiryDate) : null;
+          if (expiryDate) {
+            expiryDate.setHours(0, 0, 0, 0);
+          }
+          
+          // Check if expired by date
+          if (expiryDate && expiryDate < today) {
+            newStatus = "expired";
+          }
+          // Check if reached max usage
+          else if (v.maxUsage !== null && newUsageCount >= v.maxUsage) {
+            newStatus = "inactive";
+          }
+          // Otherwise active
+          else {
+            newStatus = "active";
+          }
+          
+          return { 
+            ...v, 
+            usageCount: newUsageCount,
+            status: newStatus
+          };
+        }
+        return v;
+      })
     );
   };
 

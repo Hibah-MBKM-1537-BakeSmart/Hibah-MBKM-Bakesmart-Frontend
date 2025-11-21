@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   Plus,
   Search,
@@ -11,6 +11,9 @@ import {
   Ticket,
   Loader2,
   AlertCircle,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import { useVouchers } from "@/app/contexts/VouchersContext";
 import { AddVoucherModal } from "@/components/adminPage/vouchersPage/AddVoucherModal";
@@ -19,10 +22,16 @@ import { VoucherDetailModal } from "@/components/adminPage/vouchersPage/VoucherD
 import { QRCodeModal } from "@/components/adminPage/vouchersPage/QRCodeModal";
 import { useToast } from "@/components/adminPage/Toast";
 
+type SortField = "code" | "discount" | "expiryDate" | "usage" | "status";
+type SortDirection = "asc" | "desc" | null;
+
 export default function VouchersPage() {
   const { vouchers, loading, error, refreshVouchers, deleteVoucher } = useVouchers();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [sortField, setSortField] = useState<SortField | null>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>(null);
+  const [groupByAlphabet, setGroupByAlphabet] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
@@ -30,14 +39,99 @@ export default function VouchersPage() {
   const [selectedVoucher, setSelectedVoucher] = useState<any>(null);
   const { addToast, ToastContainer } = useToast();
 
-  const filteredVouchers = vouchers.filter((voucher) => {
-    const matchesSearch = voucher.code
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase());
-    const matchesStatus =
-      filterStatus === "all" || voucher.status === filterStatus;
-    return matchesSearch && matchesStatus;
-  });
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      // Cycle through: asc -> desc -> null
+      if (sortDirection === "asc") {
+        setSortDirection("desc");
+      } else if (sortDirection === "desc") {
+        setSortDirection(null);
+        setSortField(null);
+      }
+    } else {
+      setSortField(field);
+      setSortDirection("asc");
+    }
+  };
+
+  const getSortIcon = (field: SortField) => {
+    if (sortField !== field) {
+      return <ArrowUpDown className="w-4 h-4 text-gray-400" />;
+    }
+    if (sortDirection === "asc") {
+      return <ArrowUp className="w-4 h-4 text-orange-500" />;
+    }
+    return <ArrowDown className="w-4 h-4 text-orange-500" />;
+  };
+
+  const filteredAndSortedVouchers = useMemo(() => {
+    let result = vouchers.filter((voucher) => {
+      const matchesSearch = voucher.code
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase());
+      const matchesStatus =
+        filterStatus === "all" || voucher.status === filterStatus;
+      return matchesSearch && matchesStatus;
+    });
+
+    // Apply sorting
+    if (sortField && sortDirection) {
+      result = [...result].sort((a, b) => {
+        let compareValue = 0;
+
+        switch (sortField) {
+          case "code":
+            compareValue = a.code.localeCompare(b.code);
+            break;
+          case "discount":
+            compareValue = a.discount - b.discount;
+            break;
+          case "expiryDate":
+            const dateA = new Date(a.expiryDate).getTime();
+            const dateB = new Date(b.expiryDate).getTime();
+            compareValue = dateA - dateB;
+            break;
+          case "usage":
+            const usagePercentA = a.maxUsage ? (a.usageCount / a.maxUsage) * 100 : a.usageCount;
+            const usagePercentB = b.maxUsage ? (b.usageCount / b.maxUsage) * 100 : b.usageCount;
+            compareValue = usagePercentA - usagePercentB;
+            break;
+          case "status":
+            const statusOrder = { active: 1, inactive: 2, expired: 3 };
+            const statusA = statusOrder[a.status as keyof typeof statusOrder] || 4;
+            const statusB = statusOrder[b.status as keyof typeof statusOrder] || 4;
+            compareValue = statusA - statusB;
+            break;
+        }
+
+        return sortDirection === "asc" ? compareValue : -compareValue;
+      });
+    }
+
+    return result;
+  }, [vouchers, searchTerm, filterStatus, sortField, sortDirection]);
+
+  const groupedVouchers = useMemo(() => {
+    if (!groupByAlphabet) {
+      return { all: filteredAndSortedVouchers };
+    }
+
+    const grouped: Record<string, typeof filteredAndSortedVouchers> = {};
+    filteredAndSortedVouchers.forEach((voucher) => {
+      const firstLetter = voucher.code.charAt(0).toUpperCase();
+      if (!grouped[firstLetter]) {
+        grouped[firstLetter] = [];
+      }
+      grouped[firstLetter].push(voucher);
+    });
+
+    return Object.keys(grouped)
+      .sort()
+      .reduce((acc, key) => {
+        acc[key] = grouped[key];
+        return acc;
+      }, {} as Record<string, typeof filteredAndSortedVouchers>);
+  }, [filteredAndSortedVouchers, groupByAlphabet]);
 
   const handleDeleteVoucher = async (
     voucherId: string,
@@ -106,6 +200,44 @@ export default function VouchersPage() {
     }
   };
 
+  const getVoucherStatusInfo = (voucher: any) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const expiryDate = voucher.expiryDate ? new Date(voucher.expiryDate) : null;
+    if (expiryDate) {
+      expiryDate.setHours(0, 0, 0, 0);
+    }
+
+    // Check expiry date
+    const isExpiredByDate = expiryDate && expiryDate < today;
+    
+    // Check max usage
+    const isExpiredByUsage = voucher.maxUsage !== null && voucher.usageCount >= voucher.maxUsage;
+
+    let status = "Aktif";
+    let color = "bg-green-100 text-green-800";
+    let tooltip = "";
+
+    if (isExpiredByDate) {
+      status = "Kadaluarsa";
+      color = "bg-red-100 text-red-800";
+      tooltip = `Voucher kadaluarsa pada ${new Date(voucher.expiryDate).toLocaleDateString("id-ID")}`;
+    } else if (isExpiredByUsage) {
+      status = "Batas Tercapai";
+      color = "bg-gray-100 text-gray-800";
+      tooltip = `Penggunaan maksimal tercapai (${voucher.usageCount}/${voucher.maxUsage})`;
+    } else if (voucher.maxUsage && voucher.usageCount >= voucher.maxUsage * 0.8) {
+      // Warning if 80% usage reached
+      status = "Aktif (Hampir Penuh)";
+      color = "bg-yellow-100 text-yellow-800";
+      tooltip = `Penggunaan: ${voucher.usageCount}/${voucher.maxUsage}`;
+    } else {
+      tooltip = "Voucher dapat digunakan";
+    }
+
+    return { status, color, tooltip };
+  };
+
   return (
     <div className="space-y-6">
       <ToastContainer />
@@ -127,37 +259,54 @@ export default function VouchersPage() {
 
       {/* Filters */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-          <div className="flex flex-col sm:flex-row gap-4">
-            {/* Search */}
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search className="h-5 w-5 text-gray-400" />
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div className="flex flex-col sm:flex-row gap-4">
+              {/* Search */}
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Search className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  type="text"
+                  placeholder="Cari kode voucher..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500 sm:text-sm"
+                />
               </div>
-              <input
-                type="text"
-                placeholder="Cari kode voucher..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500 sm:text-sm"
-              />
+
+              {/* Status Filter */}
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500"
+              >
+                <option value="all">Semua Status</option>
+                <option value="active">Aktif</option>
+                <option value="inactive">Tidak Aktif</option>
+                <option value="expired">Kadaluarsa</option>
+              </select>
             </div>
 
-            {/* Status Filter */}
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500"
-            >
-              <option value="all">Semua Status</option>
-              <option value="active">Aktif</option>
-              <option value="inactive">Tidak Aktif</option>
-              <option value="expired">Kadaluarsa</option>
-            </select>
+            <div className="text-sm text-gray-600">
+              {filteredAndSortedVouchers.length} dari {vouchers.length} voucher
+            </div>
           </div>
 
-          <div className="text-sm text-gray-600">
-            {filteredVouchers.length} dari {vouchers.length} voucher
+          {/* Group by Alphabet Toggle */}
+          <div className="flex items-center space-x-2">
+            <label className="flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={groupByAlphabet}
+                onChange={(e) => setGroupByAlphabet(e.target.checked)}
+                className="w-4 h-4 text-orange-500 border-gray-300 rounded focus:ring-orange-500"
+              />
+              <span className="ml-2 text-sm text-gray-700">
+                Kelompokkan berdasarkan abjad
+              </span>
+            </label>
           </div>
         </div>
       </div>
@@ -190,19 +339,49 @@ export default function VouchersPage() {
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Kode Voucher
+                      <button
+                        onClick={() => handleSort("code")}
+                        className="flex items-center space-x-1 hover:text-gray-700 transition-colors"
+                      >
+                        <span>Kode Voucher</span>
+                        {getSortIcon("code")}
+                      </button>
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Diskon
+                      <button
+                        onClick={() => handleSort("discount")}
+                        className="flex items-center space-x-1 hover:text-gray-700 transition-colors"
+                      >
+                        <span>Diskon</span>
+                        {getSortIcon("discount")}
+                      </button>
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Tanggal Kadaluarsa
+                      <button
+                        onClick={() => handleSort("expiryDate")}
+                        className="flex items-center space-x-1 hover:text-gray-700 transition-colors"
+                      >
+                        <span>Tanggal Kadaluarsa</span>
+                        {getSortIcon("expiryDate")}
+                      </button>
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Penggunaan
+                      <button
+                        onClick={() => handleSort("usage")}
+                        className="flex items-center space-x-1 hover:text-gray-700 transition-colors"
+                      >
+                        <span>Penggunaan</span>
+                        {getSortIcon("usage")}
+                      </button>
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
+                      <button
+                        onClick={() => handleSort("status")}
+                        className="flex items-center space-x-1 hover:text-gray-700 transition-colors"
+                      >
+                        <span>Status</span>
+                        {getSortIcon("status")}
+                      </button>
                     </th>
                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Aksi
@@ -210,7 +389,18 @@ export default function VouchersPage() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredVouchers.map((voucher) => (
+                  {Object.entries(groupedVouchers).map(([group, vouchersInGroup]) => (
+                    <React.Fragment key={group}>
+                      {groupByAlphabet && (
+                        <tr className="bg-gray-100">
+                          <td colSpan={6} className="px-6 py-3 text-sm font-semibold text-gray-700">
+                            {group} ({vouchersInGroup.length} voucher{vouchersInGroup.length > 1 ? 's' : ''})
+                          </td>
+                        </tr>
+                      )}
+                      {vouchersInGroup.map((voucher) => {
+                        const statusInfo = getVoucherStatusInfo(voucher);
+                        return (
                     <tr key={voucher.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center space-x-3">
@@ -259,11 +449,10 @@ export default function VouchersPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadgeColor(
-                            voucher.status
-                          )}`}
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusInfo.color}`}
+                          title={statusInfo.tooltip}
                         >
-                          {getStatusLabel(voucher.status)}
+                          {statusInfo.status}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -301,12 +490,15 @@ export default function VouchersPage() {
                         </div>
                       </td>
                     </tr>
+                        );
+                      })}
+                    </React.Fragment>
                   ))}
                 </tbody>
               </table>
             </div>
 
-            {filteredVouchers.length === 0 && !loading && (
+            {filteredAndSortedVouchers.length === 0 && !loading && (
               <div className="text-center py-12">
                 <Ticket className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">
