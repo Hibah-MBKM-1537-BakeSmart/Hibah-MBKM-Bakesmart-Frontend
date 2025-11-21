@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, Upload, Package, Settings } from 'lucide-react';
+import { X, Upload, Package, Settings, Trash2 } from 'lucide-react';
 import { Product } from '@/app/contexts/ProductsContext';
 import { useCategories } from '@/app/contexts/CategoriesContext';
 import { ProductAddonsManager, ProductAddon } from './ProductAddonsManager';
@@ -9,25 +9,28 @@ import { ProductAddonsManager, ProductAddon } from './ProductAddonsManager';
 interface EditProductModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onEditProduct: (productData: Partial<Omit<Product, 'id' | 'created_at' | 'updated_at'>>) => Promise<void>;
+  onEditProduct: (productData: Partial<Product>) => Promise<void>;
   product: Product | null;
 }
 
 export function EditProductModal({ isOpen, onClose, onEditProduct, product }: EditProductModalProps) {
   const { categories } = useCategories();
   const [formData, setFormData] = useState({
-    nama: '',
+    nama_id: '',
+    nama_en: '',
     deskripsi: '',
     harga: 0,
     stok: 0,
-    status: 'active' as 'active' | 'inactive',
     jenis: [] as Array<{ id: number; nama: string }>,
     hari_tersedia: [] as string[],
     addons: [] as ProductAddon[],
+    images: [] as File[],
   });
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAddonsManager, setShowAddonsManager] = useState(false);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [existingImages, setExistingImages] = useState<Array<{ id: number; file_path: string }>>([]);
 
   const daysOfWeek = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
 
@@ -35,16 +38,19 @@ export function EditProductModal({ isOpen, onClose, onEditProduct, product }: Ed
   useEffect(() => {
     if (product) {
       setFormData({
-        nama: product.nama,
+        nama_id: product.nama_id || product.nama || '',
+        nama_en: product.nama_en || product.nama || '',
         deskripsi: product.deskripsi,
         harga: product.harga,
         stok: product.stok,
-        status: product.status,
         jenis: product.jenis || [],
         hari_tersedia: product.hari_tersedia || [],
         addons: product.addons || [],
+        images: [],
       });
       setSelectedCategoryId(product.jenis?.[0]?.id || null);
+      setExistingImages(product.gambars || []);
+      setImagePreviews([]);
     }
   }, [product]);
 
@@ -53,7 +59,7 @@ export function EditProductModal({ isOpen, onClose, onEditProduct, product }: Ed
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.nama.trim() || !formData.deskripsi.trim() || formData.harga <= 0) {
+    if (!formData.nama_id.trim() || !formData.nama_en.trim() || !formData.deskripsi.trim() || formData.harga <= 0) {
       alert('Harap isi semua field yang wajib');
       return;
     }
@@ -63,9 +69,25 @@ export function EditProductModal({ isOpen, onClose, onEditProduct, product }: Ed
     try {
       const selectedCategory = categories.find(cat => cat.id === selectedCategoryId);
       
+      // Combine existing images with new images
+      const allImages = [
+        ...existingImages.map(img => ({
+          id: img.id,
+          file_path: img.file_path,
+          product_id: product?.id || 0
+        })),
+        ...formData.images.map((file, index) => ({
+          id: Date.now() + index,
+          file_path: URL.createObjectURL(file),
+          product_id: product?.id || 0
+        }))
+      ];
+      
       const productData = {
         ...formData,
+        nama: formData.nama_id, // Keep nama for backward compatibility
         jenis: selectedCategory ? [{ id: selectedCategory.id, nama: selectedCategory.nama }] : [],
+        gambars: allImages,
       };
 
       await onEditProduct(productData);
@@ -79,17 +101,58 @@ export function EditProductModal({ isOpen, onClose, onEditProduct, product }: Ed
 
   const handleClose = () => {
     setFormData({
-      nama: '',
+      nama_id: '',
+      nama_en: '',
       deskripsi: '',
       harga: 0,
       stok: 0,
-      status: 'active',
       jenis: [],
       hari_tersedia: [],
       addons: [],
+      images: [],
     });
     setSelectedCategoryId(null);
+    setImagePreviews([]);
+    setExistingImages([]);
     onClose();
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    
+    const totalImages = existingImages.length + formData.images.length + files.length;
+    if (totalImages > 5) {
+      alert('Maksimal 5 gambar total');
+      return;
+    }
+
+    const newPreviews: string[] = [];
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          newPreviews.push(event.target.result as string);
+          if (newPreviews.length === files.length) {
+            setImagePreviews(prev => [...prev, ...newPreviews]);
+          }
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+
+    setFormData(prev => ({ ...prev, images: [...prev.images, ...files] }));
+  };
+
+  const removeNewImage = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      images: prev.images.filter((_, i) => i !== index)
+    }));
+    setImagePreviews(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const removeExistingImage = (index: number) => {
+    setExistingImages(prev => prev.filter((_, i) => i !== index));
   };
 
   const toggleDay = (day: string) => {
@@ -130,38 +193,119 @@ export function EditProductModal({ isOpen, onClose, onEditProduct, product }: Ed
 
         {/* Body */}
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          {/* Product Image Preview */}
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-lg overflow-hidden border bg-gray-50 flex items-center justify-center flex-shrink-0">
-              {product.gambars && product.gambars.length > 0 ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img 
-                  src={product.gambars[0].file_path} 
-                  alt={product.nama} 
-                  className="w-full h-full object-cover" 
-                />
-              ) : (
-                <Package className="w-6 h-6 text-orange-600" />
-              )}
+          {/* Product Images Upload */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Gambar Produk (Max 5 gambar total)
+            </label>
+            
+            {/* Existing Images */}
+            {existingImages.length > 0 && (
+              <div className="mb-4">
+                <p className="text-xs text-gray-600 mb-2">Gambar saat ini:</p>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  {existingImages.map((image, index) => (
+                    <div key={`existing-${image.id}`} className="relative group">
+                      <img
+                        src={image.file_path}
+                        alt={`Product ${index + 1}`}
+                        className="w-full h-24 object-cover rounded-lg border border-gray-200"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeExistingImage(index)}
+                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                        disabled={isSubmitting}
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Upload New Images */}
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-orange-500 transition-colors">
+              <input
+                type="file"
+                multiple
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="hidden"
+                id="image-upload-edit"
+                disabled={isSubmitting || (existingImages.length + formData.images.length) >= 5}
+              />
+              <label
+                htmlFor="image-upload-edit"
+                className={`cursor-pointer ${
+                  isSubmitting || (existingImages.length + formData.images.length) >= 5 ? 'cursor-not-allowed opacity-50' : ''
+                }`}
+              >
+                <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                <p className="text-sm text-gray-600">Klik untuk upload gambar baru atau drag & drop</p>
+                <p className="text-xs text-gray-500 mt-1">PNG, JPG, JPEG up to 10MB</p>
+                <p className="text-xs text-orange-600 mt-1">
+                  {existingImages.length + formData.images.length} / 5 gambar
+                </p>
+              </label>
             </div>
-            <div className="text-sm text-gray-600">
-              <p className="font-medium">Current Image</p>
-              <p>Image upload akan ditambahkan nanti</p>
-            </div>
+
+            {/* New Images Preview */}
+            {imagePreviews.length > 0 && (
+              <div className="mt-4">
+                <p className="text-xs text-gray-600 mb-2">Gambar baru yang akan ditambahkan:</p>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  {imagePreviews.map((preview, index) => (
+                    <div key={`new-${index}`} className="relative group">
+                      <img
+                        src={preview}
+                        alt={`New ${index + 1}`}
+                        className="w-full h-24 object-cover rounded-lg border border-orange-200"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeNewImage(index)}
+                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                        disabled={isSubmitting}
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Product Name */}
+          {/* Product Name - Indonesian */}
           <div>
-            <label htmlFor="nama" className="block text-sm font-medium text-gray-700 mb-2">
-              Nama Produk *
+            <label htmlFor="nama_id" className="block text-sm font-medium text-gray-700 mb-2">
+              Nama Produk (Bahasa Indonesia) *
             </label>
             <input
               type="text"
-              id="nama"
-              value={formData.nama}
-              onChange={(e) => setFormData(prev => ({ ...prev, nama: e.target.value }))}
+              id="nama_id"
+              value={formData.nama_id}
+              onChange={(e) => setFormData(prev => ({ ...prev, nama_id: e.target.value }))}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-              placeholder="Masukkan nama produk"
+              placeholder="Contoh: Roti Cokelat"
+              required
+            />
+          </div>
+
+          {/* Product Name - English */}
+          <div>
+            <label htmlFor="nama_en" className="block text-sm font-medium text-gray-700 mb-2">
+              Nama Produk (English) *
+            </label>
+            <input
+              type="text"
+              id="nama_en"
+              value={formData.nama_en}
+              onChange={(e) => setFormData(prev => ({ ...prev, nama_en: e.target.value }))}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+              placeholder="Example: Chocolate Bread"
               required
             />
           </div>
@@ -302,22 +446,6 @@ export function EditProductModal({ isOpen, onClose, onEditProduct, product }: Ed
                 </div>
               )}
             </div>
-          </div>
-
-          {/* Status */}
-          <div>
-            <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-2">
-              Status
-            </label>
-            <select
-              id="status"
-              value={formData.status}
-              onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value as 'active' | 'inactive' }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-            >
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
           </div>
 
           {/* Footer */}

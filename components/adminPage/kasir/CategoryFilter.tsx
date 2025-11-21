@@ -15,8 +15,8 @@ export function CategoryFilter() {
     if (state.categories && state.categories.length > 0) {
       // Use categories from API
       const apiCategories = state.categories.map((cat: any) => ({
-        id: cat.nama,
-        name: cat.nama,
+        id: cat.nama_id,
+        name: cat.nama_id,
         icon: Package
       }));
       return [allCategory, ...apiCategories];

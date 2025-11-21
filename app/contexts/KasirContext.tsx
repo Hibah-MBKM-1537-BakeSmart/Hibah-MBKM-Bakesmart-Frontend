@@ -1,36 +1,54 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { productsApi, categoriesApi, checkApiConnection } from '@/lib/api/mockApi';
 
-// Related entities interfaces based on ERD
+// Related entities interfaces based on backend structure
 export interface Gambar {
-  id: string;
+  id: number;
   file_path: string;
-  product_id: string;
+  product_id: number;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface RefJenis {
-  id: string;
-  nama: string;
+  id: number;
+  nama_id: string;
+  nama_en: string;
 }
 
 export interface RefHari {
-  id: string;
-  nama: string;
+  id: number;
+  nama_id: string;
+  nama_en: string;
 }
 
 export interface RefAttribute {
-  id: string;
-  nama: string;
+  id: number;
+  nama_id: string;
+  nama_en: string;
+  harga?: number;
+}
+
+export interface RefBahan {
+  id: number;
+  nama_id: string;
+  nama_en: string;
+  jumlah?: number;
 }
 
 export interface Product {
   id: number;
-  nama: string;
-  deskripsi: string;
+  nama_id: string;
+  nama_en: string;
+  deskripsi_id: string;
+  deskripsi_en: string;
   harga: number;
+  harga_diskon?: number;
   stok: number;
+  isBestSeller?: boolean;
+  isDaily?: boolean;
+  daily_stock?: number;
   created_at?: string;
   updated_at?: string;
   // Related data (populated via joins)
@@ -38,6 +56,7 @@ export interface Product {
   jenis?: RefJenis[];
   hari?: RefHari[];
   attributes?: RefAttribute[];
+  bahans?: RefBahan[];
 }
 
 export interface CartItem {
@@ -76,10 +95,16 @@ interface KasirState {
   customerName: string;
   customerWhatsApp: string;
   customerAddress: string;
-  discount: number;
-  discountType: 'percentage' | 'nominal';
+  voucherCode: string;
+  voucherDiscount: number;
+  orderDate: string;
+  orderDay: string;
+  deliveryMode: string;
+  deliveryFee: number;
+  catatan: string;
   isLoadingProducts: boolean;
   isApiConnected: boolean;
+  isLoading: boolean;
 }
 
 interface KasirContextType {
@@ -95,209 +120,19 @@ interface KasirContextType {
   setCustomerName: (name: string) => void;
   setCustomerWhatsApp: (whatsapp: string) => void;
   setCustomerAddress: (address: string) => void;
-  setDiscount: (discount: number) => void;
-  setDiscountType: (type: 'percentage' | 'nominal') => void;
+  setVoucherCode: (code: string) => void;
+  setVoucherDiscount: (discount: number) => void;
+  setOrderDate: (date: string) => void;
+  setOrderDay: (day: string) => void;
+  setDeliveryMode: (mode: string) => void;
+  setDeliveryFee: (fee: number) => void;
+  setCatatan: (catatan: string) => void;
   processPayment: () => Promise<boolean>;
   calculateSubtotal: () => number;
-  calculateTax: () => number;
   calculateTotal: () => number;
-  calculateDiscountAmount: () => number;
 }
 
 const KasirContext = createContext<KasirContextType | undefined>(undefined);
-
-// Sample products data
-const sampleProducts: Product[] = [
-  {
-    id: 1,
-    nama: 'Chocolate Cake',
-    harga: 125000,
-    deskripsi: 'Rich chocolate cake with cream frosting',
-    stok: 10,
-    gambars: [
-      { id: '1', file_path: '/img/cake1.jpg', product_id: '1' }
-    ],
-    jenis: [
-      { id: '1', nama: 'Cake' }
-    ],
-    hari: [
-      { id: '1', nama: 'Monday' },
-      { id: '2', nama: 'Tuesday' },
-      { id: '3', nama: 'Wednesday' },
-      { id: '4', nama: 'Thursday' },
-      { id: '5', nama: 'Friday' },
-      { id: '6', nama: 'Saturday' },
-      { id: '7', nama: 'Sunday' }
-    ],
-    attributes: [
-      { id: '1', nama: 'Sweet' },
-      { id: '2', nama: 'Premium' }
-    ]
-  },
-  {
-    id: 2,
-    nama: 'Red Velvet Cupcakes',
-    harga: 15000,
-    deskripsi: 'Classic red velvet cupcakes (per piece)',
-    stok: 24,
-    gambars: [
-      { id: '2', file_path: '/img/cupcake1.jpg', product_id: '2' }
-    ],
-    jenis: [
-      { id: '2', nama: 'Cupcake' }
-    ],
-    hari: [
-      { id: '1', nama: 'Monday' },
-      { id: '2', nama: 'Tuesday' },
-      { id: '3', nama: 'Wednesday' },
-      { id: '4', nama: 'Thursday' },
-      { id: '5', nama: 'Friday' }
-    ],
-    attributes: [
-      { id: '1', nama: 'Sweet' }
-    ]
-  },
-  {
-    id: 3,
-    nama: 'Croissant',
-    harga: 12000,
-    deskripsi: 'Buttery French croissant',
-    stok: 15,
-    gambars: [
-      { id: '3', file_path: '/img/croissant1.jpg', product_id: '3' }
-    ],
-    jenis: [
-      { id: '3', nama: 'Pastry' }
-    ],
-    hari: [
-      { id: '1', nama: 'Monday' },
-      { id: '2', nama: 'Tuesday' },
-      { id: '3', nama: 'Wednesday' },
-      { id: '4', nama: 'Thursday' },
-      { id: '5', nama: 'Friday' },
-      { id: '6', nama: 'Saturday' }
-    ],
-    attributes: [
-      { id: '3', nama: 'Fresh' }
-    ]
-  },
-  {
-    id: 4,
-    nama: 'Birthday Cake',
-    harga: 200000,
-    deskripsi: 'Custom birthday cake with decoration',
-    stok: 5,
-    gambars: [
-      { id: '4', file_path: '/img/birthday1.jpg', product_id: '4' }
-    ],
-    jenis: [
-      { id: '1', nama: 'Cake' }
-    ],
-    hari: [
-      { id: '6', nama: 'Saturday' },
-      { id: '7', nama: 'Sunday' }
-    ],
-    attributes: [
-      { id: '2', nama: 'Premium' },
-      { id: '4', nama: 'Custom' }
-    ]
-  },
-  {
-    id: 5,
-    nama: 'Donuts Box (12 pcs)',
-    harga: 60000,
-    deskripsi: 'Mixed flavors donut box',
-    stok: 8,
-    gambars: [
-      { id: '5', file_path: '/img/donuts1.jpg', product_id: '5' }
-    ],
-    jenis: [
-      { id: '4', nama: 'Donut' }
-    ],
-    hari: [
-      { id: '1', nama: 'Monday' },
-      { id: '2', nama: 'Tuesday' },
-      { id: '3', nama: 'Wednesday' },
-      { id: '4', nama: 'Thursday' },
-      { id: '5', nama: 'Friday' },
-      { id: '6', nama: 'Saturday' },
-      { id: '7', nama: 'Sunday' }
-    ],
-    attributes: [
-      { id: '1', nama: 'Sweet' },
-      { id: '5', nama: 'Mixed' }
-    ]
-  },
-  {
-    id: 6,
-    nama: 'Cheese Tart',
-    harga: 25000,
-    deskripsi: 'Creamy cheese tart',
-    stok: 12,
-    gambars: [
-      { id: '6', file_path: '/img/tart1.jpg', product_id: '6' }
-    ],
-    jenis: [
-      { id: '5', nama: 'Tart' }
-    ],
-    hari: [
-      { id: '2', nama: 'Tuesday' },
-      { id: '3', nama: 'Wednesday' },
-      { id: '4', nama: 'Thursday' },
-      { id: '5', nama: 'Friday' },
-      { id: '6', nama: 'Saturday' }
-    ],
-    attributes: [
-      { id: '6', nama: 'Creamy' }
-    ]
-  },
-  {
-    id: 7,
-    nama: 'Apple Pie',
-    harga: 45000,
-    deskripsi: 'Traditional apple pie',
-    stok: 6,
-    gambars: [
-      { id: '7', file_path: '/img/pie1.jpg', product_id: '7' }
-    ],
-    jenis: [
-      { id: '6', nama: 'Pie' }
-    ],
-    hari: [
-      { id: '3', nama: 'Wednesday' },
-      { id: '4', nama: 'Thursday' },
-      { id: '5', nama: 'Friday' },
-      { id: '6', nama: 'Saturday' },
-      { id: '7', nama: 'Sunday' }
-    ],
-    attributes: [
-      { id: '7', nama: 'Traditional' }
-    ]
-  },
-  {
-    id: 8,
-    nama: 'Bagel',
-    harga: 18000,
-    deskripsi: 'Fresh baked bagel',
-    stok: 20,
-    gambars: [
-      { id: '8', file_path: '/img/bagel1.jpg', product_id: '8' }
-    ],
-    jenis: [
-      { id: '7', nama: 'Bread' }
-    ],
-    hari: [
-      { id: '1', nama: 'Monday' },
-      { id: '2', nama: 'Tuesday' },
-      { id: '3', nama: 'Wednesday' },
-      { id: '4', nama: 'Thursday' },
-      { id: '5', nama: 'Friday' }
-    ],
-    attributes: [
-      { id: '3', nama: 'Fresh' }
-    ]
-  }
-];
 
 export function KasirProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<KasirState>({
@@ -311,65 +146,74 @@ export function KasirProvider({ children }: { children: React.ReactNode }) {
     customerName: '',
     customerWhatsApp: '',
     customerAddress: '',
-    discount: 0,
-    discountType: 'nominal',
+    voucherCode: '',
+    voucherDiscount: 0,
+    orderDate: '',
+    orderDay: '',
+    deliveryMode: '',
+    deliveryFee: 0,
+    catatan: '',
     isLoadingProducts: true,
-    isApiConnected: false
+    isApiConnected: false,
+    isLoading: false
   });
 
-  // Load products from API on mount
+  // Load products from backend API on mount
   useEffect(() => {
     const loadProducts = async () => {
       try {
-        setState(prev => ({ ...prev, isLoadingProducts: true }));
+        console.log('[Kasir] Loading products from backend...');
+        setState(prev => ({ ...prev, isLoadingProducts: true, isApiConnected: false }));
         
-        // Check API connection
-        const isConnected = await checkApiConnection();
-        setState(prev => ({ ...prev, isApiConnected: isConnected }));
+        // Fetch products from backend via Next.js API proxy
+        const response = await fetch('/api/products', {
+          method: 'GET',
+          cache: 'no-store',
+        });
 
-        if (isConnected) {
-          // Load from API
-          const [products, categories] = await Promise.all([
-            productsApi.getAll(),
-            categoriesApi.getAll()
-          ]);
-          
-          // Transform API data to match Product interface - only active products
-          const transformedProducts: Product[] = products
-            .filter((p: any) => p.status === 'active' && p.stok > 0) // Only show active products with stock
-            .map((p: any) => ({
-              id: p.id,
-              nama: p.nama,
-              harga: p.harga,
-              deskripsi: p.deskripsi || '',
-              stok: p.stok || 0,
-              gambars: p.gambars || [],
-              jenis: p.jenis || [],
-              hari: p.hari || [],
-              attributes: p.attributes || []
-            }));
-
-          setState(prev => ({
-            ...prev,
-            products: transformedProducts,
-            categories: categories || [],
-            isLoadingProducts: false
-          }));
-        } else {
-          // Use sample products if API not available
-          setState(prev => ({
-            ...prev,
-            products: sampleProducts,
-            categories: [],
-            isLoadingProducts: false
-          }));
+        if (!response.ok) {
+          throw new Error(`Failed to fetch products: ${response.status}`);
         }
-      } catch (error) {
-        console.error('Failed to load products:', error);
-        // Fallback to sample products on error
+
+        const result = await response.json();
+        console.log('[Kasir] Backend response:', result);
+
+        // Backend response structure: { message: "...", data: [...] }
+        const productsData = result?.data || [];
+        console.log(`[Kasir] Received ${productsData.length} products from backend`);
+
+        // Filter products with stock > 0
+        const availableProducts = productsData.filter((p: Product) => p.stok > 0);
+        console.log(`[Kasir] ${availableProducts.length} products with stock available`);
+
+        // Extract unique categories from products' jenis field
+        const uniqueCategories = new Map<number, RefJenis>();
+        productsData.forEach((product: Product) => {
+          if (product.jenis && Array.isArray(product.jenis)) {
+            product.jenis.forEach((jenis: RefJenis) => {
+              if (jenis && jenis.id) {
+                uniqueCategories.set(jenis.id, jenis);
+              }
+            });
+          }
+        });
+        const categories = Array.from(uniqueCategories.values());
+        console.log(`[Kasir] Extracted ${categories.length} categories:`, categories);
+
         setState(prev => ({
           ...prev,
-          products: sampleProducts,
+          products: availableProducts,
+          categories: categories,
+          isLoadingProducts: false,
+          isApiConnected: true
+        }));
+
+        console.log('[Kasir] Products loaded successfully');
+      } catch (error) {
+        console.error('[Kasir] Failed to load products:', error);
+        setState(prev => ({
+          ...prev,
+          products: [],
           categories: [],
           isLoadingProducts: false,
           isApiConnected: false
@@ -380,43 +224,39 @@ export function KasirProvider({ children }: { children: React.ReactNode }) {
     loadProducts();
   }, []);
 
-  // Auto-sync: Poll API every 5 seconds to sync with product changes
+  // Auto-sync: Poll backend API every 10 seconds to sync with product changes
   useEffect(() => {
     if (!state.isApiConnected) return;
 
     const syncInterval = setInterval(async () => {
       try {
-        const products = await productsApi.getAll();
-        
-        // Transform and filter products
-        const transformedProducts: Product[] = products
-          .filter((p: any) => p.status === 'active' && p.stok > 0)
-          .map((p: any) => ({
-            id: p.id,
-            nama: p.nama,
-            harga: p.harga,
-            deskripsi: p.deskripsi || '',
-            stok: p.stok || 0,
-            gambars: p.gambars || [],
-            jenis: p.jenis || [],
-            hari: p.hari || [],
-            attributes: p.attributes || []
-          }));
+        const response = await fetch('/api/products', {
+          method: 'GET',
+          cache: 'no-store',
+        });
+
+        if (!response.ok) {
+          throw new Error('Sync failed');
+        }
+
+        const result = await response.json();
+        const productsData = result?.data || [];
+        const availableProducts = productsData.filter((p: Product) => p.stok > 0);
         
         setState(prev => {
           // Only update if data has changed
-          const hasChanges = JSON.stringify(prev.products) !== JSON.stringify(transformedProducts);
+          const hasChanges = JSON.stringify(prev.products) !== JSON.stringify(availableProducts);
           if (hasChanges) {
-            console.log('Kasir: Products synced from API');
-            return { ...prev, products: transformedProducts };
+            console.log('[Kasir] Products synced from backend');
+            return { ...prev, products: availableProducts };
           }
           return prev;
         });
       } catch (error) {
-        console.warn('Kasir: Auto-sync failed:', error);
+        console.warn('[Kasir] Auto-sync failed:', error);
         setState(prev => ({ ...prev, isApiConnected: false }));
       }
-    }, 5000); // Sync every 5 seconds
+    }, 10000); // Sync every 10 seconds
 
     return () => clearInterval(syncInterval);
   }, [state.isApiConnected]);
@@ -431,7 +271,7 @@ export function KasirProvider({ children }: { children: React.ReactNode }) {
       const totalQuantity = currentCartQuantity + quantity;
       
       if (totalQuantity > product.stok) {
-        console.warn(`Insufficient stock for ${product.nama}. Available: ${product.stok}, Requested: ${totalQuantity}`);
+        console.warn(`Insufficient stock for ${product.nama_id}. Available: ${product.stok}, Requested: ${totalQuantity}`);
         alert(`Stok tidak cukup! Tersedia: ${product.stok}, Di keranjang: ${currentCartQuantity}`);
         return prev; // Don't add to cart
       }
@@ -525,8 +365,9 @@ export function KasirProvider({ children }: { children: React.ReactNode }) {
       customerName: '',
       customerWhatsApp: '',
       customerAddress: '',
-      discount: 0,
-      discountType: 'nominal'
+      voucherCode: '',
+      voucherDiscount: 0,
+      catatan: ''
     }));
   };
 
@@ -554,12 +395,32 @@ export function KasirProvider({ children }: { children: React.ReactNode }) {
     setState(prev => ({ ...prev, customerAddress: address }));
   };
 
-  const setDiscount = (discount: number) => {
-    setState(prev => ({ ...prev, discount }));
+  const setVoucherCode = (code: string) => {
+    setState(prev => ({ ...prev, voucherCode: code }));
   };
 
-  const setDiscountType = (type: 'percentage' | 'nominal') => {
-    setState(prev => ({ ...prev, discountType: type }));
+  const setVoucherDiscount = (discount: number) => {
+    setState(prev => ({ ...prev, voucherDiscount: discount }));
+  };
+
+  const setOrderDate = (date: string) => {
+    setState(prev => ({ ...prev, orderDate: date }));
+  };
+
+  const setOrderDay = (day: string) => {
+    setState(prev => ({ ...prev, orderDay: day }));
+  };
+
+  const setDeliveryMode = (mode: string) => {
+    setState(prev => ({ ...prev, deliveryMode: mode }));
+  };
+
+  const setDeliveryFee = (fee: number) => {
+    setState(prev => ({ ...prev, deliveryFee: fee }));
+  };
+
+  const setCatatan = (catatan: string) => {
+    setState(prev => ({ ...prev, catatan: catatan }));
   };
 
   const calculateSubtotal = () => {
@@ -569,74 +430,129 @@ export function KasirProvider({ children }: { children: React.ReactNode }) {
     }, 0);
   };
 
-  const calculateTax = () => {
-    const subtotal = calculateSubtotal();
-    return subtotal * 0.1; // 10% tax
-  };
-
   const calculateTotal = () => {
     const subtotal = calculateSubtotal();
-    const tax = calculateTax();
-    const discountAmount = calculateDiscountAmount();
-    const total = subtotal + tax - discountAmount;
+    const finalDeliveryFee = state.deliveryMode === 'pickup' ? 0 : state.deliveryFee;
+    const total = subtotal + finalDeliveryFee - state.voucherDiscount;
     return Math.max(0, total); // Pastikan total tidak negatif
-  };
-
-  const calculateDiscountAmount = () => {
-    const subtotal = calculateSubtotal();
-    const tax = calculateTax();
-    
-    if (state.discountType === 'percentage') {
-      // Diskon persentase dari subtotal + tax
-      return (subtotal + tax) * (state.discount / 100);
-    } else {
-      // Diskon nominal
-      return state.discount;
-    }
   };
 
   const processPayment = async (): Promise<boolean> => {
     try {
-      const transaction: Transaction = {
-        id: `TXN${Date.now()}`,
-        items: [...state.cart],
-        subtotal: calculateSubtotal(),
-        tax: calculateTax(),
-        discount: state.discount,
-        total: calculateTotal(),
-        paymentMethod: state.paymentMethod,
-        customerName: state.customerName,
-        timestamp: new Date(),
-        status: 'completed'
-      };
+      // Validate cart
+      if (state.cart.length === 0) {
+        alert('Keranjang kosong! Tambahkan produk terlebih dahulu.');
+        return false;
+      }
 
-      setState(prev => ({ ...prev, currentTransaction: transaction }));
-      
-      // Simulate payment processing
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Update stock in API after successful payment
+      // Validate customer info (optional for kasir)
+      if (!state.customerName.trim()) {
+        alert('Nama pelanggan harus diisi!');
+        return false;
+      }
+
+      console.log('[Kasir] Processing payment...');
+      setState(prev => ({ ...prev, isLoading: true }));
+
+      // Create order via backend API
       if (state.isApiConnected) {
         try {
-          for (const item of state.cart) {
-            const newStok = item.product.stok - item.quantity;
-            await productsApi.update(item.product.id, { 
-              stok: newStok 
-            });
-            console.log(`Updated stock for ${item.product.nama}: ${item.product.stok} → ${newStok}`);
+          // Prepare order data
+          const orderData = {
+            user_id: 1, // Default kasir user (or you can add customer selection)
+            items: state.cart.map(item => ({
+              product_id: item.product.id,
+              jumlah: item.quantity,
+              harga_beli: item.finalPrice || item.product.harga,
+              note: item.note || ''
+            })),
+            total_harga: calculateTotal(),
+            provider_pembayaran: state.paymentMethod,
+            waktu_ambil: new Date().toISOString(),
+            catatan: `Kasir order - Customer: ${state.customerName}${state.customerWhatsApp ? `, Phone: ${state.customerWhatsApp}` : ''}${state.customerAddress ? `, Address: ${state.customerAddress}` : ''}`
+          };
+
+          console.log('[Kasir] Sending order to backend:', orderData);
+
+          const response = await fetch('/api/orders/kasir', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(orderData),
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || `Failed to create order: ${response.status}`);
           }
+
+          const result = await response.json();
+          console.log('[Kasir] Order created successfully:', result);
+
+          // Create local transaction record
+          const transaction: Transaction = {
+            id: result.data?.id?.toString() || `TXN${Date.now()}`,
+            items: [...state.cart],
+            subtotal: calculateSubtotal(),
+            tax: 0, // No tax in new kasir
+            discount: state.voucherDiscount,
+            total: calculateTotal(),
+            paymentMethod: state.paymentMethod,
+            customerName: state.customerName,
+            timestamp: new Date(),
+            status: 'completed'
+          };
+
+          setState(prev => ({ 
+            ...prev, 
+            currentTransaction: transaction,
+            isLoading: false 
+          }));
+
+          // Clear cart after successful order
+          clearCart();
+          
+          alert('✅ Pembayaran berhasil! Order telah dibuat.');
+          return true;
+
         } catch (error) {
-          console.error('Failed to update stock in API:', error);
-          // Don't fail the transaction, just log the error
+          console.error('[Kasir] Failed to create order in backend:', error);
+          setState(prev => ({ ...prev, isLoading: false }));
+          alert(`❌ Gagal membuat order: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          return false;
         }
+      } else {
+        // Fallback: Local transaction without backend
+        console.warn('[Kasir] API not connected, creating local transaction only');
+        
+        const transaction: Transaction = {
+          id: `TXN${Date.now()}`,
+          items: [...state.cart],
+          subtotal: calculateSubtotal(),
+          tax: 0, // No tax in new kasir
+          discount: state.voucherDiscount,
+          total: calculateTotal(),
+          paymentMethod: state.paymentMethod,
+          customerName: state.customerName,
+          timestamp: new Date(),
+          status: 'completed'
+        };
+
+        setState(prev => ({ 
+          ...prev, 
+          currentTransaction: transaction,
+          isLoading: false 
+        }));
+
+        clearCart();
+        alert('⚠️ Pembayaran berhasil (offline mode)');
+        return true;
       }
-      
-      // Clear cart after successful payment
-      clearCart();
-      
-      return true;
     } catch (error) {
-      console.error('Payment processing failed:', error);
+      console.error('[Kasir] Payment processing failed:', error);
+      setState(prev => ({ ...prev, isLoading: false }));
+      alert(`❌ Pembayaran gagal: ${error instanceof Error ? error.message : 'Unknown error'}`);
       return false;
     }
   };
@@ -654,13 +570,16 @@ export function KasirProvider({ children }: { children: React.ReactNode }) {
     setCustomerName,
     setCustomerWhatsApp,
     setCustomerAddress,
-    setDiscount,
-    setDiscountType,
+    setVoucherCode,
+    setVoucherDiscount,
+    setOrderDate,
+    setOrderDay,
+    setDeliveryMode,
+    setDeliveryFee,
+    setCatatan,
     processPayment,
     calculateSubtotal,
-    calculateTax,
-    calculateTotal,
-    calculateDiscountAmount
+    calculateTotal
   };
 
   return (

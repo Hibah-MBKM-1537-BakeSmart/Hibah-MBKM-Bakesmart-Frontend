@@ -1,7 +1,7 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 // Menggunakan 127.0.0.1 untuk menghindari masalah localhost di Node v18+
-const EXTERNAL_API_URL = "http://192.168.0.196:5000/orders";
+const EXTERNAL_API_URL = "http://127.0.0.1:5000/orders";
 
 function transformPayloadForBackend(payload: any) {
   const { order, customer, items } = payload;
@@ -123,3 +123,48 @@ export async function POST(request: Request) {
     );
   }
 }
+
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const relation = searchParams.get('relation');
+    
+    // Build URL with query parameters
+    const url = new URL(EXTERNAL_API_URL);
+    if (relation) {
+      url.searchParams.append('relation', relation);
+    }
+
+    const response = await fetch(url.toString(), {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      cache: 'no-store',
+    });
+
+    if (!response.ok) {
+      throw new Error(`Backend responded with status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    
+    return NextResponse.json(data, { 
+      status: 200,
+      headers: {
+        'Cache-Control': 'no-store, must-revalidate',
+      }
+    });
+  } catch (error) {
+    console.error('[API Route] Error fetching orders:', error);
+    return NextResponse.json(
+      { 
+        success: false, 
+        message: error instanceof Error ? error.message : 'Failed to fetch orders',
+        data: [] 
+      },
+      { status: 500 }
+    );
+  }
+}
+

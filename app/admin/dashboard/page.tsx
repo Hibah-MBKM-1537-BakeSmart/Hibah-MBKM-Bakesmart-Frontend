@@ -29,7 +29,7 @@ const stats: StatCard[] = [
     change: '+12.5%',
     changeType: 'increase',
     icon: DollarSign,
-    color: '#8b6f47'
+    color: '#10B981'
   },
   {
     title: 'Total Orders',
@@ -37,7 +37,7 @@ const stats: StatCard[] = [
     change: '+8.2%',
     changeType: 'increase',
     icon: ShoppingCart,
-    color: '#9B6D49'
+    color: '#3B82F6'
   },
   {
     title: 'Total Products',
@@ -45,7 +45,7 @@ const stats: StatCard[] = [
     change: '+3.1%',
     changeType: 'increase',
     icon: Package,
-    color: '#5d4037'
+    color: '#8B5CF6'
   },
   {
     title: 'Total Customers',
@@ -53,7 +53,7 @@ const stats: StatCard[] = [
     change: '-2.4%',
     changeType: 'decrease',
     icon: Users,
-    color: '#7b5235'
+    color: '#F59E0B'
   }
 ];
 
@@ -157,19 +157,21 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold font-admin-heading" style={{ color: '#5d4037' }}>Dashboard</h1>
-          <p className="font-admin-body" style={{ color: '#8b6f47' }}>Welcome back! Here's what's happening with your bakery.</p>
-        </div>
-        <div className="flex items-center space-x-2 text-sm font-admin-body" style={{ color: '#8b6f47' }}>
-          <Calendar className="w-4 h-4" />
-          <span>{new Date().toLocaleDateString('id-ID', { 
-            weekday: 'long', 
-            year: 'numeric', 
-            month: 'long', 
-            day: 'numeric' 
-          })}</span>
+      <div className="bg-gradient-to-r from-blue-400 to-purple-400 rounded-2xl p-8 shadow-md">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold font-admin-heading text-white">Dashboard</h1>
+            <p className="font-admin-body text-white/90 mt-2">Welcome back! Here's what's happening with your bakery.</p>
+          </div>
+          <div className="flex items-center space-x-2 text-sm font-admin-body bg-white/30 backdrop-blur-sm px-4 py-2 rounded-lg text-white">
+            <Calendar className="w-4 h-4" />
+            <span>{new Date().toLocaleDateString('id-ID', { 
+              weekday: 'long', 
+              year: 'numeric', 
+              month: 'long', 
+              day: 'numeric' 
+            })}</span>
+          </div>
         </div>
       </div>
 
@@ -177,12 +179,30 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat, index) => {
           const Icon = stat.icon;
+          const getBgColor = () => {
+            if (stat.color === '#10B981') return 'bg-green-50/80';
+            if (stat.color === '#3B82F6') return 'bg-blue-50/80';
+            if (stat.color === '#8B5CF6') return 'bg-purple-50/80';
+            return 'bg-orange-50/80';
+          };
+          const getBorderColor = () => {
+            if (stat.color === '#10B981') return '#A7F3D0';
+            if (stat.color === '#3B82F6') return '#BFDBFE';
+            if (stat.color === '#8B5CF6') return '#DDD6FE';
+            return '#FDE68A';
+          };
+          const getIconBg = () => {
+            if (stat.color === '#10B981') return '#6EE7B7';
+            if (stat.color === '#3B82F6') return '#93C5FD';
+            if (stat.color === '#8B5CF6') return '#C4B5FD';
+            return '#FCD34D';
+          };
           return (
-            <div key={index} className="bg-white rounded-lg shadow-sm border p-6" style={{ borderColor: '#e0d5c7' }}>
+            <div key={index} className={`${getBgColor()} rounded-xl shadow-sm border p-6 hover:shadow-md transition-all duration-300`} style={{ borderColor: getBorderColor() }}>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium font-admin-body" style={{ color: '#8b6f47' }}>{stat.title}</p>
-                  <p className="text-2xl font-bold mt-2 font-admin-heading" style={{ color: '#5d4037' }}>{stat.value}</p>
+                  <p className="text-sm font-medium font-admin-body text-gray-600">{stat.title}</p>
+                  <p className="text-2xl font-bold mt-2 font-admin-heading text-gray-900">{stat.value}</p>
                   <div className="flex items-center mt-2">
                     {stat.changeType === 'increase' ? (
                       <TrendingUp className="w-4 h-4 text-green-500 mr-1" />
@@ -197,8 +217,8 @@ export default function DashboardPage() {
                     <span className="text-sm text-gray-500 ml-1 font-admin-body">vs last month</span>
                   </div>
                 </div>
-                <div className="p-3 rounded-lg" style={{ backgroundColor: stat.color }}>
-                  <Icon className="w-6 h-6 text-white" />
+                <div className="p-4 rounded-xl shadow-sm" style={{ backgroundColor: getIconBg() }}>
+                  <Icon className="w-7 h-7 text-white" />
                 </div>
               </div>
             </div>
@@ -209,9 +229,12 @@ export default function DashboardPage() {
       {/* Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Orders */}
-        <div className="bg-white rounded-lg shadow-sm border" style={{ borderColor: '#e0d5c7' }}>
-          <div className="px-6 py-4 border-b" style={{ borderColor: '#e0d5c7' }}>
-            <h2 className="text-lg font-semibold font-admin-heading" style={{ color: '#5d4037' }}>Recent Orders</h2>
+        <div className="bg-white rounded-xl shadow-sm border border-blue-200/60 hover:shadow-md transition-all duration-300">
+          <div className="px-6 py-4 border-b border-blue-100 bg-blue-50/50">
+            <div className="flex items-center space-x-2">
+              <ShoppingCart className="w-5 h-5 text-blue-500" />
+              <h2 className="text-lg font-semibold font-admin-heading text-gray-900">Recent Orders</h2>
+            </div>
           </div>
           <div className="p-6">
             <div className="space-y-4">
@@ -259,21 +282,21 @@ export default function DashboardPage() {
                 };
 
                 return (
-                <div key={index} className="flex items-center justify-between p-4 rounded-lg" style={{ backgroundColor: '#f9f7f4' }}>
+                <div key={index} className="flex items-center justify-between p-4 rounded-lg border-2 hover:shadow-sm transition-all duration-200" style={{ backgroundColor: '#F9FAFB', borderColor: '#E5E7EB' }}>
                   <div className="flex-1">
                     <div className="flex items-center justify-between">
-                      <p className="font-medium font-admin-heading" style={{ color: '#5d4037' }}>#{order.id}</p>
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full font-admin-body ${getStatusStyle(order.status)}`}
-                        style={order.status === 'completed' ? { backgroundColor: '#8b6f47' } : {}}
+                      <p className="font-medium font-admin-heading text-gray-900">#{order.id}</p>
+                      <span className={`px-3 py-1 text-xs font-medium rounded-full font-admin-body shadow-sm ${getStatusStyle(order.status)}`}
+                        style={order.status === 'completed' ? { backgroundColor: '#10B981', color: 'white' } : {}}
                       >
                         {getStatusDisplay(order.status)}
                       </span>
                     </div>
-                    <p className="text-sm font-admin-body" style={{ color: '#8b6f47' }}>
+                    <p className="text-sm font-admin-body text-gray-600">
                       {order.customer} ({order.customerPhone}) • {order.product} ({order.quantity}x)
                     </p>
                     <div className="flex items-center justify-between mt-2">
-                      <p className="font-semibold font-admin-heading" style={{ color: '#5d4037' }}>
+                      <p className="font-semibold font-admin-heading text-gray-900">
                         Rp {order.amount.toLocaleString('id-ID')}
                       </p>
                       <div className="flex items-center text-xs text-gray-500 font-admin-body">
@@ -287,7 +310,7 @@ export default function DashboardPage() {
               })}
             </div>
             <div className="mt-4">
-              <button className="w-full text-center py-2 text-sm font-medium transition-colors font-admin-body" style={{ color: '#8b6f47' }}>
+              <button className="w-full text-center py-2 px-4 text-sm font-medium transition-all duration-200 font-admin-body bg-blue-500 text-white rounded-lg hover:bg-blue-600 hover:shadow-sm">
                 View All Orders
               </button>
             </div>
@@ -295,70 +318,86 @@ export default function DashboardPage() {
         </div>
 
         {/* Top Products */}
-        <div className="bg-white rounded-lg shadow-sm border" style={{ borderColor: '#e0d5c7' }}>
-          <div className="px-6 py-4 border-b" style={{ borderColor: '#e0d5c7' }}>
-            <h2 className="text-lg font-semibold font-admin-heading" style={{ color: '#5d4037' }}>Top Products</h2>
+        <div className="bg-white rounded-xl shadow-sm border border-purple-200/60 hover:shadow-md transition-all duration-300">
+          <div className="px-6 py-4 border-b border-purple-100 bg-purple-50/50">
+            <div className="flex items-center space-x-2">
+              <Package className="w-5 h-5 text-purple-500" />
+              <h2 className="text-lg font-semibold font-admin-heading text-gray-900">Top Products</h2>
+            </div>
           </div>
           <div className="p-6">
             <div className="space-y-4">
-              {topProducts.map((product, index) => (
-                <div key={index} className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#f9f7f4' }}>
-                      <Package className="w-5 h-5" style={{ color: '#8b6f47' }} />
+              {topProducts.map((product, index) => {
+                const getRankBadge = () => {
+                  const badges = [
+                    { bg: '#FCD34D', text: '#78350F', label: '🥇' },
+                    { bg: '#E5E7EB', text: '#374151', label: '🥈' },
+                    { bg: '#FED7AA', text: '#7C2D12', label: '🥉' },
+                    { bg: '#93C5FD', text: '#1E3A8A', label: '4th' },
+                  ];
+                  return badges[index] || badges[3];
+                };
+                const badge = getRankBadge();
+                return (
+                  <div key={index} className="flex items-center justify-between p-3 rounded-lg border-2 hover:shadow-sm transition-all duration-200" style={{ backgroundColor: '#F9FAFB', borderColor: '#E5E7EB' }}>
+                    <div className="flex items-center space-x-3">
+                      <div className="w-12 h-12 rounded-lg flex items-center justify-center font-bold shadow-sm" style={{ backgroundColor: badge.bg, color: badge.text }}>
+                        {badge.label}
+                      </div>
+                      <div>
+                        <p className="font-medium font-admin-heading text-gray-900">{product.nama}</p>
+                        <p className="text-sm font-admin-body text-gray-600">{product.sales} sales • Stok: {product.stok}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-medium font-admin-heading" style={{ color: '#5d4037' }}>{product.nama}</p>
-                      <p className="text-sm font-admin-body" style={{ color: '#8b6f47' }}>{product.sales} sales • Stok: {product.stok}</p>
+                    <div className="text-right">
+                      <p className="font-semibold font-admin-heading text-gray-900">
+                        Rp {product.revenue.toLocaleString('id-ID')}
+                      </p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="font-semibold font-admin-heading" style={{ color: '#5d4037' }}>
-                      Rp {product.revenue.toLocaleString('id-ID')}
-                    </p>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>
       </div>
 
       {/* Quick Actions */}
-      <div className="bg-white rounded-lg shadow-sm border p-6" style={{ borderColor: '#e0d5c7' }}>
-        <h2 className="text-lg font-semibold mb-4 font-admin-heading" style={{ color: '#5d4037' }}>Quick Actions</h2>
+      <div className="bg-white rounded-xl shadow-sm border border-green-200/60 p-6 hover:shadow-md transition-all duration-300">
+        <div className="flex items-center space-x-2 mb-4">
+          <div className="w-8 h-8 rounded-lg bg-green-400 flex items-center justify-center">
+            <span className="text-white font-bold text-lg">⚡</span>
+          </div>
+          <h2 className="text-lg font-semibold font-admin-heading text-gray-900">Quick Actions</h2>
+        </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <button 
             onClick={() => handleQuickAction('add-product')}
-            className="flex flex-col items-center p-4 border rounded-lg hover:bg-gray-50 transition-colors" 
-            style={{ borderColor: '#e0d5c7' }}
+            className="flex flex-col items-center p-6 rounded-xl bg-purple-400 hover:bg-purple-500 transition-all duration-200 shadow-sm hover:shadow-md hover:scale-105"
           >
-            <Package className="w-8 h-8 mb-2" style={{ color: '#8b6f47' }} />
-            <span className="text-sm font-medium font-admin-body" style={{ color: '#5d4037' }}>Add Product</span>
+            <Package className="w-8 h-8 mb-2 text-white" />
+            <span className="text-sm font-medium font-admin-body text-white">Add Product</span>
           </button>
           <button 
             onClick={() => handleQuickAction('view-kasir')}
-            className="flex flex-col items-center p-4 border rounded-lg hover:bg-gray-50 transition-colors" 
-            style={{ borderColor: '#e0d5c7' }}
+            className="flex flex-col items-center p-6 rounded-xl bg-blue-400 hover:bg-blue-500 transition-all duration-200 shadow-sm hover:shadow-md hover:scale-105"
           >
-            <ShoppingCart className="w-8 h-8 mb-2" style={{ color: '#8b6f47' }} />
-            <span className="text-sm font-medium font-admin-body" style={{ color: '#5d4037' }}>View Kasir</span>
+            <ShoppingCart className="w-8 h-8 mb-2 text-white" />
+            <span className="text-sm font-medium font-admin-body text-white">View Kasir</span>
           </button>
           <button 
             onClick={() => handleQuickAction('manage-users')}
-            className="flex flex-col items-center p-4 border rounded-lg hover:bg-gray-50 transition-colors" 
-            style={{ borderColor: '#e0d5c7' }}
+            className="flex flex-col items-center p-6 rounded-xl bg-orange-400 hover:bg-orange-500 transition-all duration-200 shadow-sm hover:shadow-md hover:scale-105"
           >
-            <Users className="w-8 h-8 mb-2" style={{ color: '#8b6f47' }} />
-            <span className="text-sm font-medium font-admin-body" style={{ color: '#5d4037' }}>Manage Users</span>
+            <Users className="w-8 h-8 mb-2 text-white" />
+            <span className="text-sm font-medium font-admin-body text-white">Manage Users</span>
           </button>
           <button 
             onClick={() => handleQuickAction('view-reports')}
-            className="flex flex-col items-center p-4 border rounded-lg hover:bg-gray-50 transition-colors" 
-            style={{ borderColor: '#e0d5c7' }}
+            className="flex flex-col items-center p-6 rounded-xl bg-green-400 hover:bg-green-500 transition-all duration-200 shadow-sm hover:shadow-md hover:scale-105"
           >
-            <TrendingUp className="w-8 h-8 mb-2" style={{ color: '#8b6f47' }} />
-            <span className="text-sm font-medium font-admin-body" style={{ color: '#5d4037' }}>View Reports</span>
+            <TrendingUp className="w-8 h-8 mb-2 text-white" />
+            <span className="text-sm font-medium font-admin-body text-white">View Reports</span>
           </button>
         </div>
       </div>

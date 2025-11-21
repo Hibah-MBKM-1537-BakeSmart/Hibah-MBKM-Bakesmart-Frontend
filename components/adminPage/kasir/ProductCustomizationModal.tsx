@@ -13,6 +13,9 @@ interface ProductCustomizationModalProps {
 interface ProductAttribute {
   id: number;
   nama: string;
+  nama_id?: string;
+  nama_en?: string;
+  harga?: number;
   harga_tambahan: number;
 }
 
@@ -22,14 +25,24 @@ export function ProductCustomizationModal({ product, isOpen, onClose }: ProductC
   const [selectedAttributes, setSelectedAttributes] = useState<number[]>([]);
   const [customNote, setCustomNote] = useState('');
 
-  // Get active addons from product or use mock data for demo
-  const availableAttributes: ProductAttribute[] = product?.addons?.filter((addon: any) => addon.is_active) || [
-    { id: 1, nama: 'Extra Keju', harga_tambahan: 5000 },
-    { id: 2, nama: 'Extra Coklat', harga_tambahan: 3000 },
-    { id: 3, nama: 'Tanpa Gula', harga_tambahan: 0 },
-    { id: 4, nama: 'Extra Manis', harga_tambahan: 2000 },
-    { id: 5, nama: 'Ukuran Besar', harga_tambahan: 10000 },
-  ];
+  // Get attributes from backend product data
+  const availableAttributes: ProductAttribute[] = React.useMemo(() => {
+    if (!product?.attributes || product.attributes.length === 0) {
+      return [];
+    }
+    
+    // Transform backend attributes to our format
+    return product.attributes
+      .filter((attr: any) => attr && attr.id) // Filter out null/invalid attributes
+      .map((attr: any) => ({
+        id: attr.id,
+        nama: attr.nama_id || attr.nama_en || 'Unnamed',
+        nama_id: attr.nama_id,
+        nama_en: attr.nama_en,
+        harga: attr.harga,
+        harga_tambahan: attr.harga || 0
+      }));
+  }, [product]);
 
   useEffect(() => {
     if (isOpen && product) {
@@ -105,7 +118,7 @@ export function ProductCustomizationModal({ product, isOpen, onClose }: ProductC
                 Kustomisasi Produk
               </h2>
               <p className="text-sm font-admin-body" style={{ color: '#8b6f47' }}>
-                {product.nama}
+                {product.nama_id}
               </p>
             </div>
           </div>
@@ -124,15 +137,15 @@ export function ProductCustomizationModal({ product, isOpen, onClose }: ProductC
             <div className="flex gap-4">
               <img
                 src={product.gambars?.[0]?.file_path || '/placeholder.svg'}
-                alt={product.nama}
+                alt={product.nama_id}
                 className="w-20 h-20 object-cover rounded-lg"
               />
               <div className="flex-1">
                 <h3 className="font-medium font-admin-heading" style={{ color: '#5d4037' }}>
-                  {product.nama}
+                  {product.nama_id}
                 </h3>
                 <p className="text-sm font-admin-body" style={{ color: '#8b6f47' }}>
-                  {product.deskripsi}
+                  {product.deskripsi_id}
                 </p>
                 <p className="text-lg font-semibold mt-1" style={{ color: '#8b6f47' }}>
                   {formatPrice(product.harga || 0)}
@@ -171,40 +184,46 @@ export function ProductCustomizationModal({ product, isOpen, onClose }: ProductC
               <label className="block text-sm font-medium mb-3 font-admin-body" style={{ color: '#5d4037' }}>
                 Pilihan Kustomisasi
               </label>
-              <div className="space-y-2">
-                {availableAttributes.map((attribute) => (
-                  <div
-                    key={attribute.id}
-                    className={`p-3 border rounded-lg cursor-pointer transition-colors ${
-                      selectedAttributes.includes(attribute.id)
-                        ? 'border-orange-300 bg-orange-50'
-                        : 'border-gray-200 hover:border-orange-200'
-                    }`}
-                    style={{
-                      borderColor: selectedAttributes.includes(attribute.id) ? '#fed7aa' : '#e0d5c7',
-                      backgroundColor: selectedAttributes.includes(attribute.id) ? '#fff7ed' : 'white'
-                    }}
-                    onClick={() => handleAttributeToggle(attribute.id)}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <input
-                          type="checkbox"
-                          checked={selectedAttributes.includes(attribute.id)}
-                          onChange={() => handleAttributeToggle(attribute.id)}
-                          className="w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500"
-                        />
-                        <span className="font-medium font-admin-body" style={{ color: '#5d4037' }}>
-                          {attribute.nama}
+              {availableAttributes.length === 0 ? (
+                <div className="p-4 text-center border border-gray-200 rounded-lg" style={{ borderColor: '#e0d5c7' }}>
+                  <p className="text-sm text-gray-500">Produk ini tidak memiliki opsi kustomisasi</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {availableAttributes.map((attribute) => (
+                    <div
+                      key={attribute.id}
+                      className={`p-3 border rounded-lg cursor-pointer transition-colors ${
+                        selectedAttributes.includes(attribute.id)
+                          ? 'border-orange-300 bg-orange-50'
+                          : 'border-gray-200 hover:border-orange-200'
+                      }`}
+                      style={{
+                        borderColor: selectedAttributes.includes(attribute.id) ? '#fed7aa' : '#e0d5c7',
+                        backgroundColor: selectedAttributes.includes(attribute.id) ? '#fff7ed' : 'white'
+                      }}
+                      onClick={() => handleAttributeToggle(attribute.id)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="checkbox"
+                            checked={selectedAttributes.includes(attribute.id)}
+                            onChange={() => handleAttributeToggle(attribute.id)}
+                            className="w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500"
+                          />
+                          <span className="font-medium font-admin-body" style={{ color: '#5d4037' }}>
+                            {attribute.nama}
+                          </span>
+                        </div>
+                        <span className="text-sm font-admin-body" style={{ color: '#8b6f47' }}>
+                          {attribute.harga_tambahan > 0 ? `+${formatPrice(attribute.harga_tambahan)}` : 'Gratis'}
                         </span>
                       </div>
-                      <span className="text-sm font-admin-body" style={{ color: '#8b6f47' }}>
-                        {attribute.harga_tambahan > 0 ? `+${formatPrice(attribute.harga_tambahan)}` : 'Gratis'}
-                      </span>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Custom Note */}

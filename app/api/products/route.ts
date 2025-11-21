@@ -1,21 +1,12 @@
 import { NextResponse } from "next/server";
 
-// Alamat API eksternal kamu.
-// Jika alamat ini berubah, kamu CUKUP ganti di satu tempat ini saja.
-const EXTERNAL_API_URL = "http://192.168.0.196:5000/products";
+const BACKEND_URL = "http://127.0.0.1:5000/products";
 
-/**
- * Ini adalah Route Handler (API internal di Next.js).
- * Dia akan dipanggil ketika ada request GET ke '/api/products'.
- */
 export async function GET(request: Request) {
   try {
-    console.log(`[API Route] Menerima request ke /api/products`);
-    console.log(`[API Route] Mengambil data dari: ${EXTERNAL_API_URL}`);
+    console.log(`[Products API] GET all products from: ${BACKEND_URL}`);
 
-    // Kita fetch ke API eksternal DARI SISI SERVER.
-    // 'cache: 'no-store'' penting agar data selalu fresh (tidak di-cache oleh Next.js)
-    const response = await fetch(EXTERNAL_API_URL, {
+    const response = await fetch(BACKEND_URL, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -24,21 +15,51 @@ export async function GET(request: Request) {
     });
 
     if (!response.ok) {
-      // Jika API eksternal error, kita teruskan errornya
-      console.error(`[API Route] Error dari API eksternal: ${response.status}`);
+      console.error(`[Products API] Error: ${response.status}`);
       throw new Error(`API error: ${response.status}`);
     }
 
     const data = await response.json();
-    console.log(
-      `[API Route] Sukses mengambil data, mengirim response ke client.`
-    );
+    console.log(`[Products API] Success, received ${data?.data?.data?.length || 0} products`);
 
-    // Kirim data kembali ke client (MenuGrid.tsx)
     return NextResponse.json(data);
   } catch (error) {
-    console.error("[API Route] Terjadi kesalahan:", error);
-    // Tangani jika terjadi error saat fetch
-    return new NextResponse("Internal Server Error", { status: 500 });
+    console.error("[Products API] Error:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch products" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const body = await request.json();
+    console.log(`[Products API] POST new product:`, body);
+
+    const response = await fetch(BACKEND_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      console.error(`[Products API] POST Error: ${response.status}`);
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log(`[Products API] POST Success`);
+
+    return NextResponse.json(data);
+  } catch (error) {
+    console.error("[Products API] POST Error:", error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Failed to create product" },
+      { status: 500 }
+    );
   }
 }

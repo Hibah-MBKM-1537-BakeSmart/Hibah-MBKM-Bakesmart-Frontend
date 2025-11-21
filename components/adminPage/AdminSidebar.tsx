@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { memo, useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAdmin } from '@/app/contexts/AdminContext';
@@ -99,10 +99,46 @@ export function AdminSidebar() {
   const { startTransition } = usePageTransition();
   const pathname = usePathname();
 
+  // Memoize menu items to prevent re-creation on every render
+  const menuElements = useMemo(() => {
+    return menuItems.map((item) => {
+      const Icon = item.icon;
+      const isActive = pathname === item.href;
+
+      return (
+        <Link
+          key={item.id}
+          href={item.href}
+          prefetch={true}
+          onClick={startTransition}
+          className={`flex items-center ${state.sidebarCollapsed ? 'justify-center' : 'space-x-3'} px-3 ${state.sidebarCollapsed ? 'py-3' : 'py-2'} rounded-lg transition-all duration-200 group ${
+            isActive
+              ? 'text-white font-medium shadow-md'
+              : 'text-gray-200 hover:bg-white/10 hover:text-white hover:shadow-sm'
+          }`}
+          style={isActive ? { backgroundColor: "#8b6f47" } : {}}
+          title={state.sidebarCollapsed ? item.label : ""}
+        >
+          <Icon className={`${state.sidebarCollapsed ? 'w-8 h-8' : 'w-5 h-5'} transition-transform duration-200 ${
+            isActive ? 'text-white scale-110' : 'text-gray-200 group-hover:scale-105'
+          }`} />
+          {!state.sidebarCollapsed && (
+            <span className="font-medium font-admin-body transition-all duration-200">
+              {item.label}
+            </span>
+          )}
+          {isActive && !state.sidebarCollapsed && (
+            <div className="ml-auto w-1 h-1 bg-white rounded-full animate-pulse"></div>
+          )}
+        </Link>
+      );
+    });
+  }, [pathname, state.sidebarCollapsed, startTransition]);
+
   return (
     <div
       className={`shadow-lg transition-all duration-300 flex flex-col h-full ${
-        state.sidebarCollapsed ? "w-16" : "w-64"
+        state.sidebarCollapsed ? "w-20" : "w-64"
       }`}
       style={{ backgroundColor: "#9B6D49" }}
     >
@@ -113,12 +149,14 @@ export function AdminSidebar() {
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div
-              className="w-8 h-8 rounded-lg flex items-center justify-center"
+            <button
+              onClick={toggleSidebar}
+              className={`${state.sidebarCollapsed ? 'w-12 h-12' : 'w-8 h-8'} rounded-lg flex items-center justify-center transition-all duration-300 hover:bg-white/10`}
               style={{ backgroundColor: "#8b6f47" }}
+              title={state.sidebarCollapsed ? "Expand Sidebar" : ""}
             >
-              <Store className="w-5 h-5 text-white" />
-            </div>
+              <Store className={`${state.sidebarCollapsed ? 'w-8 h-8' : 'w-5 h-5'} text-white transition-all duration-300`} />
+            </button>
             {!state.sidebarCollapsed && (
               <div>
                 <h1 className="text-lg font-bold text-white font-admin-heading">
@@ -130,52 +168,21 @@ export function AdminSidebar() {
               </div>
             )}
           </div>
-          <button
-            onClick={toggleSidebar}
-            className="p-1 rounded-lg hover:bg-white/10 transition-colors"
-          >
-            {state.sidebarCollapsed ? (
-              <ChevronRight className="w-4 h-4 text-gray-200" />
-            ) : (
-              <ChevronLeft className="w-4 h-4 text-gray-200" />
-            )}
-          </button>
+          {!state.sidebarCollapsed && (
+            <button
+              onClick={toggleSidebar}
+              className="p-1 rounded-lg hover:bg-white/10 transition-colors"
+              title="Collapse Sidebar"
+            >
+              <ChevronLeft className="w-5 h-5 text-gray-200" />
+            </button>
+          )}
         </div>
       </div>
 
       {/* Navigation Menu */}
       <nav className="p-4 space-y-2 flex-1 overflow-y-auto">
-        {menuItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = pathname === item.href;
-
-          return (
-            <Link
-              key={item.id}
-              href={item.href}
-              prefetch={true} // Enable prefetching for faster navigation
-              onClick={startTransition} // Start loading state
-              className={`flex items-center space-x-3 px-3 py-2 rounded-lg transition-all duration-200 group ${
-                isActive
-                  ? 'text-white font-medium shadow-md'
-                  : 'text-gray-200 hover:bg-white/10 hover:text-white hover:shadow-sm'
-              }`}
-              style={isActive ? { backgroundColor: "#8b6f47" } : {}}
-            >
-              <Icon className={`w-5 h-5 transition-transform duration-200 ${
-                isActive ? 'text-white scale-110' : 'text-gray-200 group-hover:scale-105'
-              }`} />
-              {!state.sidebarCollapsed && (
-                <span className="font-medium font-admin-body transition-all duration-200">
-                  {item.label}
-                </span>
-              )}
-              {isActive && !state.sidebarCollapsed && (
-                <div className="ml-auto w-1 h-1 bg-white rounded-full animate-pulse"></div>
-              )}
-            </Link>
-          );
-        })}
+        {menuElements}
       </nav>
 
       {/* Bottom Section - User Info and Logout */}
@@ -214,11 +221,12 @@ export function AdminSidebar() {
         <div className="p-4">
           <button
             onClick={logout}
-            className={`flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors text-red-300 hover:bg-red-500/20 hover:text-red-200 w-full font-admin-body ${
+            className={`flex items-center space-x-3 px-3 ${state.sidebarCollapsed ? 'py-3' : 'py-2'} rounded-lg transition-colors text-red-300 hover:bg-red-500/20 hover:text-red-200 w-full font-admin-body ${
               state.sidebarCollapsed ? "justify-center" : ""
             }`}
+            title={state.sidebarCollapsed ? "Logout" : ""}
           >
-            <LogOut className="w-5 h-5" />
+            <LogOut className={`${state.sidebarCollapsed ? 'w-8 h-8' : 'w-5 h-5'} transition-all duration-200`} />
             {!state.sidebarCollapsed && (
               <span className="font-medium">Logout</span>
             )}

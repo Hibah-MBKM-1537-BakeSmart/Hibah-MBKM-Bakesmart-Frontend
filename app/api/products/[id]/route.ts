@@ -1,0 +1,107 @@
+import { NextResponse } from "next/server";
+
+const BACKEND_URL = "http://127.0.0.1:5000/products";
+
+export async function GET(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const { id } = params;
+    console.log(`[Products API] GET product by ID: ${id}`);
+
+    const response = await fetch(`${BACKEND_URL}/${id}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      console.error(`[Products API] GET Error: ${response.status}`);
+      throw new Error(`API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log(`[Products API] GET Success for ID: ${id}`);
+
+    return NextResponse.json(data);
+  } catch (error) {
+    console.error("[Products API] GET Error:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch product" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PUT(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const { id } = params;
+    const body = await request.json();
+    console.log(`[Products API] PUT product ID: ${id}`, body);
+
+    const response = await fetch(`${BACKEND_URL}/${id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      console.error(`[Products API] PUT Error: ${response.status}`);
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log(`[Products API] PUT Success for ID: ${id}`);
+
+    return NextResponse.json(data);
+  } catch (error) {
+    console.error("[Products API] PUT Error:", error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Failed to update product" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const { id } = params;
+    console.log(`[Products API] DELETE product ID: ${id}`);
+
+    const response = await fetch(`${BACKEND_URL}/${id}`, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      console.error(`[Products API] DELETE Error: ${response.status}`);
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log(`[Products API] DELETE Success for ID: ${id}`);
+
+    return NextResponse.json(data);
+  } catch (error) {
+    console.error("[Products API] DELETE Error:", error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Failed to delete product" },
+      { status: 500 }
+    );
+  }
+}

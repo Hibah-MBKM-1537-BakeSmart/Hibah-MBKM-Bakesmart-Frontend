@@ -39,7 +39,8 @@ export function ProductGrid() {
   
   const filteredProducts = state.products.filter(product => {
     if (state.selectedCategory === 'All') return true;
-    return product.jenis?.[0]?.nama === state.selectedCategory;
+    // Check if any of the product's jenis matches the selected category
+    return product.jenis?.some(j => j.nama_id === state.selectedCategory);
   });
 
   const formatPrice = (price: number) => {
@@ -85,7 +86,7 @@ export function ProductGrid() {
             <div className="aspect-square bg-gray-100 relative">
               <img
                 src={product.gambars?.[0]?.file_path || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2Y3ZjdmNyIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjY2NjIiBmb250LXNpemU9IjE0Ij5Ob0ltYWdlPC90ZXh0Pjwvc3ZnPg=='}
-                alt={product.nama}
+                alt={product.nama_id}
                 className="w-full h-full object-cover"
                 onError={(e) => {
                   e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2Y3ZjdmNyIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjY2NjIiBmb250LXNpemU9IjE0Ij5Ob0ltYWdlPC90ZXh0Pjwvc3ZnPg==';
@@ -103,7 +104,7 @@ export function ProductGrid() {
 
               {/* Category Badge */}
               <div className="absolute top-2 left-2 bg-orange-500 text-white rounded-full px-2 py-1 text-xs font-medium">
-                {product.jenis?.[0]?.nama || 'Umum'}
+                {product.jenis?.[0]?.nama_id || 'Umum'}
               </div>
 
               {/* Cart Quantity Indicator */}
@@ -117,12 +118,12 @@ export function ProductGrid() {
             {/* Product Info */}
             <div className="p-4">
               <h3 className="font-semibold text-gray-900 text-sm mb-1 line-clamp-2">
-                {product.nama}
+                {product.nama_id}
               </h3>
               
-              {product.deskripsi && (
+              {product.deskripsi_id && (
                 <p className="text-xs text-gray-600 mb-2 line-clamp-2">
-                  {product.deskripsi}
+                  {product.deskripsi_id}
                 </p>
               )}
               

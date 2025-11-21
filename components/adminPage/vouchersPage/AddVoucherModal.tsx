@@ -15,6 +15,7 @@ export function AddVoucherModal({ isOpen, onClose }: AddVoucherModalProps) {
   const { addVoucher } = useVouchers();
   const { addToast } = useToast();
   const [formData, setFormData] = useState({
+    nama: "",
     code: "",
     discount: "",
     discountType: "percentage" as "percentage" | "fixed",
@@ -25,23 +26,26 @@ export function AddVoucherModal({ isOpen, onClose }: AddVoucherModalProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.code || !formData.discount || !formData.expiryDate) {
+    if (!formData.code || !formData.discount) {
       addToast({
         type: "error",
         title: "Validasi Gagal",
-        message: "Silakan isi semua kolom yang diperlukan",
+        message: "Silakan isi kode dan diskon voucher",
       });
       return;
     }
 
     try {
       await addVoucher({
+        nama: formData.nama || `Voucher ${formData.code}`,
         code: formData.code.toUpperCase(),
+        kode: formData.code.toUpperCase(),
         discount: Number.parseInt(formData.discount),
+        persen: Number.parseInt(formData.discount),
         discountType: formData.discountType,
-        expiryDate: formData.expiryDate,
+        expiryDate: formData.expiryDate || new Date().toISOString().split("T")[0],
         maxUsage: formData.maxUsage ? Number.parseInt(formData.maxUsage) : null,
-      });
+      } as any);
 
       addToast({
         type: "success",
@@ -50,6 +54,7 @@ export function AddVoucherModal({ isOpen, onClose }: AddVoucherModalProps) {
       });
 
       setFormData({
+        nama: "",
         code: "",
         discount: "",
         discountType: "percentage",
@@ -69,8 +74,14 @@ export function AddVoucherModal({ isOpen, onClose }: AddVoucherModalProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
+    <div 
+      className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+      onClick={onClose}
+    >
+      <div 
+        className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="flex justify-between items-center p-6 border-b border-gray-200">
           <h2 className="text-xl font-bold text-gray-900">
@@ -86,10 +97,26 @@ export function AddVoucherModal({ isOpen, onClose }: AddVoucherModalProps) {
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          {/* Voucher Name */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Nama Voucher
+            </label>
+            <input
+              type="text"
+              value={formData.nama}
+              onChange={(e) =>
+                setFormData({ ...formData, nama: e.target.value })
+              }
+              placeholder="contoh: Voucher Lebaran 2025"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500"
+            />
+          </div>
+
           {/* Voucher Code */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Kode Voucher
+              Kode Voucher <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
@@ -99,6 +126,7 @@ export function AddVoucherModal({ isOpen, onClose }: AddVoucherModalProps) {
               }
               placeholder="contoh: WELCOME20"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500"
+              required
             />
           </div>
 
@@ -120,12 +148,15 @@ export function AddVoucherModal({ isOpen, onClose }: AddVoucherModalProps) {
               <option value="percentage">Persentase (%)</option>
               <option value="fixed">Jumlah Tetap (Rp)</option>
             </select>
+            <p className="text-xs text-gray-500 mt-1">
+              Note: Backend saat ini hanya mendukung persentase
+            </p>
           </div>
 
           {/* Discount Amount */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Jumlah Diskon
+              Jumlah Diskon (%) <span className="text-red-500">*</span>
             </label>
             <input
               type="number"
@@ -133,17 +164,18 @@ export function AddVoucherModal({ isOpen, onClose }: AddVoucherModalProps) {
               onChange={(e) =>
                 setFormData({ ...formData, discount: e.target.value })
               }
-              placeholder={
-                formData.discountType === "percentage" ? "20" : "50000"
-              }
+              placeholder="contoh: 20"
+              min="0"
+              max="100"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500"
+              required
             />
           </div>
 
           {/* Expiry Date */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Tanggal Kadaluarsa
+              Tanggal Kadaluarsa (Opsional)
             </label>
             <input
               type="date"
