@@ -4,7 +4,7 @@ import type React from "react";
 import { useState } from "react";
 import { X } from "lucide-react";
 import { useVouchers } from "@/app/contexts/VouchersContext";
-import { useToast } from "@/components/adminPage/Toast";
+import { useToast } from "@/app/contexts/ToastContext";
 
 interface AddVoucherModalProps {
   isOpen: boolean;

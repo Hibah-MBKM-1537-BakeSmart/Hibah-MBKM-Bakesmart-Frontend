@@ -20,7 +20,8 @@ import { AddVoucherModal } from "@/components/adminPage/vouchersPage/AddVoucherM
 import { EditVoucherModal } from "@/components/adminPage/vouchersPage/EditVoucherModal";
 import { VoucherDetailModal } from "@/components/adminPage/vouchersPage/VoucherDetailModal";
 import { QRCodeModal } from "@/components/adminPage/vouchersPage/QRCodeModal";
-import { useToast } from "@/components/adminPage/Toast";
+import { DeleteConfirmModal } from "@/components/adminPage/vouchersPage/DeleteConfirmModal";
+import { useToast } from "@/app/contexts/ToastContext";
 
 type SortField = "code" | "discount" | "expiryDate" | "usage" | "status";
 type SortDirection = "asc" | "desc" | null;
@@ -36,8 +37,10 @@ export default function VouchersPage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showQRModal, setShowQRModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedVoucher, setSelectedVoucher] = useState<any>(null);
-  const { addToast, ToastContainer } = useToast();
+  const [voucherToDelete, setVoucherToDelete] = useState<{id: string, code: string} | null>(null);
+  const { addToast } = useToast();
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -133,29 +136,29 @@ export default function VouchersPage() {
       }, {} as Record<string, typeof filteredAndSortedVouchers>);
   }, [filteredAndSortedVouchers, groupByAlphabet]);
 
-  const handleDeleteVoucher = async (
-    voucherId: string,
-    voucherCode: string
-  ) => {
-    if (
-      window.confirm(
-        `Apakah Anda yakin ingin menghapus voucher "${voucherCode}"?`
-      )
-    ) {
-      try {
-        await deleteVoucher(voucherId);
-        addToast({
-          type: "success",
-          title: "Voucher berhasil dihapus!",
-          message: `${voucherCode} telah dihapus dari sistem.`,
-        });
-      } catch (error) {
-        addToast({
-          type: "error",
-          title: "Gagal menghapus voucher",
-          message: error instanceof Error ? error.message : "Terjadi kesalahan",
-        });
-      }
+  const handleDeleteClick = (voucherId: string, voucherCode: string) => {
+    setVoucherToDelete({ id: voucherId, code: voucherCode });
+    setShowDeleteModal(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!voucherToDelete) return;
+
+    try {
+      await deleteVoucher(voucherToDelete.id);
+      addToast({
+        type: "success",
+        title: "Voucher Berhasil di Hapus",
+        message: `Voucher ${voucherToDelete.code} telah dihapus dari sistem`,
+      });
+    } catch (error) {
+      addToast({
+        type: "error",
+        title: "Gagal menghapus voucher",
+        message: error instanceof Error ? error.message : "Terjadi kesalahan",
+      });
+    } finally {
+      setVoucherToDelete(null);
     }
   };
 
@@ -240,8 +243,6 @@ export default function VouchersPage() {
 
   return (
     <div className="space-y-6">
-      <ToastContainer />
-
       {/* Page Header */}
       <div className="flex justify-between items-center">
         <div>
@@ -480,7 +481,7 @@ export default function VouchersPage() {
                           </button>
                           <button
                             onClick={() =>
-                              handleDeleteVoucher(voucher.id, voucher.code)
+                              handleDeleteClick(voucher.id, voucher.code)
                             }
                             className="inline-flex items-center justify-center p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 transition-all duration-200 hover:shadow-md hover:scale-105"
                             title="Hapus Voucher"
@@ -593,6 +594,16 @@ export default function VouchersPage() {
           setSelectedVoucher(null);
         }}
         voucher={selectedVoucher}
+      />
+
+      <DeleteConfirmModal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setVoucherToDelete(null);
+        }}
+        onConfirm={handleConfirmDelete}
+        voucherCode={voucherToDelete?.code || ""}
       />
     </div>
   );

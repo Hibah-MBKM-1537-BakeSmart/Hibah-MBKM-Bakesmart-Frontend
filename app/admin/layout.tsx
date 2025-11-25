@@ -3,6 +3,7 @@ import { Poppins, Inter } from 'next/font/google';
 import { AdminProvider } from '@/app/contexts/AdminContext';
 import { AdminProvider as UsersProvider } from '@/app/contexts/UsersContext';
 import { AuthProvider } from '@/app/contexts/AuthContext';
+import { ToastProvider } from '@/app/contexts/ToastContext';
 import AdminAuthWrapper from './AdminAuthWrapper';
 
 const poppins = Poppins({
@@ -28,16 +29,18 @@ export default function AdminLayout({
     <AuthProvider>
       <AdminProvider>
         <UsersProvider>
-          <div 
-            className={`${poppins.variable} ${inter.variable}`}
-            style={{ 
-              fontFamily: 'var(--font-inter), sans-serif'
-            }}
-          >
-            <AdminAuthWrapper>
-              {children}
-            </AdminAuthWrapper>
-          </div>
+          <ToastProvider>
+            <div 
+              className={`${poppins.variable} ${inter.variable}`}
+              style={{ 
+                fontFamily: 'var(--font-inter), sans-serif'
+              }}
+            >
+              <AdminAuthWrapper>
+                {children}
+              </AdminAuthWrapper>
+            </div>
+          </ToastProvider>
         </UsersProvider>
       </AdminProvider>
     </AuthProvider>

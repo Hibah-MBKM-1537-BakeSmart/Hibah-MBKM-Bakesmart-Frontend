@@ -52,6 +52,14 @@ export function VoucherDetailModal({
 
         {/* Content */}
         <div className="p-6 space-y-6">
+          {/* Voucher Name */}
+          {voucher.nama && voucher.nama !== voucher.code && (
+            <div>
+              <p className="text-sm text-gray-600 mb-2">Nama Voucher</p>
+              <p className="text-xl font-bold text-gray-900">{voucher.nama}</p>
+            </div>
+          )}
+
           {/* Voucher Code */}
           <div>
             <p className="text-sm text-gray-600 mb-2">Kode Voucher</p>

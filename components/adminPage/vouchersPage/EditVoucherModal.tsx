@@ -4,7 +4,7 @@ import type React from "react";
 import { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import { useVouchers } from "@/app/contexts/VouchersContext";
-import { useToast } from "@/components/adminPage/Toast";
+import { useToast } from "@/app/contexts/ToastContext";
 
 interface EditVoucherModalProps {
   isOpen: boolean;
@@ -63,7 +63,7 @@ export function EditVoucherModal({
 
       addToast({
         type: "success",
-        title: "Voucher Berhasil Diperbarui",
+        title: "Voucher Berhasil Di Edit",
         message: `Voucher ${formData.code} telah diperbarui`,
       });
 
