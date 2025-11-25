@@ -3,7 +3,6 @@
 import type React from "react";
 import { createContext, useContext, useState, useEffect } from "react";
 import { stockManager } from "@/lib/api/stockManager";
-import type { ProductAttribute } from "@/lib/api/mockData";
 import type { CartItem } from "@/lib/types";
 
 export // Using CartItem from @/lib/types
@@ -36,6 +35,60 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
+interface CartStorage {
+  items: CartItem[];
+  orderDay: string | null;
+  timestamp: number;
+}
+
+const CART_STORAGE_KEY = "merpati-bakery-cart";
+const CART_EXPIRY_HOURS = 24;
+
+const isCartExpired = (timestamp: number): boolean => {
+  const expiryMs = CART_EXPIRY_HOURS * 60 * 60 * 1000;
+  return Date.now() - timestamp > expiryMs;
+};
+
+const loadCartFromStorage = (): CartStorage | null => {
+  if (typeof window === "undefined") return null;
+
+  try {
+    const stored = localStorage.getItem(CART_STORAGE_KEY);
+    if (!stored) return null;
+
+    const cartData: CartStorage = JSON.parse(stored);
+
+    // Check if cart has expired (24 hours)
+    if (isCartExpired(cartData.timestamp)) {
+      localStorage.removeItem(CART_STORAGE_KEY);
+      return null;
+    }
+
+    return cartData;
+  } catch (error) {
+    console.error("[v0] Error loading cart from storage:", error);
+    return null;
+  }
+};
+
+const saveCartToStorage = (
+  items: CartItem[],
+  orderDay: string | null
+): void => {
+  if (typeof window === "undefined") return;
+
+  try {
+    const cartData: CartStorage = {
+      items,
+      orderDay,
+      timestamp: Date.now(),
+    };
+    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cartData));
+  } catch (error) {
+    console.error("[v0] Error saving cart to storage:", error);
+  }
+};
+
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [selectedOrderDay, setSelectedOrderDayState] = useState<string | null>(
@@ -48,28 +101,20 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     return `cart_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   };
 
-  // Load from memory storage instead of localStorage for artifact compatibility
   useEffect(() => {
-    // In a real app, you would use localStorage here
-    // const savedCart = localStorage.getItem("merpati-bakery-cart");
-    // const savedOrderDay = localStorage.getItem("merpati-bakery-order-day");
-    // For now, we'll use memory storage only
+    const savedCart = loadCartFromStorage();
+    if (savedCart) {
+      console.log("[v0] Loading cart from storage:", savedCart);
+      setCartItems(savedCart.items);
+      if (savedCart.orderDay) {
+        setSelectedOrderDayState(savedCart.orderDay);
+      }
+    }
   }, []);
 
-  // Save to memory storage instead of localStorage for artifact compatibility
   useEffect(() => {
-    // In a real app, you would use localStorage here
-    // localStorage.setItem("merpati-bakery-cart", JSON.stringify(cartItems));
-  }, [cartItems]);
-
-  useEffect(() => {
-    // In a real app, you would use localStorage here
-    // if (selectedOrderDay) {
-    //   localStorage.setItem("merpati-bakery-order-day", selectedOrderDay);
-    // } else {
-    //   localStorage.removeItem("merpati-bakery-order-day");
-    // }
-  }, [selectedOrderDay]);
+    saveCartToStorage(cartItems, selectedOrderDay);
+  }, [cartItems, selectedOrderDay]);
 
   const setSelectedOrderDay = (day: string | null) => {
     console.log("[v0] CartContext - Setting selectedOrderDay:", day);
@@ -95,15 +140,18 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
 
     if (cartItems.length > 0) {
-      // Use the selectedOrderDay if available, otherwise use the day from first cart item
-      const cartDay = selectedOrderDay || cartItems[0].orderDay;
-      // Check if item is available on the same day as cart items
-      console.log("Available days:", item.availableDays);
-      console.log("Cart day:", cartDay);
-      if (!item.availableDays || !item.availableDays.includes(cartDay)) {
+      // Get the locked day from the first cart item
+      const lockedDay = cartItems[0].orderDay;
+
+      // Check if the item is available on the locked day
+      if (!item.availableDays || !item.availableDays.includes(lockedDay)) {
         return {
           canAdd: false,
-          reason: `Pesanan Anda untuk hari ${cartDay}. Produk ini tidak tersedia untuk hari tersebut.`,
+          reason: `❌ Tabrakan Hari! Pesanan Anda untuk hari ${lockedDay}, tapi produk "${
+            item.name
+          }" hanya tersedia untuk hari: ${
+            item.availableDays?.join(", ") || "tidak ada"
+          }. Silakan pilih produk lain atau ubah hari pesanan.`,
         };
       }
     }
@@ -120,6 +168,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         reason: `Produk tidak tersedia untuk hari ${selectedOrderDay}`,
       };
     }
+
     const totalQuantityForProduct = cartItems
       .filter((cartItem) => cartItem.id === item.id)
       .reduce((total, cartItem) => total + cartItem.quantity, 0);
@@ -140,22 +189,21 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
 
     if (cartItems.length === 0) {
-      // If we have a selectedOrderDay and item is available on that day, use it
-      const availableDayNames = item.availableDays || [];
-      if (selectedOrderDay && availableDayNames.includes(selectedOrderDay)) {
-        console.log("[v0] Using existing selectedOrderDay:", selectedOrderDay);
-        // Keep the selectedOrderDay
-      } else {
-        // Otherwise, use the first available day for this item
-        const firstAvailableDay = item.availableDays?.[0] || "Senin";
-        console.log("[v0] Setting new selectedOrderDay:", firstAvailableDay);
-        setSelectedOrderDay(firstAvailableDay);
-      }
+      // Use first available day from product and lock it
+      const firstAvailableDay = item.availableDays?.[0] || "Senin";
+      console.log(
+        "[v0] First product added - auto-locking to day:",
+        firstAvailableDay
+      );
+      setSelectedOrderDay(firstAvailableDay);
     }
 
     setCartItems((prev) => {
+      const lockedDay =
+        cartItems.length === 0
+          ? item.availableDays?.[0] || "Senin"
+          : selectedOrderDay || item.availableDays?.[0] || "Senin";
       const itemKey = getCartItemKey(item);
-      const orderDay = selectedOrderDay || item.availableDays?.[0] || "Senin";
 
       // Look for existing item with EXACTLY same customization AND same order day
       const existingItem = prev.find((cartItem) => {
@@ -168,7 +216,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         );
         return (
           cartItemKey === itemKey &&
-          cartItem.orderDay === orderDay &&
+          cartItem.orderDay === lockedDay &&
           sameCustomization
         );
       });
@@ -179,7 +227,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           .filter(
             (cartItem) =>
               cartItem.id === item.id &&
-              cartItem.orderDay === orderDay &&
+              cartItem.orderDay === lockedDay &&
               cartItem.cartId !== existingItem.cartId
           )
           .reduce((total, cartItem) => total + cartItem.quantity, 0);
@@ -214,7 +262,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         {
           ...item,
           quantity: 1,
-          orderDay,
+          orderDay: lockedDay,
           attributesPrice,
           cartId: generateCartId(),
         },

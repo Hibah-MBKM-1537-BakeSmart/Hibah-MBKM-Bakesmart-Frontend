@@ -25,10 +25,10 @@ import { useCart } from "@/app/contexts/CartContext";
 import { useTranslation } from "@/app/contexts/TranslationContext";
 import { useStoreClosure } from "@/app/contexts/StoreClosureContext";
 
-// Komponen Logo (bisa diganti dengan komponen logo Anda sendiri atau tag <img>)
+// Komponen Logo
 const Logo = () => (
   <Image
-    src="/img/logo.png" // simpan file di folder public/logo.png
+    src="/img/logo.png"
     alt="Merpati Bakery Logo"
     width={80}
     height={75}
@@ -74,10 +74,10 @@ export function Navbar() {
           <span
             className="
           text-white font-medium
-          text-[18px] leading-[28px] tracking-[3px]  /* mobile */
-          sm:text-[20px] sm:leading-[30px] sm:tracking-[5px] /* ≥640px */
-          md:text-[24px] md:leading-[36px] md:tracking-[7px] /* ≥768px */
-          lg:text-[30px] lg:leading-[45px] lg:tracking-[9px] /* ≥1024px */
+          text-[18px] leading-[28px] tracking-[3px]
+          sm:text-[20px] sm:leading-[30px] sm:tracking-[5px]
+          md:text-[24px] md:leading-[36px] md:tracking-[7px]
+          lg:text-[30px] lg:leading-[45px] lg:tracking-[9px]
           font-[Poppins,sans-serif]
         "
           >
@@ -93,20 +93,17 @@ export function Navbar() {
                 <NavigationMenuItem key={link.href}>
                   <NavigationMenuLink
                     asChild
+                    // PERUBAHAN: Saya menghapus logika 'storeIsClosed' di sini agar link tetap aktif
                     className={cn(
                       navigationMenuTriggerStyle(),
                       "bg-transparent hover:bg-transparent focus:bg-transparent shadow-none text-center text-[18px] font-[Poppins,sans-serif]",
                       pathname === link.href
                         ? "text-[#4A1D1F] font-bold"
-                        : "text-white font-normal",
-                      storeIsClosed
-                        ? "opacity-50 cursor-not-allowed pointer-events-none"
-                        : ""
+                        : "text-white font-normal"
                     )}
                   >
-                    <Link href={storeIsClosed ? "#" : link.href}>
-                      {link.label}
-                    </Link>
+                    {/* PERUBAHAN: Href selalu mengarah ke link.href, tidak peduli toko tutup atau tidak */}
+                    <Link href={link.href}>{link.label}</Link>
                   </NavigationMenuLink>
                 </NavigationMenuItem>
               ))}
@@ -128,6 +125,7 @@ export function Navbar() {
             </span>
           </Button>
 
+          {/* CART: Tetap dinonaktifkan jika toko tutup */}
           <Link
             href={storeIsClosed ? "#" : "/order"}
             className={storeIsClosed ? "pointer-events-none" : ""}
@@ -136,7 +134,7 @@ export function Navbar() {
               variant="ghost"
               size="icon"
               aria-label="Keranjang Belanja"
-              disabled={storeIsClosed}
+              disabled={storeIsClosed} // Cart tetap disabled saat tutup
               className={`relative transition-all duration-300 ${
                 showCartAnimation ? "animate-bounce bg-white/20" : ""
               } ${storeIsClosed ? "opacity-50 cursor-not-allowed" : ""}`}
@@ -166,6 +164,7 @@ export function Navbar() {
             </span>
           </Button>
 
+          {/* CART MOBILE: Tetap dinonaktifkan jika toko tutup */}
           <Link
             href={storeIsClosed ? "#" : "/order"}
             className={storeIsClosed ? "pointer-events-none" : ""}
@@ -174,7 +173,7 @@ export function Navbar() {
               variant="ghost"
               size="icon"
               aria-label="Keranjang Belanja"
-              disabled={storeIsClosed}
+              disabled={storeIsClosed} // Cart tetap disabled saat tutup
               className={`relative rounded-full bg-white/20 hover:bg-white/30 text-white transition-all duration-300 ${
                 showCartAnimation ? "animate-bounce bg-white/40" : ""
               } ${storeIsClosed ? "opacity-50 cursor-not-allowed" : ""}`}
@@ -217,13 +216,12 @@ export function Navbar() {
                 {navLinks.map((link) => (
                   <a
                     key={link.href}
-                    href={storeIsClosed ? "#" : link.href}
-                    onClick={() => !storeIsClosed && setIsMobileMenuOpen(false)}
-                    className={`block rounded-md p-3 font-medium text-white hover:bg-[#7b5235] ${
-                      storeIsClosed
-                        ? "opacity-50 cursor-not-allowed pointer-events-none"
-                        : ""
-                    }`}
+                    // PERUBAHAN: Href selalu aktif, logika '#' dihapus
+                    href={link.href}
+                    // PERUBAHAN: onClick selalu menutup menu, tidak peduli toko tutup
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    // PERUBAHAN: Menghapus class opacity/pointer-events-none
+                    className="block rounded-md p-3 font-medium text-white hover:bg-[#7b5235]"
                   >
                     {link.label}
                   </a>

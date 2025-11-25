@@ -2,6 +2,7 @@ export const menuTranslations = {
   id: {
     // Menu
     "menu.title": "Menu Kami",
+    "menu.stockavailable": "Stok Tersedia",
     "menu.viewAll": "Lihat Semua Menu",
     "menu.addToCart": "Tambah ke Keranjang",
     "menu.outOfStock": "Stok Habis",
@@ -16,14 +17,15 @@ export const menuTranslations = {
     "menu.categories.pastries": "Pastries",
     "menu.categories.bread": "Bread",
     "menu.categories.favorite": "Favorite",
-
+    "home.dailyBreadStock": "Stok Roti Hari Ini",
     // Menu Grid
     "menuGrid.selectOrderDay": "Pilih Hari Pesanan:",
     "menuGrid.selectDayToOrder": "Pilih hari untuk mulai memesan produk",
     "menuGrid.orderForDay": "Pesanan untuk hari:",
     "menuGrid.productCategories": "Kategori Produk:",
     "menuGrid.promoSection": "Promo",
-    "menuGrid.noProductsAvailable": "Belum ada produk tersedia untuk hari dan kategori ini",
+    "menuGrid.noProductsAvailable":
+      "Belum ada produk tersedia untuk hari dan kategori ini",
     "menuGrid.allDays": "Semua Hari",
     "menuGrid.allProducts": "Semua Produk",
     "menuGrid.categories.turkishCheese": "Turkish Cheese Bread",
@@ -41,6 +43,7 @@ export const menuTranslations = {
 
     // Menu Modal
     "menuModal.outOfStock": "STOK HABIS",
+    "menu.storeIsClosed": "Toko Tutup",
     "menuModal.stockAvailable": "Stok tersedia",
     "menuModal.stockEmpty": "Stok habis",
     "menuModal.selectOrderDay": "Pilih Hari Pesanan:",
@@ -55,8 +58,11 @@ export const menuTranslations = {
     // Menu
     "menu.title": "Our Menu",
     "menu.viewAll": "View All Menu",
+    "menu.stockavailable": "Stock Available",
     "menu.addToCart": "Add to Cart",
     "menu.outOfStock": "Out of Stock",
+    "menu.storeIsClosed": "Store is Closed",
+    "home.dailyBreadStock": "Today's Bread Stock",
     "menu.available": "Available",
     "menu.notAvailable": "Not Available",
     "menu.order": "+ Order",
@@ -75,7 +81,8 @@ export const menuTranslations = {
     "menuGrid.orderForDay": "Order for day:",
     "menuGrid.productCategories": "Product Categories:",
     "menuGrid.promoSection": "Promo",
-    "menuGrid.noProductsAvailable": "No products available for this day and category yet",
+    "menuGrid.noProductsAvailable":
+      "No products available for this day and category yet",
     "menuGrid.allDays": "All Days",
     "menuGrid.allProducts": "All Products",
     "menuGrid.categories.turkishCheese": "Turkish Cheese Bread",
@@ -88,7 +95,8 @@ export const menuTranslations = {
 
     // Menu Hero
     "menuHero.title": "Bread Categories",
-    "menuHero.description": "Explore our complete collection of bakery products made with high-quality ingredients",
+    "menuHero.description":
+      "Explore our complete collection of bakery products made with high-quality ingredients",
 
     // Menu Modal
     "menuModal.outOfStock": "OUT OF STOCK",
@@ -102,4 +110,4 @@ export const menuTranslations = {
     "menuModal.promo": "Promo",
     "menuModal.orderNow": "Order Now",
   },
-}
+};

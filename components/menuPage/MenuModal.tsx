@@ -4,6 +4,7 @@ import { X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useCart } from "@/app/contexts/CartContext";
 import { useTranslation } from "@/app/contexts/TranslationContext";
+import { useStoreClosure } from "@/app/contexts/StoreClosureContext";
 import { ImagePopup } from "./ImagePopup";
 import type { MenuItem, ProductAttribute } from "@/lib/api/mockData";
 
@@ -17,6 +18,7 @@ interface MenuModalProps {
 export function MenuModal({ item, isOpen, onClose }: MenuModalProps) {
   const { t, language } = useTranslation();
   const { addToCart, cartItems, selectedOrderDay } = useCart();
+  const { isStoreClosed } = useStoreClosure();
   const [tempOrderDay, setTempOrderDay] = useState<string>("");
   const [selectedAttributes, setSelectedAttributes] = useState<number[]>([]);
   const [isImagePopupOpen, setIsImagePopupOpen] = useState(false);
@@ -84,6 +86,13 @@ export function MenuModal({ item, isOpen, onClose }: MenuModalProps) {
   };
 
   const handleAddToCart = () => {
+    if (isStoreClosed()) {
+      alert(
+        t("menu.storeIsClosed") || "Toko sedang tutup. Silakan coba lagi nanti."
+      );
+      return;
+    }
+
     if (!tempOrderDay) {
       alert(t("menuModal.selectDayFirst"));
       return;
@@ -189,10 +198,12 @@ export function MenuModal({ item, isOpen, onClose }: MenuModalProps) {
                 className="w-full h-full max-w-none object-cover cursor-pointer hover:opacity-90 transition-opacity rounded-t-lg md:rounded-l-lg md:rounded-tr-none"
                 onClick={() => setIsImagePopupOpen(true)}
               />
-              {isOutOfStock && (
+              {(isOutOfStock || isStoreClosed()) && (
                 <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded-t-lg md:rounded-l-lg md:rounded-tr-none">
                   <span className="text-white text-xl font-bold">
-                    {t("menuModal.outOfStock")}
+                    {isStoreClosed()
+                      ? t("menu.storeIsClosed")
+                      : t("menuModal.outOfStock")}
                   </span>
                 </div>
               )}
@@ -207,13 +218,15 @@ export function MenuModal({ item, isOpen, onClose }: MenuModalProps) {
                   {itemName}
                 </h2>
                 <div className="flex items-center gap-2 mt-2">
-                  {!isOutOfStock ? (
+                  {!isOutOfStock && !isStoreClosed() ? (
                     <span className="text-xs md:text-sm bg-green-100 text-green-600 px-2 py-1 rounded">
                       {t("menuModal.stockAvailable")}: {item.stok}
                     </span>
                   ) : (
                     <span className="text-xs md:text-sm bg-red-100 text-red-600 px-2 py-1 rounded">
-                      {t("menuModal.stockEmpty")}
+                      {isStoreClosed()
+                        ? t("menu.storeIsClosed")
+                        : t("menuModal.stockEmpty")}
                     </span>
                   )}
                 </div>
@@ -238,12 +251,15 @@ export function MenuModal({ item, isOpen, onClose }: MenuModalProps) {
                       <button
                         key={day}
                         onClick={() => handleDaySelection(day)}
+                        disabled={isStoreClosed()}
                         className={`px-3 py-2 md:px-4 md:py-2.5 text-sm rounded-lg font-medium transition-all duration-200 min-w-[70px] md:min-w-[80px] ${
                           tempOrderDay === day
                             ? "bg-[#5D4037] text-white shadow-md"
                             : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 hover:border-[#8B6F47]"
+                        } ${
+                          isStoreClosed() ? "opacity-50 cursor-not-allowed" : ""
                         }`}
-                        data-day={day} // For debugging
+                        data-day={day}
                       >
                         {getDayLabel(day)}
                       </button>
@@ -274,7 +290,11 @@ export function MenuModal({ item, isOpen, onClose }: MenuModalProps) {
                         return (
                           <label
                             key={attribute.id}
-                            className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200 hover:border-[#8B6F47] hover:shadow-sm cursor-pointer transition-all duration-200"
+                            className={`flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200 hover:border-[#8B6F47] hover:shadow-sm cursor-pointer transition-all duration-200 ${
+                              isStoreClosed()
+                                ? "opacity-50 cursor-not-allowed"
+                                : ""
+                            }`}
                           >
                             <div className="flex items-center gap-3 flex-1 min-w-0">
                               <input
@@ -285,6 +305,7 @@ export function MenuModal({ item, isOpen, onClose }: MenuModalProps) {
                                 onChange={() =>
                                   handleAttributeToggle(attribute.id)
                                 }
+                                disabled={isStoreClosed()}
                                 className="w-4 h-4 text-[#8B6F47] border-gray-300 rounded focus:ring-[#8B6F47] focus:ring-2 flex-shrink-0"
                               />
                               <span className="text-gray-800 font-medium text-sm truncate">
@@ -359,9 +380,9 @@ export function MenuModal({ item, isOpen, onClose }: MenuModalProps) {
                   <div className="flex items-center gap-2 mb-2 justify-end">
                     <button
                       onClick={() => handleQuantityChange(-1)}
-                      disabled={quantity <= 1}
+                      disabled={quantity <= 1 || isStoreClosed()}
                       className={`w-8 h-8 flex items-center justify-center rounded-full ${
-                        quantity <= 1
+                        quantity <= 1 || isStoreClosed()
                           ? "bg-gray-100 text-gray-400"
                           : "bg-[#5D4037] text-white hover:bg-[#8B6F47]"
                       }`}
@@ -373,9 +394,11 @@ export function MenuModal({ item, isOpen, onClose }: MenuModalProps) {
                     </span>
                     <button
                       onClick={() => handleQuantityChange(1)}
-                      disabled={quantity >= (item?.stok || 0)}
+                      disabled={
+                        quantity >= (item?.stok || 0) || isStoreClosed()
+                      }
                       className={`w-8 h-8 flex items-center justify-center rounded-full ${
-                        quantity >= (item?.stok || 0)
+                        quantity >= (item?.stok || 0) || isStoreClosed()
                           ? "bg-gray-100 text-gray-400"
                           : "bg-[#5D4037] text-white hover:bg-[#8B6F47]"
                       }`}
@@ -385,14 +408,16 @@ export function MenuModal({ item, isOpen, onClose }: MenuModalProps) {
                   </div>
                   <button
                     className={`px-6 md:px-8 py-3 md:py-3.5 rounded-lg font-medium transition-all duration-300 text-sm md:text-base w-full md:w-auto ${
-                      isOutOfStock || !tempOrderDay
+                      isOutOfStock || !tempOrderDay || isStoreClosed()
                         ? "bg-gray-400 text-gray-600 cursor-not-allowed"
                         : "bg-[#5D4037] text-white hover:bg-[#8B6F47] shadow-md hover:shadow-lg"
                     }`}
                     onClick={handleAddToCart}
-                    disabled={isOutOfStock || !tempOrderDay}
+                    disabled={isOutOfStock || !tempOrderDay || isStoreClosed()}
                   >
-                    {isOutOfStock
+                    {isStoreClosed()
+                      ? t("menu.storeIsClosed")
+                      : isOutOfStock
                       ? t("menuModal.stockEmpty")
                       : !tempOrderDay
                       ? t("menuModal.selectDayFirst")
@@ -407,6 +432,7 @@ export function MenuModal({ item, isOpen, onClose }: MenuModalProps) {
                       <button
                         className="px-4 md:px-6 py-2 md:py-2.5 text-sm md:text-base border border-[#8B6F47] text-[#8B6F47] rounded-lg hover:bg-[#8B6F47] hover:text-white transition-all duration-300 w-full md:w-auto"
                         onClick={handleResetCustomization}
+                        disabled={isStoreClosed()}
                       >
                         Reset Pilihan
                       </button>

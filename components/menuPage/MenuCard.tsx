@@ -3,6 +3,7 @@
 import type React from "react";
 import { Plus, Minus } from "lucide-react";
 import { useCart } from "@/app/contexts/CartContext";
+import { useStoreClosure } from "@/app/contexts/StoreClosureContext";
 import { useTranslation } from "@/app/contexts/TranslationContext";
 import { useState, useEffect, useRef } from "react";
 
@@ -28,6 +29,7 @@ export function MenuCard({
     selectedOrderDay,
     canAddToCart,
   } = useCart();
+  const { isStoreClosed } = useStoreClosure();
   const { t, language } = useTranslation();
 
   const name = language === "id" ? item.nama_id : item.nama_en;
@@ -124,13 +126,26 @@ export function MenuCard({
   const handleAddItem = (e: React.MouseEvent) => {
     e.stopPropagation();
     console.log("🟢 MenuCard: handleAddItem called for:", name);
+    console.log(
+      "🟢 Cart has items:",
+      hasItemInCart,
+      "- Total qty:",
+      totalQuantity
+    );
+
+    if (isStoreClosed()) {
+      alert(
+        t("menu.storeIsClosed") || "Toko sedang tutup. Silakan coba lagi nanti."
+      );
+      return;
+    }
 
     // Jika item memiliki attributes, selalu buka modal untuk customization
     if (attributes && attributes.length > 0) {
       if (hasItemInCart) {
-        // Jika sudah ada di cart, tampilkan modal existing customization
-        console.log("🟢 MenuCard: Calling onShowExistingCustomization");
-        // Find existing item in cart with same attributes
+        console.log(
+          "🟢 MenuCard: Item exists in cart, showing existing customization modal"
+        );
         const existingCartItem = cartItems.find(
           (cartItem) =>
             cartItem.id === item.id && cartItem.orderDay === selectedOrderDay
@@ -139,11 +154,12 @@ export function MenuCard({
         if (existingCartItem) {
           onShowExistingCustomization?.(item, existingCartItem);
         } else {
-          // Jika belum ada di cart, buka modal untuk pilih customization
-          console.log("🟢 MenuCard: Calling onClick (main modal)");
           onClick();
         }
+        return;
       }
+      console.log("🟢 MenuCard: Opening customization modal for new item");
+      onClick();
       return;
     }
 
@@ -197,9 +213,21 @@ export function MenuCard({
 
   return (
     <div
-      className={`bg-white border-b border-gray-100 p-4 md:p-6 cursor-pointer hover:bg-gray-50 transition-colors ${
-        isDisabled ? "opacity-60" : ""
+      className={`bg-white border-b border-gray-100 p-4 md:p-6 cursor-pointer transition-all duration-300 ${
+        isDisabled || isStoreClosed() ? "opacity-60" : ""
       }`}
+      style={{
+        backgroundColor: "white",
+        boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.boxShadow = "0 8px 16px rgba(139,111,71,0.1)";
+        e.currentTarget.style.backgroundColor = "#fafaf9";
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.boxShadow = "0 1px 2px rgba(0,0,0,0.05)";
+        e.currentTarget.style.backgroundColor = "white";
+      }}
       onClick={onClick}
     >
       <div className="flex gap-4 md:gap-6">
@@ -211,10 +239,12 @@ export function MenuCard({
               alt={name}
               className="w-full h-full object-cover"
             />
-            {stock <= 0 && (
+            {(stock <= 0 || isStoreClosed()) && (
               <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
                 <span className="text-white text-sm font-medium">
-                  {t("menu.outOfStock")}
+                  {isStoreClosed()
+                    ? t("menu.storeIsClosed")
+                    : t("menu.outOfStock")}
                 </span>
               </div>
             )}
@@ -315,18 +345,29 @@ export function MenuCard({
                 {totalQuantity === 0 ? (
                   <button
                     className={`px-6 py-2.5 lg:px-8 lg:py-3 text-base font-medium rounded-full text-white transition-all duration-200 ${
-                      isDisabled
+                      isDisabled || isStoreClosed()
                         ? "bg-gray-400 cursor-not-allowed"
                         : "hover:opacity-90 hover:scale-105 active:scale-95"
                     }`}
                     style={{
-                      backgroundColor: isDisabled ? undefined : "#8b6f47",
+                      backgroundColor:
+                        isDisabled || isStoreClosed() ? undefined : "#8b6f47",
                     }}
                     onClick={handleAddItem}
-                    disabled={isDisabled}
-                    title={!validation.canAdd ? validation.reason : undefined}
+                    disabled={isDisabled || isStoreClosed()}
+                    title={
+                      !validation.canAdd
+                        ? validation.reason
+                        : isStoreClosed()
+                        ? "Toko sedang tutup"
+                        : undefined
+                    }
                   >
-                    {stock <= 0 ? t("menu.outOfStock") : "Tambah"}
+                    {isStoreClosed()
+                      ? t("menu.storeIsClosed")
+                      : stock <= 0
+                      ? t("menu.outOfStock")
+                      : "Tambah"}
                   </button>
                 ) : (
                   <div className="flex items-center gap-4">
@@ -334,6 +375,7 @@ export function MenuCard({
                       className="w-10 h-10 lg:w-12 lg:h-12 rounded-full border-2 hover:opacity-90 transition-all duration-200 hover:scale-110 active:scale-95 flex items-center justify-center"
                       style={{ borderColor: "#8b6f47", color: "#8b6f47" }}
                       onClick={handleRemoveItem}
+                      disabled={isStoreClosed()}
                     >
                       <Minus size={20} className="lg:w-6 lg:h-6" />
                     </button>
@@ -348,17 +390,22 @@ export function MenuCard({
                     </span>
                     <button
                       className={`w-10 h-10 lg:w-12 lg:h-12 rounded-full border-2 transition-all duration-200 flex items-center justify-center ${
-                        totalQuantity >= stock
+                        totalQuantity >= stock || isStoreClosed()
                           ? "border-gray-400 text-gray-400 cursor-not-allowed"
                           : "hover:opacity-90 hover:scale-110 active:scale-95"
                       }`}
                       style={{
                         borderColor:
-                          totalQuantity >= stock ? undefined : "#8b6f47",
-                        color: totalQuantity >= stock ? undefined : "#8b6f47",
+                          totalQuantity >= stock || isStoreClosed()
+                            ? undefined
+                            : "#8b6f47",
+                        color:
+                          totalQuantity >= stock || isStoreClosed()
+                            ? undefined
+                            : "#8b6f47",
                       }}
                       onClick={handleAddItem}
-                      disabled={totalQuantity >= stock}
+                      disabled={totalQuantity >= stock || isStoreClosed()}
                     >
                       <Plus size={20} className="lg:w-6 lg:h-6" />
                     </button>
@@ -373,18 +420,29 @@ export function MenuCard({
               {totalQuantity === 0 ? (
                 <button
                   className={`px-4 py-2 text-sm font-medium rounded-full text-white transition-all duration-200 ${
-                    isDisabled
+                    isDisabled || isStoreClosed()
                       ? "bg-gray-400 cursor-not-allowed"
                       : "hover:opacity-90 hover:scale-105 active:scale-95"
                   }`}
                   style={{
-                    backgroundColor: isDisabled ? undefined : "#8b6f47",
+                    backgroundColor:
+                      isDisabled || isStoreClosed() ? undefined : "#8b6f47",
                   }}
                   onClick={handleAddItem}
-                  disabled={isDisabled}
-                  title={!validation.canAdd ? validation.reason : undefined}
+                  disabled={isDisabled || isStoreClosed()}
+                  title={
+                    !validation.canAdd
+                      ? validation.reason
+                      : isStoreClosed()
+                      ? "Toko sedang tutup"
+                      : undefined
+                  }
                 >
-                  {stock <= 0 ? t("menu.outOfStock") : "Tambah"}
+                  {isStoreClosed()
+                    ? t("menu.storeIsClosed")
+                    : stock <= 0
+                    ? t("menu.outOfStock")
+                    : "Tambah"}
                 </button>
               ) : (
                 <div className="flex items-center gap-3">
@@ -392,6 +450,7 @@ export function MenuCard({
                     className="w-8 h-8 rounded-full border-2 hover:opacity-90 transition-all duration-200 hover:scale-110 active:scale-95 flex items-center justify-center"
                     style={{ borderColor: "#8b6f47", color: "#8b6f47" }}
                     onClick={handleRemoveItem}
+                    disabled={isStoreClosed()}
                   >
                     <Minus size={16} />
                   </button>
@@ -406,17 +465,22 @@ export function MenuCard({
                   </span>
                   <button
                     className={`w-8 h-8 rounded-full border-2 transition-all duration-200 flex items-center justify-center ${
-                      totalQuantity >= stock
+                      totalQuantity >= stock || isStoreClosed()
                         ? "border-gray-400 text-gray-400 cursor-not-allowed"
                         : "hover:opacity-90 hover:scale-110 active:scale-95"
                     }`}
                     style={{
                       borderColor:
-                        totalQuantity >= stock ? undefined : "#8b6f47",
-                      color: totalQuantity >= stock ? undefined : "#8b6f47",
+                        totalQuantity >= stock || isStoreClosed()
+                          ? undefined
+                          : "#8b6f47",
+                      color:
+                        totalQuantity >= stock || isStoreClosed()
+                          ? undefined
+                          : "#8b6f47",
                     }}
                     onClick={handleAddItem}
-                    disabled={totalQuantity >= stock}
+                    disabled={totalQuantity >= stock || isStoreClosed()}
                   >
                     <Plus size={16} />
                   </button>
