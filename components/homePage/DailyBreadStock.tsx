@@ -79,7 +79,7 @@ function BreadStockCard(item: MenuItem) {
 
           {/* Stock Counter */}
           <div className="absolute bottom-3 left-3 bg-black/70 text-white px-3 py-1 rounded-full text-sm font-semibold">
-            {t("stock available") || "Stok"}: {stock}
+            {t("menu.stockavailable")}: {stock}
           </div>
         </div>
 
@@ -288,7 +288,7 @@ export function DailyBreadStock() {
                 className="font-serif text-3xl md:text-4xl lg:text-5xl font-bold mb-4"
                 style={{ color: "#5D4037" }}
               >
-                {t("stock todays Bread") || "Roti Hari Ini"}
+                {t("home.dailyBreadStock")}
               </h2>
             </div>
           </div>

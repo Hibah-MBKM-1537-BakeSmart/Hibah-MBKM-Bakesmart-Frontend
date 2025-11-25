@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
-const host = process.env.API_HOST || 'localhost';
-const port = process.env.API_PORT || '5000';
+const host = process.env.API_HOST || "localhost";
+const port = process.env.API_PORT || "5000";
 const EXTERNAL_API_URL = `http://${host}:${port}/products`;
 
 export async function GET(request: Request) {
@@ -22,17 +22,19 @@ export async function GET(request: Request) {
     }
 
     const data = await response.json();
-    console.log(
-      `[Products API] Success, received ${
-        data?.data?.data?.length || 0
-      } products`
-    );
+    console.log(`[Products API] Success`);
 
-    return NextResponse.json(data);
+    // If API returns nested structure (data.data.data), flatten it
+    const productsData = data?.data?.data || data?.data || data;
+
+    return NextResponse.json({
+      message: "Products retrieved successfully",
+      data: Array.isArray(productsData) ? productsData : [],
+    });
   } catch (error) {
     console.error("[Products API] Error:", error);
     return NextResponse.json(
-      { error: "Failed to fetch products" },
+      { error: "Failed to fetch products", data: [] },
       { status: 500 }
     );
   }

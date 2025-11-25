@@ -152,7 +152,7 @@ export function OrderSummary({
   };
 
   const getDayLabel = (day: string) => {
-    const dayKey = `day.${day}`;
+    const dayKey = `${day}`;
     return t(dayKey) || day;
   };
 
@@ -262,7 +262,7 @@ export function OrderSummary({
                   item.availableDays &&
                   !item.availableDays.some(
                     (day) => day.toLowerCase() === currentOrderDay.toLowerCase()
-                  ) 
+                  )
                     ? "bg-red-50 border-red-200"
                     : "bg-[#F5F1EB] border-[#E8DDD4]"
                 }`}

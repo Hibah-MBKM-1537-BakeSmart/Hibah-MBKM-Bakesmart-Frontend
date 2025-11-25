@@ -1,18 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
-// Impor ini mengasumsikan file-file ini ada di struktur proyek kamu
-// Kompilator di sini tidak bisa melihatnya, tapi ini seharusnya bekerja di app kamu
 import { MenuCard } from "./MenuCard";
 import { MenuModal } from "./MenuModal";
 import { ExistingCustomizationModal } from "./ExistingCustomModal";
 import { RemoveCustomizationModal } from "./RemoveCustomizationModal";
 import { useCart } from "@/app/contexts/CartContext";
 import { useTranslation } from "@/app/contexts/TranslationContext";
-// Import tipe data dari file terpusat
 import type { MenuItem, ApiProduct } from "@/lib/types";
 
-// Tipe untuk respons API yang baru
 interface ApiResponse {
   message: string;
   data: ApiProduct[];
@@ -37,18 +33,23 @@ export function MenuGrid() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const { selectedOrderDay, setSelectedOrderDay } = useCart();
+  const { selectedOrderDay, setSelectedOrderDay, cartItems } = useCart();
   const { t, language } = useTranslation();
+
+  useEffect(() => {
+    if (cartItems.length === 0) {
+      setActiveDay("all");
+    }
+  }, [cartItems.length]);
 
   useEffect(() => {
     const fetchProducts = async () => {
       try {
         setLoading(true);
         setError(null);
-        // [PERUBAHAN] Memanggil API internal Next.js
         console.log("[v2] Fetching products from /api/products");
 
-        const response = await fetch("/api/products"); // <-- PERUBAHAN DI SINI
+        const response = await fetch("/api/products");
 
         if (!response.ok) {
           const errorData = await response.json();
@@ -58,7 +59,6 @@ export function MenuGrid() {
         const data: ApiResponse = await response.json();
         console.log("[v2] API Response (from /api/products):", data);
 
-        // Transform API response to MenuItem format
         const products: MenuItem[] = (data.data || []).map(
           (product: ApiProduct) => ({
             id: product.id,
@@ -70,7 +70,6 @@ export function MenuGrid() {
             harga_diskon: product.harga_diskon || null,
             stok: product.stok || 0,
             isBestSeller: product.isBestSeller || false,
-            // Sesuaikan dengan data dari API (berdasarkan contoh JSON kamu)
             isDaily: product.isDaily || false,
             dailyStock: product.daily_stock || 0,
             created_at: product.created_at || "",
@@ -80,8 +79,8 @@ export function MenuGrid() {
               .map((g) => ({
                 ...g,
                 product_id: product.id,
-                created_at: "", // Sesuaikan jika ada datanya
-                updated_at: "", // Sesuaikan jika ada datanya
+                created_at: "",
+                updated_at: "",
               })),
             jenis: product.jenis || [],
             hari: product.hari || [],
@@ -92,7 +91,6 @@ export function MenuGrid() {
 
         setMenuItems(products);
 
-        // Extract unique categories from products
         const categoryMap = new Map<
           number,
           { id: number; nama_id: string; nama_en: string }
@@ -200,10 +198,13 @@ export function MenuGrid() {
   };
 
   const handleDayFilter = (dayId: string) => {
-    console.log("Setting active day to:", dayId);
-    setActiveDay(dayId);
-    if (dayId !== "all") {
+    console.log("[MenuGrid] Day filter selected:", dayId);
+    if (dayId === "all") {
+      setSelectedOrderDay(null);
+      setActiveDay("all");
+    } else {
       setSelectedOrderDay(dayId);
+      setActiveDay(dayId);
     }
   };
 
@@ -241,6 +242,18 @@ export function MenuGrid() {
           item.jenis.some((j) => `cat-${j.id}` === activeCategory)
         );
 
+  const dayFilteredItems =
+    activeDay === "all"
+      ? filteredItems
+      : filteredItems.filter((item) => {
+          const availableDays = (item.hari || [])
+            .filter((day) => day !== null)
+            .map((day) => day.nama_id);
+          return (
+            availableDays.length === 0 || availableDays.includes(activeDay)
+          );
+        });
+
   return (
     <>
       <div className="sticky top-0 z-10 bg-white border-b shadow-sm">
@@ -260,10 +273,10 @@ export function MenuGrid() {
                   <button
                     key={day.id}
                     onClick={() => handleDayFilter(day.id)}
-                    className={`px-4 py-2 text-sm font-medium transition-all duration-200 rounded-full whitespace-nowrap flex-shrink-0 ${
+                    className={`px-4 py-2 text-sm font-medium transition-all duration-300 rounded-full whitespace-nowrap flex-shrink-0 ${
                       activeDay === day.id
-                        ? "text-white shadow-md"
-                        : "text-gray-600 hover:text-white hover:shadow-sm bg-gray-100"
+                        ? "text-white shadow-lg"
+                        : "text-gray-700 bg-gray-100 hover:bg-gray-200 hover:shadow-md"
                     }`}
                     style={{
                       backgroundColor:
@@ -280,15 +293,20 @@ export function MenuGrid() {
             </div>
           </div>
 
-          {selectedOrderDay && selectedOrderDay !== "all" && (
-            <div className="mb-2 text-center">
-              <span className="text-sm bg-green-100 text-green-700 px-3 py-1 rounded-full">
-                {t("menuGrid.orderForDay")}{" "}
-                {selectedOrderDay.charAt(0).toUpperCase() +
-                  selectedOrderDay.slice(1)}
-              </span>
-            </div>
-          )}
+          {selectedOrderDay &&
+            selectedOrderDay !== "all" &&
+            cartItems.length > 0 && (
+              <div className="mb-2 text-center">
+                <span className="text-sm bg-green-100 text-green-700 px-3 py-1 rounded-full">
+                  {t("menuGrid.orderForDay")}{" "}
+                  {selectedOrderDay.charAt(0).toUpperCase() +
+                    selectedOrderDay.slice(1)}
+                  {cartItems.length > 0 && (
+                    <span className="ml-2 font-semibold">🔒</span>
+                  )}
+                </span>
+              </div>
+            )}
 
           <div className="mb-2">
             <h3 className="text-sm font-medium text-gray-600 mb-2 text-center">
@@ -306,10 +324,10 @@ export function MenuGrid() {
                   <button
                     key={category.id}
                     onClick={() => setActiveCategory(category.id)}
-                    className={`px-4 py-2 text-sm font-medium transition-all duration-200 rounded-full whitespace-nowrap ${
+                    className={`px-4 py-2 text-sm font-medium transition-all duration-300 rounded-full whitespace-nowrap ${
                       activeCategory === category.id
                         ? "text-white shadow-lg"
-                        : "text-gray-600 hover:text-white hover:shadow-md bg-gray-100"
+                        : "text-gray-700 bg-gray-100 hover:bg-gray-200 hover:shadow-md"
                     }`}
                     style={{
                       backgroundColor:
@@ -336,7 +354,7 @@ export function MenuGrid() {
           </div>
 
           <div className="divide-y divide-gray-100">
-            {filteredItems.map((item) => (
+            {dayFilteredItems.map((item) => (
               <MenuCard
                 key={item.id}
                 item={item}
@@ -347,7 +365,7 @@ export function MenuGrid() {
             ))}
           </div>
 
-          {filteredItems.length === 0 && (
+          {dayFilteredItems.length === 0 && (
             <div className="text-center py-16">
               <p className="text-gray-500 text-lg">
                 {t("menuGrid.noProductsAvailable")}
