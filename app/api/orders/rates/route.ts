@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 
+const host = process.env.API_HOST;
+const port = process.env.API_PORT;
 // PENTING: Pastikan URL ini mengarah ke endpoint 'coordinates' backend Anda
-const BACKEND_RATES_URL = "http://192.168.0.196:5000/orders/rates/coordinates";
+const BACKEND_RATES_URL = "http://${host}:${port}/orders/rates/coordinates";
 
 export async function POST(request: Request) {
   try {

@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 
-// Arahkan ke Backend Hapi.js (Gunakan 127.0.0.1 untuk localhost)
-const BACKEND_QR_URL = "http://127.0.0.1:5000/qr/create";
+const host = process.env.API_HOST;
+const port = process.env.API_PORT;
+const BACKEND_QR_URL = `http://${host}:${port}/qr/create`;
 
 export async function POST(request: Request) {
   try {

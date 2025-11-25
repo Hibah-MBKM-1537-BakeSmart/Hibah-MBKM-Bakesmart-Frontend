@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 
-// Alamat API eksternal kamu.
-// Jika alamat ini berubah, kamu CUKUP ganti di satu tempat ini saja.
-const EXTERNAL_API_URL = "http://192.168.0.196:5000/products";
+const host = process.env.API_HOST;
+const port = process.env.API_PORT;
+const EXTERNAL_API_URL = `http://${host}:${port}/products`;
 
 /**
  * Ini adalah Route Handler (API internal di Next.js).
@@ -10,6 +10,7 @@ const EXTERNAL_API_URL = "http://192.168.0.196:5000/products";
  */
 export async function GET(request: Request) {
   try {
+    console.log(EXTERNAL_API_URL);
     console.log(`[API Route] Menerima request ke /api/products`);
     console.log(`[API Route] Mengambil data dari: ${EXTERNAL_API_URL}`);
 

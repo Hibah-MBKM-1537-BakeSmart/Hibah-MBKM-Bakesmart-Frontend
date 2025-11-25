@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 
-// Menggunakan 127.0.0.1 untuk menghindari masalah localhost di Node v18+
-const EXTERNAL_API_URL = "http://192.168.0.196:5000/orders";
+const host = process.env.API_HOST;
+const port = process.env.API_PORT;
+const EXTERNAL_API_URL = `http://${host}:${port}/orders`;
 
 function transformPayloadForBackend(payload: any) {
   const { order, customer, items } = payload;
