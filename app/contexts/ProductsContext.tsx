@@ -178,12 +178,13 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
       const products = parseBackendResponse(data);
       console.log('[ProductsContext] Parsed products:', products.length);
 
-      setState({
+      setState(prev => ({
+        ...prev,
         products,
         loading: false,
         error: null,
         isBackendConnected: true,
-      });
+      }));
     } catch (error: any) {
       console.error('[ProductsContext] Error fetching products:', error);
       
@@ -216,7 +217,7 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
   const addProduct = async (productData: Partial<Product>): Promise<void> => {
     try {
       console.log('[ProductsContext] Creating product:', productData);
-      setState(prev => ({ ...prev, loading: true, error: null }));
+      setState(prev => ({ ...prev, error: null }));
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000);
@@ -238,10 +239,26 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
       }
 
       const data = await response.json();
-      console.log('[ProductsContext] Product created:', data);
+      console.log('[ProductsContext] Product created successfully:', data);
 
-      // Refresh products list
-      await refreshProducts();
+      // Parse new product and add to state
+      if (data.data) {
+        const parsed = parseBackendResponse(data);
+        const newProduct = parsed[0];
+        if (newProduct) {
+          setState(prev => ({
+            ...prev,
+            products: [...prev.products, newProduct],
+            loading: false,
+          }));
+        } else {
+          // Fallback: refresh from backend if parsing failed
+          await refreshProducts();
+        }
+      } else {
+        // Fallback: refresh from backend
+        await refreshProducts();
+      }
     } catch (error: any) {
       console.error('[ProductsContext] Error creating product:', error);
       
@@ -265,7 +282,7 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
   const updateProduct = async (id: number, productData: Partial<Product>): Promise<void> => {
     try {
       console.log('[ProductsContext] Updating product:', id, productData);
-      setState(prev => ({ ...prev, loading: true, error: null }));
+      setState(prev => ({ ...prev, error: null }));
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000);
@@ -287,10 +304,29 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
       }
 
       const data = await response.json();
-      console.log('[ProductsContext] Product updated:', data);
+      console.log('[ProductsContext] Backend PUT response:', JSON.stringify(data));
 
-      // Refresh products list
-      await refreshProducts();
+      // Immediately update local state with optimistic data
+      // Don't rely on backend response format, use what we sent
+      setState(prev => {
+        console.log('[ProductsContext] Updating state, current products:', prev.products.length);
+        const updatedProducts = prev.products.map(product => {
+          if (product.id === id) {
+            const updated = { ...product, ...productData };
+            console.log(`[ProductsContext] Updating product ${id}:`, updated);
+            return updated;
+          }
+          return product;
+        });
+        console.log('[ProductsContext] New products array:', updatedProducts.length);
+        return {
+          ...prev,
+          products: updatedProducts,
+          loading: false,
+        };
+      });
+
+      console.log('[ProductsContext] State update completed');
     } catch (error: any) {
       console.error('[ProductsContext] Error updating product:', error);
       
@@ -314,7 +350,7 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
   const deleteProduct = async (id: number): Promise<void> => {
     try {
       console.log('[ProductsContext] Deleting product:', id);
-      setState(prev => ({ ...prev, loading: true, error: null }));
+      setState(prev => ({ ...prev, error: null }));
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000);
@@ -336,8 +372,14 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
 
       console.log('[ProductsContext] Product deleted successfully');
 
-      // Refresh products list
-      await refreshProducts();
+      // Immediately remove from local state
+      setState(prev => ({
+        ...prev,
+        products: prev.products.filter(product => product.id !== id),
+        loading: false,
+      }));
+
+      console.log('[ProductsContext] Product removed from state');
     } catch (error: any) {
       console.error('[ProductsContext] Error deleting product:', error);
       
