@@ -21,20 +21,22 @@ export default function StatisticsPage() {
     setIsRefreshing(false);
   };
 
-  // Calculate summary metrics
-  const totalRevenue = state.monthlySalesData.reduce(
+  // Use data from backend
+  const totalRevenue = state.totalRevenue || state.monthlySalesData.reduce(
     (sum, month) => sum + month.revenue,
     0
   );
-  const totalSales = state.topProducts.reduce(
+  const totalSales = state.totalSales || state.topProducts.reduce(
     (sum, product) => sum + product.sales,
     0
   );
   const averageMonthlyRevenue =
-    totalRevenue / (state.monthlySalesData.length || 1);
+    state.monthlySalesData.length > 0
+      ? totalRevenue / state.monthlySalesData.length
+      : 0;
   const highestMonth = state.monthlySalesData.reduce(
     (prev, current) => (current.revenue > prev.revenue ? current : prev),
-    state.monthlySalesData[0] || { month: "N/A", revenue: 0 }
+    state.monthlySalesData[0] || { month: "N/A", revenue: 0, sales: 0, orders: 0 }
   );
 
   return (

@@ -8,6 +8,8 @@ import {
   type ReactNode,
 } from "react";
 
+const BACKEND_API_URL = "/api/dashboard/stats";
+
 export interface MonthlySalesData {
   month: string;
   sales: number;
@@ -42,6 +44,8 @@ interface StatisticsState {
   categorySalesData: CategorySalesData[];
   topProducts: ProductPerformance[];
   customerStats: CustomerStatistics;
+  totalRevenue: number;
+  totalSales: number;
   loading: boolean;
   error: string | null;
 }
@@ -55,30 +59,7 @@ const StatisticsContext = createContext<StatisticsContextType | undefined>(
   undefined
 );
 
-// Mock data generator
-const generateMonthlySalesData = (): MonthlySalesData[] => {
-  const months = [
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec",
-  ];
-  return months.map((month, index) => ({
-    month,
-    sales: Math.floor(Math.random() * 500) + 200,
-    revenue: Math.floor(Math.random() * 50000000) + 10000000,
-    orders: Math.floor(Math.random() * 100) + 30,
-  }));
-};
-
+// Mock/fallback data
 const categoryData: CategorySalesData[] = [
   { category: "Cakes", sales: 420, percentage: 35 },
   { category: "Cupcakes", sales: 280, percentage: 23 },
@@ -130,64 +111,103 @@ const topProductsData: ProductPerformance[] = [
   },
 ];
 
-const customerStatsData: CustomerStatistics = {
-  totalCustomers: 2847,
-  newCustomers: 342,
-  repeatCustomers: 1205,
-  averageOrderValue: 156750,
-};
-
 export function StatisticsProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<StatisticsState>({
     monthlySalesData: [],
     categorySalesData: categoryData,
     topProducts: topProductsData,
-    customerStats: customerStatsData,
+    customerStats: {
+      totalCustomers: 0,
+      newCustomers: 0,
+      repeatCustomers: 0,
+      averageOrderValue: 0,
+    },
+    totalRevenue: 0,
+    totalSales: 0,
     loading: false,
     error: null,
   });
 
-  useEffect(() => {
-    const initializeData = async () => {
-      setState((prev) => ({ ...prev, loading: true }));
-      try {
-        // Simulate API call delay
-        await new Promise((resolve) => setTimeout(resolve, 500));
-        setState((prev) => ({
-          ...prev,
-          monthlySalesData: generateMonthlySalesData(),
-          loading: false,
-          error: null,
-        }));
-      } catch (error) {
-        setState((prev) => ({
-          ...prev,
-          loading: false,
-          error: "Failed to load statistics",
-        }));
-      }
-    };
+  const fetchStatistics = async () => {
+    setState((prev) => ({ ...prev, loading: true, error: null }));
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-    initializeData();
-  }, []);
-
-  const refreshStatistics = async (): Promise<void> => {
-    setState((prev) => ({ ...prev, loading: true }));
     try {
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      const response = await fetch(BACKEND_API_URL, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        signal: controller.signal,
+        cache: "no-store",
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      
+      if (!result.data) {
+        throw new Error("Invalid response format");
+      }
+
+      const backendData = result.data;
+
+      // Transform sales_and_revenue to monthly data
+      const monthlySalesData: MonthlySalesData[] = backendData.sales_and_revenue?.map((item: any) => ({
+        month: getMonthName(item.month),
+        sales: parseInt(item.sales) || 0,
+        revenue: parseInt(item.revenue) || 0,
+        orders: parseInt(item.sales) || 0, // Using sales as orders count
+      })) || [];
+
+      // Transform customer statistics
+      const customerStats: CustomerStatistics = {
+        totalCustomers: parseInt(backendData.total_customer) || 0,
+        newCustomers: parseInt(backendData.new_customer) || 0,
+        repeatCustomers: parseInt(backendData.repeat_customer) || 0,
+        averageOrderValue: parseFloat(backendData.avg_order_value) || 0,
+      };
+
       setState((prev) => ({
         ...prev,
-        monthlySalesData: generateMonthlySalesData(),
+        monthlySalesData,
+        customerStats,
+        totalRevenue: parseInt(backendData.total_revenue) || 0,
+        totalSales: parseInt(backendData.total_sales) || 0,
         loading: false,
         error: null,
       }));
-    } catch (error) {
+    } catch (error: any) {
+      clearTimeout(timeoutId);
+      console.error("Error fetching statistics:", error);
+      
+      let errorMessage = "Gagal memuat statistik";
+      if (error.name === "AbortError") {
+        errorMessage = "Koneksi timeout, coba lagi";
+      } else if (error.message) {
+        errorMessage = `Error: ${error.message}`;
+      }
+
       setState((prev) => ({
         ...prev,
         loading: false,
-        error: "Failed to refresh statistics",
+        error: errorMessage,
       }));
     }
+  };
+
+  useEffect(() => {
+    fetchStatistics();
+  }, []);
+
+  const refreshStatistics = async (): Promise<void> => {
+    await fetchStatistics();
   };
 
   const contextValue: StatisticsContextType = {
@@ -200,6 +220,16 @@ export function StatisticsProvider({ children }: { children: ReactNode }) {
       {children}
     </StatisticsContext.Provider>
   );
+}
+
+// Helper function to convert month number to name
+function getMonthName(monthNum: string): string {
+  const months = [
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+  ];
+  const index = parseInt(monthNum) - 1;
+  return months[index] || monthNum;
 }
 
 export function useStatistics(): StatisticsContextType {
