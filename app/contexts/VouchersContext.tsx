@@ -2,8 +2,8 @@
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
 
-// Backend API URL
-const BACKEND_API_URL = "http://localhost:5000/voucher";
+// Use Next.js API route instead of direct backend call to avoid CORS
+const BACKEND_API_URL = "/api/vouchers";
 
 export interface Voucher {
   id: string;
@@ -145,7 +145,7 @@ export function VouchersProvider({ children }: { children: ReactNode }) {
       let errorMessage = "Failed to fetch vouchers";
       
       if (err instanceof TypeError && err.message.includes("fetch")) {
-        errorMessage = "Backend server tidak dapat diakses. Pastikan server backend running di http://localhost:5000";
+        errorMessage = "Backend server tidak dapat diakses. Pastikan server backend running";
       } else if (err instanceof Error) {
         errorMessage = err.message;
       }

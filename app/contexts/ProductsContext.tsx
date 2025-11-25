@@ -2,7 +2,8 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
-const BACKEND_URL = 'http://localhost:5000/products';
+// Use Next.js API route instead of direct backend call to avoid CORS
+const BACKEND_URL = '/api/products';
 
 export interface Product {
   id: number;
@@ -156,7 +157,7 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
       setState(prev => ({ ...prev, loading: true, error: null }));
 
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // Increased to 10 seconds
 
       const response = await fetch(BACKEND_URL, {
         signal: controller.signal,
@@ -188,9 +189,11 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
       
       let errorMessage = 'Tidak dapat terhubung ke backend. ';
       if (error.name === 'AbortError') {
-        errorMessage += 'Request timeout.';
-      } else if (error.message?.includes('Failed to fetch')) {
-        errorMessage += 'Pastikan backend berjalan di http://localhost:5000';
+        errorMessage = '⏱️ Backend tidak merespons dalam 10 detik. Pastikan backend server berjalan';
+      } else if (error.message?.includes('Failed to fetch') || error.message?.includes('fetch')) {
+        errorMessage = '🔌 Backend server tidak dapat diakses. Pastikan backend berjalan';
+      } else if (error.message?.includes('ECONNREFUSED')) {
+        errorMessage = '❌ Koneksi ditolak. Backend server tidak berjalan';
       } else {
         errorMessage += error.message;
       }
