@@ -23,32 +23,36 @@ export function StatisticsSummaryCards({
       value: `Rp ${(totalRevenue / 1000000).toFixed(1)}M`,
       subtitle: "All time sales",
       icon: DollarSign,
-      color: "#8b6f47",
-      bgColor: "#f9f7f4",
+      color: "#10B981",
+      bgColor: "#ECFDF5",
+      borderColor: "#6EE7B7",
     },
     {
       title: "Total Sales",
       value: totalSales.toString(),
       subtitle: "Items sold",
       icon: ShoppingCart,
-      color: "#9B6D49",
-      bgColor: "#f9f7f4",
+      color: "#3B82F6",
+      bgColor: "#EFF6FF",
+      borderColor: "#93C5FD",
     },
     {
       title: "Avg Monthly Revenue",
       value: `Rp ${(averageMonthlyRevenue / 1000000).toFixed(1)}M`,
       subtitle: `Highest: ${highestMonth.month}`,
       icon: TrendingUp,
-      color: "#5d4037",
-      bgColor: "#f9f7f4",
+      color: "#F59E0B",
+      bgColor: "#FFF7ED",
+      borderColor: "#FCD34D",
     },
     {
       title: "Repeat Customers",
       value: customerStats.repeatCustomers.toString(),
       subtitle: `${((customerStats.repeatCustomers / customerStats.totalCustomers) * 100).toFixed(0)}% of total`,
       icon: Users,
-      color: "#7b5235",
-      bgColor: "#f9f7f4",
+      color: "#8B5CF6",
+      bgColor: "#F5F3FF",
+      borderColor: "#C4B5FD",
     },
   ]
 
@@ -57,21 +61,21 @@ export function StatisticsSummaryCards({
       {summaryCards.map((card, index) => {
         const Icon = card.icon
         return (
-          <div key={index} className="bg-white rounded-lg shadow-sm border p-6" style={{ borderColor: "#e0d5c7" }}>
+          <div key={index} className="bg-white rounded-xl shadow-sm border-2 p-6 hover:shadow-lg transition-all duration-300" style={{ borderColor: card.borderColor }}>
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <p className="text-sm font-medium font-admin-body" style={{ color: "#8b6f47" }}>
+                <p className="text-sm font-medium font-admin-body text-gray-600">
                   {card.title}
                 </p>
-                <p className="text-2xl font-bold mt-2 font-admin-heading" style={{ color: "#5d4037" }}>
+                <p className="text-2xl font-bold mt-2 font-admin-heading text-gray-900">
                   {card.value}
                 </p>
-                <p className="text-xs mt-2 font-admin-body" style={{ color: "#999" }}>
+                <p className="text-xs mt-2 font-admin-body text-gray-500">
                   {card.subtitle}
                 </p>
               </div>
-              <div className="p-3 rounded-lg" style={{ backgroundColor: card.bgColor }}>
-                <Icon className="w-6 h-6" style={{ color: card.color }} />
+              <div className="p-4 rounded-lg" style={{ backgroundColor: card.bgColor }}>
+                <Icon className="w-7 h-7" style={{ color: card.color }} />
               </div>
             </div>
           </div>

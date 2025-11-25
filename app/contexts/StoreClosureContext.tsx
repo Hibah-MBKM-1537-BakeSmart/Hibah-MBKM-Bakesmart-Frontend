@@ -82,7 +82,7 @@ export function StoreClosureProvider({
       return !(currentTime >= 8 * 60 && currentTime < 22 * 60);
     } else if (day >= 1 && day <= 5) {
       // Senin-Jumat: 07:00-21:00
-      return !(currentTime >= 7 * 60 && currentTime < 21 * 60);
+      return !(currentTime >= 7 * 60 && currentTime < 24 * 60);
     }
 
     return true;

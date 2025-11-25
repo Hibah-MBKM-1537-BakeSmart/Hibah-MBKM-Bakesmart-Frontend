@@ -20,7 +20,6 @@ import { AddProductModal } from '@/components/adminPage/productsPage/AddProductM
 import { CategoryManager } from '@/components/adminPage/productsPage/CategoryManager';
 import { ProductDetailModal } from '@/components/adminPage/productsPage/ProductDetailModal';
 import { EditProductModal } from '@/components/adminPage/productsPage/EditProductModal';
-import { ApiStatusBanner } from '@/components/adminPage/productsPage/ApiStatusBanner';
 import { useToast } from '@/components/adminPage/Toast';
 import { useCategories } from '@/app/contexts/CategoriesContext';
 import { useProducts, Product } from '@/app/contexts/ProductsContext';
@@ -30,7 +29,6 @@ import { useProducts, Product } from '@/app/contexts/ProductsContext';
 export default function ProductsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [selectedStatus, setSelectedStatus] = useState<'all' | 'active' | 'inactive'>('all');
   const [sortField, setSortField] = useState<'nama' | 'harga' | 'stok' | 'sales'>('nama');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [priceRange, setPriceRange] = useState<{ min: number; max: number }>({ min: 0, max: 1000000 });
@@ -42,6 +40,7 @@ export default function ProductsPage() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [editingStockId, setEditingStockId] = useState<number | null>(null);
   const [tempStock, setTempStock] = useState<string>(''); // Changed to string to preserve user input
+  const [pendingStockChanges, setPendingStockChanges] = useState<Record<number, number>>({}); // Track pending changes
   const { addToast, ToastContainer } = useToast();
   const { categories } = useCategories();
   const { products, addProduct, deleteProduct, updateProduct } = useProducts();
@@ -62,16 +61,13 @@ export default function ProductsPage() {
       const productCategory = product.jenis?.[0]?.nama || '';
       const matchesCategory = selectedCategory === 'all' || productCategory === selectedCategory;
       
-      // Status filter
-      const matchesStatus = selectedStatus === 'all' || product.status === selectedStatus;
-      
       // Price range filter
       const matchesPrice = product.harga >= priceRange.min && product.harga <= priceRange.max;
       
       // Stock range filter
       const matchesStock = (product.stok ?? 0) >= stockRange.min && (product.stok ?? 0) <= stockRange.max;
       
-      return matchesSearch && matchesCategory && matchesStatus && matchesPrice && matchesStock;
+      return matchesSearch && matchesCategory && matchesPrice && matchesStock;
     })
     .sort((a, b) => {
       let comparison = 0;
@@ -124,12 +120,11 @@ export default function ProductsPage() {
     }).format(price);
   };
 
-  const handleAddProduct = async (newProductData: Omit<Product, 'id' | 'created_at' | 'updated_at' | 'sales' | 'rating'>) => {
+  const handleAddProduct = async (newProductData: Partial<Product>) => {
     try {
       await addProduct(newProductData);
       setShowAddModal(false);
       
-      // Show success notification
       addToast({
         type: 'success',
         title: 'Product added successfully!',
@@ -171,7 +166,7 @@ export default function ProductsPage() {
     }
   };
 
-  const handleUpdateProduct = async (productData: Partial<Omit<Product, 'id' | 'created_at' | 'updated_at'>>) => {
+  const handleUpdateProduct = async (productData: Partial<Product>) => {
     if (!selectedProduct) return;
     
     try {
@@ -179,7 +174,6 @@ export default function ProductsPage() {
       setShowEditModal(false);
       setSelectedProduct(null);
       
-      // Show success notification
       addToast({
         type: 'success',
         title: 'Product updated successfully!',
@@ -202,35 +196,70 @@ export default function ProductsPage() {
     }
   };
 
-  const handleStockIncrement = async (productId: number) => {
+  const handleStockIncrement = (productId: number) => {
     const product = products.find(p => p.id === productId);
     if (product && typeof product.stok === 'number') {
-      try {
-        const newStok = product.stok + 1;
-        console.log('Incrementing stock for product:', productId, 'from', product.stok, 'to', newStok);
-        await updateProduct(productId, { stok: newStok });
-        // Only show toast on success - error will be handled by updateProduct
-      } catch (error) {
-        console.error('Error incrementing stock:', error);
-        // Error toast will be shown by updateProduct, but we can add additional context
-        // No need to show duplicate toast here
+      const currentPending = pendingStockChanges[productId] ?? product.stok;
+      const newStok = currentPending + 1;
+      console.log('Incrementing stock for product:', productId, 'from', currentPending, 'to', newStok);
+      setPendingStockChanges(prev => ({
+        ...prev,
+        [productId]: newStok
+      }));
+    }
+  };
+
+  const handleStockDecrement = (productId: number) => {
+    const product = products.find(p => p.id === productId);
+    if (product && typeof product.stok === 'number') {
+      const currentPending = pendingStockChanges[productId] ?? product.stok;
+      if (currentPending > 0) {
+        const newStok = currentPending - 1;
+        console.log('Decrementing stock for product:', productId, 'from', currentPending, 'to', newStok);
+        setPendingStockChanges(prev => ({
+          ...prev,
+          [productId]: newStok
+        }));
       }
     }
   };
 
-  const handleStockDecrement = async (productId: number) => {
-    const product = products.find(p => p.id === productId);
-    if (product && typeof product.stok === 'number' && product.stok > 0) {
-      try {
-        const newStok = product.stok - 1;
-        console.log('Decrementing stock for product:', productId, 'from', product.stok, 'to', newStok);
-        await updateProduct(productId, { stok: newStok });
-        // Only show toast on success - error will be handled by updateProduct
-      } catch (error) {
-        console.error('Error decrementing stock:', error);
-        // Error toast will be shown by updateProduct
-      }
+  const confirmStockChange = async (productId: number) => {
+    const newStok = pendingStockChanges[productId];
+    if (newStok === undefined) return;
+
+    try {
+      console.log('Confirming stock change for product:', productId, 'New stock:', newStok);
+      await updateProduct(productId, { stok: newStok });
+      
+      // Remove from pending changes
+      setPendingStockChanges(prev => {
+        const updated = { ...prev };
+        delete updated[productId];
+        return updated;
+      });
+
+      addToast({
+        type: 'success',
+        title: 'Stock updated!',
+        message: `Stock has been updated to ${newStok}.`,
+      });
+    } catch (error) {
+      console.error('Error confirming stock change:', error);
+      addToast({
+        type: 'error',
+        title: 'Failed to update stock',
+        message: error instanceof Error ? error.message : 'An error occurred',
+      });
     }
+  };
+
+  const cancelStockChange = (productId: number) => {
+    setPendingStockChanges(prev => {
+      const updated = { ...prev };
+      delete updated[productId];
+      return updated;
+    });
   };
 
   const startEditingStock = (productId: number, currentStock: number) => {
@@ -275,9 +304,6 @@ export default function ProductsPage() {
   return (
     <div className="space-y-6">
       <ToastContainer />
-      
-      {/* API Status Banner */}
-      <ApiStatusBanner />
       
       {/* Page Header */}
       <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-4">
@@ -338,17 +364,6 @@ export default function ProductsPage() {
                   ))}
                 </select>
               </div>
-
-              {/* Status Filter */}
-              <select
-                value={selectedStatus}
-                onChange={(e) => setSelectedStatus(e.target.value as 'all' | 'active' | 'inactive')}
-                className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500 text-sm w-full sm:w-auto"
-              >
-                <option value="all">All Status</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </select>
             </div>
 
             <div className="text-sm text-gray-600 text-center lg:text-right">
@@ -409,7 +424,6 @@ export default function ProductsPage() {
               onClick={() => {
                 setSearchTerm('');
                 setSelectedCategory('all');
-                setSelectedStatus('all');
                 setPriceRange({ min: 0, max: 1000000 });
                 setStockRange({ min: 0, max: 1000 });
                 setSortField('nama');
@@ -511,9 +525,6 @@ export default function ProductsPage() {
                     {getSortIcon('sales')}
                   </button>
                 </th>
-                <th className="px-3 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                  Status
-                </th>
                 <th className="px-3 lg:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
                   Actions
                 </th>
@@ -607,6 +618,41 @@ export default function ProductsPage() {
                           <span className="text-base font-bold">✕</span>
                         </button>
                       </div>
+                    ) : pendingStockChanges[product.id] !== undefined ? (
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => handleStockDecrement(product.id)}
+                          className="p-1.5 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent border border-gray-200 hover:border-red-300"
+                          disabled={pendingStockChanges[product.id] === 0}
+                          title="Decrease stock"
+                        >
+                          <Minus className="w-4 h-4 text-gray-600 hover:text-red-600" />
+                        </button>
+                        <div className="min-w-[45px] px-3 py-1.5 rounded-lg text-sm font-semibold bg-orange-100 text-orange-800 border-2 border-orange-400 shadow-md animate-pulse">
+                          {pendingStockChanges[product.id]}
+                        </div>
+                        <button
+                          onClick={() => handleStockIncrement(product.id)}
+                          className="p-1.5 hover:bg-green-50 rounded-lg transition-colors border border-gray-200 hover:border-green-300"
+                          title="Increase stock"
+                        >
+                          <Plus className="w-4 h-4 text-gray-600 hover:text-green-600" />
+                        </button>
+                        <button
+                          onClick={() => confirmStockChange(product.id)}
+                          className="ml-2 px-3 py-1.5 bg-green-500 text-white text-xs font-semibold rounded-lg hover:bg-green-600 transition-colors shadow-sm"
+                          title="Confirm and save to database"
+                        >
+                          ✓ Confirm
+                        </button>
+                        <button
+                          onClick={() => cancelStockChange(product.id)}
+                          className="px-3 py-1.5 bg-red-500 text-white text-xs font-semibold rounded-lg hover:bg-red-600 transition-colors shadow-sm"
+                          title="Cancel changes"
+                        >
+                          ✕ Cancel
+                        </button>
+                      </div>
                     ) : (
                       <div className="flex items-center gap-1.5">
                         <button
@@ -642,15 +688,6 @@ export default function ProductsPage() {
                   </td>
                   <td className="px-3 lg:px-6 py-4 whitespace-nowrap text-xs lg:text-sm text-gray-900">
                     {product.sales ?? 0}
-                  </td>
-                  <td className="px-3 lg:px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex items-center px-2 lg:px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      product.status === 'active' 
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-red-100 text-red-800'
-                    }`}>
-                      {product.status || 'inactive'}
-                    </span>
                   </td>
                   <td className="px-3 lg:px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex items-center justify-end gap-2">

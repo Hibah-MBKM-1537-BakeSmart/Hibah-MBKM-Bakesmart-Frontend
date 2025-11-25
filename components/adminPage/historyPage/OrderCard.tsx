@@ -39,6 +39,12 @@ export function OrderCard({ order }: OrderCardProps) {
         return { bg: '#d4edda', text: '#155724', border: '#c3e6cb' };
       case 'cancelled':
         return { bg: '#f8d7da', text: '#721c24', border: '#f5c6cb' };
+      case 'paid':
+        return { bg: '#d4edda', text: '#155724', border: '#c3e6cb' };
+      case 'processing':
+        return { bg: '#fff3cd', text: '#856404', border: '#ffeaa7' };
+      case 'verifying':
+        return { bg: '#d1ecf1', text: '#0c5460', border: '#bee5eb' };
       default:
         return { bg: '#e2e3e5', text: '#383d41', border: '#d1ecf1' };
     }
@@ -57,6 +63,9 @@ export function OrderCard({ order }: OrderCardProps) {
     switch (status) {
       case 'completed': return 'Selesai';
       case 'cancelled': return 'Dibatalkan';
+      case 'paid': return 'Dibayar';
+      case 'processing': return 'Diproses';
+      case 'verifying': return 'Verifikasi';
       default: return status;
     }
   };
@@ -143,15 +152,21 @@ export function OrderCard({ order }: OrderCardProps) {
         </div>
       </div>
 
-      {/* Customer Info */}
+      {/* Customer Info - Removed since backend doesn't include user info */}
       <div className="p-3 bg-opacity-50" style={{ backgroundColor: '#f9f7f4' }}>
-        <p className="font-semibold text-sm font-admin-heading truncate" style={{ color: '#5d4037' }}>
-          {order.user?.nama || 'Unknown Customer'}
+        <p className="font-semibold text-sm font-admin-heading" style={{ color: '#5d4037' }}>
+          Informasi Pesanan
         </p>
         <div className="flex items-center gap-1 text-xs font-admin-body mt-1" style={{ color: '#8b6f47' }}>
-          <Phone className="w-3 h-3" />
-          <span className="truncate">{order.user?.no_hp || 'No Phone'}</span>
+          <CreditCard className="w-3 h-3" />
+          <span>{order.provider || 'N/A'}</span>
         </div>
+        {order.courier_name && (
+          <div className="flex items-center gap-1 text-xs font-admin-body mt-1" style={{ color: '#8b6f47' }}>
+            <ShoppingBag className="w-3 h-3" />
+            <span>{order.courier_name}</span>
+          </div>
+        )}
       </div>
 
       {/* Order Items */}
@@ -160,17 +175,22 @@ export function OrderCard({ order }: OrderCardProps) {
           Detail Pesanan:
         </h4>
         <div className="space-y-1 max-h-24 overflow-y-auto">
-          {order.order_products?.slice(0, 3).map((item, index) => (
+          {order.products?.slice(0, 3).map((item, index) => (
             <div key={index} className="text-xs font-admin-body" style={{ color: '#8b6f47' }}>
               <div className="flex justify-between gap-2">
-                <span className="truncate flex-1">{item.product?.nama || 'Product'}</span>
+                <span className="truncate flex-1">{item.nama_id || item.nama_en || 'Product'}</span>
                 <span className="whitespace-nowrap">{item.jumlah}x</span>
               </div>
             </div>
           ))}
-          {(order.order_products?.length || 0) > 3 && (
+          {(order.products?.length || 0) > 3 && (
             <p className="text-xs italic font-admin-body" style={{ color: '#8b6f47' }}>
-              +{(order.order_products?.length || 0) - 3} item lainnya
+              +{(order.products?.length || 0) - 3} item lainnya
+            </p>
+          )}
+          {(!order.products || order.products.length === 0) && (
+            <p className="text-xs italic font-admin-body" style={{ color: '#8b6f47' }}>
+              Tidak ada item
             </p>
           )}
         </div>
@@ -182,28 +202,23 @@ export function OrderCard({ order }: OrderCardProps) {
         <div className="text-center">
           <p className="text-xs font-admin-body mb-1" style={{ color: '#8b6f47' }}>Total</p>
           <p className="text-lg font-bold font-admin-heading" style={{ color: '#5d4037' }}>
-            Rp {order.order_products?.reduce((sum, item) => sum + (item.harga_beli * item.jumlah), 0)?.toLocaleString('id-ID') || '0'}
+            Rp {(order.total_harga || 0).toLocaleString('id-ID')}
           </p>
+          {order.shipping_cost && order.shipping_cost > 0 && (
+            <p className="text-xs font-admin-body mt-1" style={{ color: '#8b6f47' }}>
+              (+ Ongkir: Rp {order.shipping_cost.toLocaleString('id-ID')})
+            </p>
+          )}
         </div>
 
         {/* Status Badges */}
         <div className="flex flex-col gap-2">
-          {/* Payment Status */}
+          {/* Payment Method */}
           <div className="flex items-center justify-between text-xs">
             <div className="flex items-center gap-1">
               <CreditCard className="w-3 h-3" style={{ color: '#8b6f47' }} />
-              <span className="font-admin-body" style={{ color: '#8b6f47' }}>Transfer</span>
+              <span className="font-admin-body" style={{ color: '#8b6f47' }}>{order.provider || 'N/A'}</span>
             </div>
-            <span
-              className="px-2 py-0.5 text-xs font-medium rounded-full font-admin-body"
-              style={{
-                backgroundColor: paymentStatusStyle.bg,
-                color: paymentStatusStyle.text,
-                border: `1px solid ${paymentStatusStyle.border}`
-              }}
-            >
-              {getStatusText(order.status, 'payment')}
-            </span>
           </div>
           
           {/* Order Status */}
@@ -216,7 +231,7 @@ export function OrderCard({ order }: OrderCardProps) {
                 border: `1px solid ${orderStatusStyle.border}`
               }}
             >
-              {getStatusText(order.status, 'order')}
+              {getOrderStatusText(order.status)}
             </span>
           </div>
         </div>

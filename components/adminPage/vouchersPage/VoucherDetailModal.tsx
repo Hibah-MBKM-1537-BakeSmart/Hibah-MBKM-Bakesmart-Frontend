@@ -31,8 +31,14 @@ export function VoucherDetailModal({
       : `Rp ${voucher.discount.toLocaleString("id-ID")}`;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg max-w-md w-full">
+    <div 
+      className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+      onClick={onClose}
+    >
+      <div 
+        className="bg-white rounded-lg max-w-md w-full shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="flex justify-between items-center p-6 border-b border-gray-200">
           <h2 className="text-xl font-bold text-gray-900">Detail Voucher</h2>

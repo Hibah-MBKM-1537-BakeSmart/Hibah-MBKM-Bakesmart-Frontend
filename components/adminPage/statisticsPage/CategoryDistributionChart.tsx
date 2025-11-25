@@ -7,7 +7,7 @@ interface CategoryDistributionChartProps {
 }
 
 export function CategoryDistributionChart({ data }: CategoryDistributionChartProps) {
-  const COLORS = ["#8b6f47", "#9B6D49", "#7b5235", "#5d4037", "#c9a876"]
+  const COLORS = ["#F59E0B", "#EF4444", "#8B5CF6", "#3B82F6", "#10B981", "#EC4899", "#14B8A6"]
 
   return (
     <div className="bg-white rounded-lg shadow-sm border p-6" style={{ borderColor: "#e0d5c7" }}>
@@ -28,22 +28,34 @@ export function CategoryDistributionChart({ data }: CategoryDistributionChartPro
             cy="50%"
             labelLine={false}
             label={({ name, percentage }) => `${name} ${percentage}%`}
-            outerRadius={80}
+            outerRadius={90}
+            innerRadius={50}
             fill="#8884d8"
             dataKey="sales"
+            paddingAngle={3}
           >
             {data.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+              <Cell 
+                key={`cell-${index}`} 
+                fill={COLORS[index % COLORS.length]} 
+                stroke="#fff"
+                strokeWidth={2}
+              />
             ))}
           </Pie>
           <Tooltip
             contentStyle={{
-              backgroundColor: "#f9f7f4",
-              border: "1px solid #e0d5c7",
-              borderRadius: "8px",
+              backgroundColor: "#ffffff",
+              border: "2px solid #E5E7EB",
+              borderRadius: "12px",
+              boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
             }}
           />
-          <Legend />
+          <Legend 
+            verticalAlign="bottom" 
+            height={36}
+            iconType="circle"
+          />
         </PieChart>
       </ResponsiveContainer>
 

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Search,
   Filter,
@@ -14,7 +14,9 @@ import {
   Phone,
   Calendar,
   UserCheck,
-  UserX
+  UserX,
+  Loader2,
+  RefreshCw
 } from 'lucide-react';
 import { AddUserModal } from '@/components/adminPage/users/AddUserModal';
 import { ViewUserModal } from '@/components/adminPage/users/ViewUserModal';
@@ -22,116 +24,45 @@ import { EditUserModal } from '@/components/adminPage/users/EditUserModal';
 import { ToastNotification, useToast } from '@/components/adminPage/users/Toast';
 import { ConfirmDialog } from '@/components/adminPage/users/ConfirmDialog';
 
-interface UserData {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  role: 'customer' | 'admin' | 'super_admin';
-  status: 'active' | 'inactive' | 'suspended';
-  avatar?: string;
-  joinDate: Date;
-  lastLogin?: Date;
-  totalOrders: number;
-  totalSpent: number;
+// Backend admin structure (from users table joined with roles)
+interface AdminData {
+  id: number;
+  nama: string;
+  no_hp: string;
+  role: string; // role name from roles table
 }
 
-const mockUsers: UserData[] = [
-  {
-    id: '1',
-    name: 'John Doe',
-    email: 'john@example.com',
-    phone: '+62 812-3456-7890',
-    role: 'customer',
-    status: 'active',
-    joinDate: new Date('2023-06-15'),
-    lastLogin: new Date('2024-01-15T10:30:00'),
-    totalOrders: 12,
-    totalSpent: 1250000
-  },
-  {
-    id: '2',
-    name: 'Jane Smith',
-    email: 'jane@example.com',
-    phone: '+62 813-4567-8901',
-    role: 'customer',
-    status: 'active',
-    joinDate: new Date('2023-08-22'),
-    lastLogin: new Date('2024-01-14T15:45:00'),
-    totalOrders: 8,
-    totalSpent: 850000
-  },
-  {
-    id: '3',
-    name: 'Admin BakeSmart',
-    email: 'admin@bakesmart.com',
-    phone: '+62 814-5678-9012',
-    role: 'admin',
-    status: 'active',
-    joinDate: new Date('2023-01-01'),
-    lastLogin: new Date('2024-01-15T12:00:00'),
-    totalOrders: 0,
-    totalSpent: 0
-  },
-  {
-    id: '4',
-    name: 'Mike Johnson',
-    email: 'mike@example.com',
-    phone: '+62 815-6789-0123',
-    role: 'customer',
-    status: 'inactive',
-    joinDate: new Date('2023-12-10'),
-    lastLogin: new Date('2023-12-25T09:15:00'),
-    totalOrders: 3,
-    totalSpent: 450000
-  },
-  {
-    id: '5',
-    name: 'Sarah Wilson',
-    email: 'sarah@example.com',
-    phone: '+62 816-7890-1234',
-    role: 'customer',
-    status: 'suspended',
-    joinDate: new Date('2023-09-05'),
-    lastLogin: new Date('2024-01-10T14:20:00'),
-    totalOrders: 15,
-    totalSpent: 1800000
-  },
-  {
-    id: '6',
-    name: 'Super Admin',
-    email: 'superadmin@bakesmart.com',
-    phone: '+62 817-8901-2345',
-    role: 'super_admin',
-    status: 'active',
-    joinDate: new Date('2023-01-01'),
-    lastLogin: new Date('2024-01-15T11:30:00'),
-    totalOrders: 0,
-    totalSpent: 0
-  }
-];
+// Backend role structure
+interface Role {
+  id: number;
+  name: string;
+}
 
-const roleColors = {
-  customer: 'bg-blue-100 text-blue-800',
-  admin: 'bg-orange-100 text-orange-800',
-  super_admin: 'bg-purple-100 text-purple-800'
-};
-
-const statusColors = {
-  active: 'bg-green-100 text-green-800',
-  inactive: 'bg-gray-100 text-gray-800',
-  suspended: 'bg-red-100 text-red-800'
+// Dynamic role colors generator
+const getRoleColor = (roleName: string): string => {
+  const colors: Record<string, string> = {
+    owner: 'bg-purple-100 text-purple-800',
+    baker: 'bg-orange-100 text-orange-800',
+    cashier: 'bg-blue-100 text-blue-800',
+    packager: 'bg-green-100 text-green-800',
+    admin: 'bg-orange-100 text-orange-800',
+    kasir: 'bg-blue-100 text-blue-800',
+    produksi: 'bg-green-100 text-green-800',
+    super_admin: 'bg-purple-100 text-purple-800',
+  };
+  return colors[roleName.toLowerCase()] || 'bg-gray-100 text-gray-800';
 };
 
 export default function UsersPage() {
-  const [users, setUsers] = useState<UserData[]>(mockUsers);
+  const [admins, setAdmins] = useState<AdminData[]>([]);
+  const [roles, setRoles] = useState<Role[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRole, setSelectedRole] = useState('all');
-  const [selectedStatus, setSelectedStatus] = useState('all');
+  const [isLoading, setIsLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<UserData | null>(null);
+  const [selectedAdmin, setSelectedAdmin] = useState<AdminData | null>(null);
   
   // Toast and confirm dialog state
   const { toasts, showSuccess, showError, showWarning, removeToast } = useToast();
@@ -149,26 +80,103 @@ export default function UsersPage() {
     onConfirm: () => {},
   });
 
-  const roleOptions = ['all', 'customer', 'admin', 'super_admin'];
-  const statusOptions = ['all', 'active', 'inactive', 'suspended'];
+  // Fetch admins from backend
+  useEffect(() => {
+    fetchAdmins();
+    fetchRoles();
+  }, []);
 
-  const filteredUsers = users.filter(user => {
-    const matchesSearch = 
-      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.phone.includes(searchTerm);
-    const matchesRole = selectedRole === 'all' || user.role === selectedRole;
-    const matchesStatus = selectedStatus === 'all' || user.status === selectedStatus;
-    return matchesSearch && matchesRole && matchesStatus;
-  });
+  const fetchRoles = async () => {
+    try {
+      const response = await fetch('/api/roles', {
+        method: 'GET',
+        cache: 'no-store',
+      });
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0
-    }).format(price);
+      if (!response.ok) {
+        console.warn('Failed to fetch roles, using fallback');
+        // Use fallback roles for development
+        setRoles([
+          { id: 1, name: 'owner' },
+          { id: 2, name: 'baker' },
+          { id: 3, name: 'cashier' },
+          { id: 4, name: 'packager' },
+        ]);
+        return;
+      }
+
+      const result = await response.json();
+      
+      if (result.success && result.data && result.data.length > 0) {
+        setRoles(result.data);
+      } else {
+        console.warn('No roles data returned, using fallback');
+        // Use fallback roles
+        setRoles([
+          { id: 1, name: 'owner' },
+          { id: 2, name: 'baker' },
+          { id: 3, name: 'cashier' },
+          { id: 4, name: 'packager' },
+        ]);
+      }
+    } catch (error) {
+      console.error('Error fetching roles:', error);
+      // Use fallback roles on error
+      setRoles([
+        { id: 1, name: 'owner' },
+        { id: 2, name: 'baker' },
+        { id: 3, name: 'cashier' },
+        { id: 4, name: 'packager' },
+      ]);
+    }
   };
+
+  const fetchAdmins = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch('/api/admins', {
+        method: 'GET',
+        cache: 'no-store',
+      });
+
+      if (!response.ok) {
+        console.warn('Failed to fetch admins, showing empty state');
+        setAdmins([]);
+        setIsLoading(false);
+        return;
+      }
+
+      const result = await response.json();
+      
+      if (result.success && result.data) {
+        setAdmins(result.data);
+      } else {
+        console.warn('Invalid response format:', result);
+        setAdmins([]);
+      }
+    } catch (error) {
+      console.error('Error fetching admins:', error);
+      setAdmins([]);
+      showWarning(
+        'Tidak dapat memuat data admin', 
+        'Pastikan backend server berjalan dan endpoint /admins tersedia'
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Get unique roles from backend roles data
+  const roleOptions = ['all', ...roles.map(r => r.name)];
+
+  const filteredAdmins = admins.filter(admin => {
+    const matchesSearch = 
+      admin.nama.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      admin.no_hp.includes(searchTerm) ||
+      admin.role.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesRole = selectedRole === 'all' || admin.role === selectedRole;
+    return matchesSearch && matchesRole;
+  });
 
   const formatDate = (date: Date) => {
     return date.toLocaleDateString('id-ID', {
@@ -178,154 +186,110 @@ export default function UsersPage() {
     });
   };
 
-  const updateUserStatus = (userId: string, newStatus: UserData['status']) => {
-    const user = users.find(u => u.id === userId);
-    if (!user) return;
+  const handleUpdateRole = async (adminId: number, newRoleId: number) => {
+    try {
+      const response = await fetch(`/api/admins/${adminId}/role`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ role_id: newRoleId }),
+      });
 
-    // Super admin tidak boleh disuspend
-    if (user.role === 'super_admin' && newStatus === 'suspended') {
-      showError(
-        'Tidak dapat menangguhkan Super Admin!',
-        'Super Admin memiliki privilege tertinggi dan tidak dapat ditangguhkan.'
-      );
-      return;
-    }
+      if (!response.ok) {
+        throw new Error('Failed to update role');
+      }
 
-    const doUpdateStatus = () => {
-      setUsers(users.map(u => 
-        u.id === userId ? { ...u, status: newStatus } : u
-      ));
-
-      // Success message
-      const statusMessages = {
-        active: 'diaktifkan',
-        suspended: 'ditangguhkan', 
-        inactive: 'dinonaktifkan'
-      };
+      const result = await response.json();
       
-      showSuccess(
-        `Status berhasil diperbarui!`,
-        `Akun ${user.name} berhasil ${statusMessages[newStatus]}.`
-      );
-    };
-
-    // Konfirmasi untuk suspend akun
-    if (newStatus === 'suspended') {
-      setConfirmDialog({
-        isOpen: true,
-        title: 'Tangguhkan Akun',
-        message: `Apakah Anda yakin ingin menangguhkan akun ${user.name}?\n\nUser tidak akan bisa mengakses sistem setelah akun ditangguhkan.`,
-        onConfirm: doUpdateStatus,
-        type: 'danger',
-        confirmText: 'Tangguhkan'
-      });
-      return;
+      if (result.success) {
+        showSuccess('Role berhasil diperbarui!', 'Perubahan role telah disimpan.');
+        fetchAdmins(); // Refresh data
+      } else {
+        showError('Gagal memperbarui role', result.message || 'Terjadi kesalahan');
+      }
+    } catch (error) {
+      console.error('Error updating role:', error);
+      showError('Gagal memperbarui role', 'Tidak dapat menyimpan perubahan');
     }
-
-    // Konfirmasi untuk mengaktifkan kembali akun yang ditangguhkan
-    if (user.status === 'suspended' && newStatus === 'active') {
-      setConfirmDialog({
-        isOpen: true,
-        title: 'Aktifkan Akun',
-        message: `Apakah Anda yakin ingin mengaktifkan kembali akun ${user.name}?`,
-        onConfirm: doUpdateStatus,
-        type: 'info',
-        confirmText: 'Aktifkan'
-      });
-      return;
-    }
-
-    // Untuk perubahan status lainnya, langsung update
-    doUpdateStatus();
   };
 
   const handleAddUser = (userData: {
     name: string;
     email: string;
     phone: string;
-    role: 'customer' | 'admin' | 'super_admin';
+    role: string;
     password: string;
   }) => {
-    const newUser: UserData = {
-      id: (users.length + 1).toString(),
-      name: userData.name,
-      email: userData.email,
-      phone: userData.phone,
-      role: userData.role,
-      status: 'active',
-      joinDate: new Date(),
-      totalOrders: 0,
-      totalSpent: 0
-    };
-    
-    setUsers([...users, newUser]);
-    showSuccess('User berhasil ditambahkan!', `${userData.name} telah ditambahkan ke sistem.`);
+    // TODO: Implement add user API call
+    showWarning('Fitur belum tersedia', 'Penambahan user akan diimplementasikan nanti');
   };
 
-  const handleViewUser = (user: UserData) => {
-    setSelectedUser(user);
+  const handleViewUser = (admin: AdminData) => {
+    setSelectedAdmin(admin);
     setShowViewModal(true);
   };
 
-  const handleEditUser = (user: UserData) => {
-    setSelectedUser(user);
+  const handleEditUser = (admin: AdminData) => {
+    setSelectedAdmin(admin);
     setShowEditModal(true);
   };
 
-  const handleUpdateUser = (userId: string, userData: {
-    name: string;
-    email: string;
-    phone: string;
-    role: 'customer' | 'admin' | 'super_admin';
-    status: 'active' | 'inactive' | 'suspended';
-    password?: string;
-  }) => {
-    setUsers(users.map(user => 
-      user.id === userId ? { ...user, ...userData } : user
-    ));
-    showSuccess('Data user berhasil diperbarui!', `Perubahan pada akun ${userData.name} telah disimpan.`);
+  const handleUpdateUser = (userId: number, userData: any) => {
+    // TODO: Implement update user API call
+    showWarning('Fitur belum tersedia', 'Edit user akan diimplementasikan nanti');
   };
 
-  const handleDeleteUser = (userId: string, userName: string) => {
-    const user = users.find(u => u.id === userId);
-    
-    // Super admin tidak boleh dihapus
-    if (user?.role === 'super_admin') {
-      showError(
-        'Tidak dapat menghapus Super Admin!',
-        'Super Admin memiliki privilege tertinggi dan tidak dapat dihapus dari sistem.'
-      );
-      return;
-    }
-
+  const handleDeleteUser = (userId: number, userName: string) => {
     setConfirmDialog({
       isOpen: true,
       title: 'Hapus User',
-      message: `Apakah Anda yakin ingin menghapus user ${userName}?\n\nTindakan ini tidak dapat dibatalkan dan semua data user akan hilang permanen.`,
+      message: `Apakah Anda yakin ingin menghapus user ${userName}?\n\nTindakan ini tidak dapat dibatalkan.`,
       onConfirm: () => {
-        setUsers(users.filter(user => user.id !== userId));
-        showSuccess('User berhasil dihapus!', `${userName} telah dihapus dari sistem.`);
+        // TODO: Implement delete user API call
+        showWarning('Fitur belum tersedia', 'Penghapusan user akan diimplementasikan nanti');
       },
       type: 'danger',
       confirmText: 'Hapus'
     });
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4 text-orange-500" />
+          <p className="text-lg text-gray-600">Memuat data admin...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Users</h1>
-          <p className="text-gray-600">Manage customer accounts and admin users</p>
+          <h1 className="text-2xl font-bold text-gray-900">Admin Users</h1>
+          <p className="text-gray-600">Kelola akun admin dan staff yang bekerja</p>
         </div>
-        <button 
-          onClick={() => setShowAddModal(true)}
-          className="flex items-center space-x-2 bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Add User</span>
-        </button>
+        <div className="flex gap-2">
+          <button 
+            onClick={fetchAdmins}
+            className="flex items-center space-x-2 bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors"
+            title="Refresh Data"
+          >
+            <RefreshCw className="w-4 h-4" />
+            <span>Refresh</span>
+          </button>
+          <button 
+            onClick={() => setShowAddModal(true)}
+            className="flex items-center space-x-2 bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Tambah Admin</span>
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -339,7 +303,7 @@ export default function UsersPage() {
               </div>
               <input
                 type="text"
-                placeholder="Search users..."
+                placeholder="Cari nama, no HP, atau role..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-orange-500 focus:border-orange-500 sm:text-sm"
@@ -356,28 +320,15 @@ export default function UsersPage() {
               >
                 {roleOptions.map(role => (
                   <option key={role} value={role}>
-                    {role === 'all' ? 'All Roles' : role.replace('_', ' ').toUpperCase()}
+                    {role === 'all' ? 'Semua Role' : role.toUpperCase()}
                   </option>
                 ))}
               </select>
             </div>
-
-            {/* Status Filter */}
-            <select
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500"
-            >
-              {statusOptions.map(status => (
-                <option key={status} value={status}>
-                  {status === 'all' ? 'All Status' : status.charAt(0).toUpperCase() + status.slice(1)}
-                </option>
-              ))}
-            </select>
           </div>
 
           <div className="text-sm text-gray-600">
-            {filteredUsers.length} of {users.length} users
+            {filteredAdmins.length} dari {admins.length} admin
           </div>
         </div>
       </div>
@@ -389,25 +340,13 @@ export default function UsersPage() {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  User
+                  Admin
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Contact
+                  No HP
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Role
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Orders
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Total Spent
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Join Date
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
@@ -415,126 +354,60 @@ export default function UsersPage() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredUsers.map((user) => (
-                <tr key={user.id} className="hover:bg-gray-50">
+              {filteredAdmins.map((admin) => (
+                <tr key={admin.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center mr-4">
-                        {user.avatar ? (
-                          <img
-                            src={user.avatar}
-                            alt={user.name}
-                            className="w-10 h-10 rounded-full"
-                          />
-                        ) : (
-                          <span className="text-orange-600 font-medium">
-                            {user.name.charAt(0)}
-                          </span>
-                        )}
+                        <span className="text-orange-600 font-medium">
+                          {admin.nama.charAt(0).toUpperCase()}
+                        </span>
                       </div>
                       <div>
                         <div className="text-sm font-medium text-gray-900">
-                          {user.name}
+                          {admin.nama}
                         </div>
-                        {user.lastLogin && (
-                          <div className="text-sm text-gray-500">
-                            Last login: {formatDate(user.lastLogin)}
-                          </div>
-                        )}
+                        <div className="text-sm text-gray-500">
+                          ID: {admin.id}
+                        </div>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">
-                      <div className="flex items-center mb-1">
-                        <Mail className="w-3 h-3 text-gray-400 mr-2" />
-                        {user.email}
-                      </div>
-                      <div className="flex items-center">
-                        <Phone className="w-3 h-3 text-gray-400 mr-2" />
-                        {user.phone}
-                      </div>
+                    <div className="flex items-center text-sm text-gray-900">
+                      <Phone className="w-3 h-3 text-gray-400 mr-2" />
+                      {admin.no_hp}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${roleColors[user.role]}`}>
-                      {user.role === 'super_admin' && <Shield className="w-3 h-3 mr-1" />}
-                      {user.role === 'admin' && <Shield className="w-3 h-3 mr-1" />}
-                      {user.role === 'customer' && <User className="w-3 h-3 mr-1" />}
-                      {user.role.replace('_', ' ').toUpperCase()}
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRoleColor(admin.role)}`}>
+                      <Shield className="w-3 h-3 mr-1" />
+                      {admin.role.toUpperCase()}
                     </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors[user.status]}`}>
-                      {user.status === 'active' && <UserCheck className="w-3 h-3 mr-1" />}
-                      {user.status === 'suspended' && <UserX className="w-3 h-3 mr-1" />}
-                      {user.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {user.totalOrders}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {formatPrice(user.totalSpent)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    <div className="flex items-center">
-                      <Calendar className="w-3 h-3 text-gray-400 mr-2" />
-                      {formatDate(user.joinDate)}
-                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex items-center justify-end space-x-2">
                       <button 
-                        onClick={() => handleViewUser(user)}
+                        onClick={() => handleViewUser(admin)}
                         className="text-gray-400 hover:text-gray-600 p-1"
                         title="Lihat Detail"
                       >
                         <Eye className="w-4 h-4" />
                       </button>
                       <button 
-                        onClick={() => handleEditUser(user)}
+                        onClick={() => handleEditUser(admin)}
                         className="text-gray-400 hover:text-orange-600 p-1"
-                        title="Edit User"
+                        title="Edit Admin"
                       >
                         <Edit className="w-4 h-4" />
                       </button>
-                      {user.role === 'super_admin' ? (
-                        /* Super Admin tidak bisa disuspend */
-                        <div className="p-1 opacity-50" title="Super Admin tidak dapat ditangguhkan">
-                          <Shield className="w-4 h-4 text-purple-600" />
-                        </div>
-                      ) : user.status === 'active' ? (
-                        <button 
-                          onClick={() => updateUserStatus(user.id, 'suspended')}
-                          className="text-gray-400 hover:text-red-600 p-1"
-                          title="Tangguhkan User"
-                        >
-                          <UserX className="w-4 h-4" />
-                        </button>
-                      ) : (
-                        <button 
-                          onClick={() => updateUserStatus(user.id, 'active')}
-                          className="text-gray-400 hover:text-green-600 p-1"
-                          title="Aktifkan User"
-                        >
-                          <UserCheck className="w-4 h-4" />
-                        </button>
-                      )}
-                      {user.role === 'super_admin' ? (
-                        /* Super Admin tidak bisa dihapus */
-                        <div className="p-1 opacity-50" title="Super Admin tidak dapat dihapus">
-                          <Shield className="w-4 h-4 text-purple-600" />
-                        </div>
-                      ) : (
-                        <button 
-                          onClick={() => handleDeleteUser(user.id, user.name)}
-                          className="text-gray-400 hover:text-red-600 p-1"
-                          title="Hapus User"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
+                      <button 
+                        onClick={() => handleDeleteUser(admin.id, admin.nama)}
+                        className="text-gray-400 hover:text-red-600 p-1"
+                        title="Hapus Admin"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -543,99 +416,101 @@ export default function UsersPage() {
           </table>
         </div>
 
-        {filteredUsers.length === 0 && (
+        {filteredAdmins.length === 0 && (
           <div className="text-center py-12">
             <User className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No users found</h3>
-            <p className="text-gray-600">Try adjusting your search or filter criteria</p>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Tidak ada admin ditemukan</h3>
+            <p className="text-gray-600">Coba ubah kriteria pencarian atau filter</p>
           </div>
         )}
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Total Users</p>
-              <p className="text-2xl font-bold text-gray-900">{users.length}</p>
+              <p className="text-sm font-medium text-gray-600">Total Admin</p>
+              <p className="text-2xl font-bold text-gray-900">{admins.length}</p>
             </div>
             <div className="bg-blue-100 p-3 rounded-lg">
-              <User className="w-6 h-6 text-blue-600" />
+              <Shield className="w-6 h-6 text-blue-600" />
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Active Users</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {users.filter(u => u.status === 'active').length}
-              </p>
+        {/* Dynamic role counts from backend roles */}
+        {roles.map(role => {
+          const roleCount = admins.filter(a => a.role === role.name).length;
+          const colorClass = getRoleColor(role.name);
+          const bgColor = colorClass.split(' ')[0].replace('bg-', '');
+          const textColor = colorClass.split(' ')[1].replace('text-', '');
+          
+          return (
+            <div key={role.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600 capitalize">{role.name}</p>
+                  <p className="text-2xl font-bold text-gray-900">{roleCount}</p>
+                </div>
+                <div className={`p-3 rounded-lg ${bgColor}`}>
+                  <Shield className={`w-6 h-6 ${textColor}`} />
+                </div>
+              </div>
             </div>
-            <div className="bg-green-100 p-3 rounded-lg">
-              <UserCheck className="w-6 h-6 text-green-600" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Customers</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {users.filter(u => u.role === 'customer').length}
-              </p>
-            </div>
-            <div className="bg-purple-100 p-3 rounded-lg">
-              <User className="w-6 h-6 text-purple-600" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Admins</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {users.filter(u => u.role === 'admin' || u.role === 'super_admin').length}
-              </p>
-            </div>
-            <div className="bg-orange-100 p-3 rounded-lg">
-              <Shield className="w-6 h-6 text-orange-600" />
-            </div>
-          </div>
-        </div>
+          );
+        })}
       </div>
 
-      {/* Add User Modal */}
-      <AddUserModal
+      {/* Add User Modal - TODO: Update for backend */}
+      {/* <AddUserModal
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
         onAddUser={handleAddUser}
-      />
+      /> */}
 
-      {/* View User Modal */}
-      <ViewUserModal
-        isOpen={showViewModal}
-        onClose={() => {
-          setShowViewModal(false);
-          setSelectedUser(null);
-        }}
-        user={selectedUser}
-      />
+      {/* View User Modal - TODO: Update for backend */}
+      {selectedAdmin && showViewModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <h2 className="text-xl font-bold mb-4">Detail Admin</h2>
+            <div className="space-y-3">
+              <div>
+                <label className="text-sm font-medium text-gray-600">Nama</label>
+                <p className="text-gray-900">{selectedAdmin.nama}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-600">No HP</label>
+                <p className="text-gray-900">{selectedAdmin.no_hp}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-600">Role</label>
+                <p className="text-gray-900">{selectedAdmin.role}</p>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                setShowViewModal(false);
+                setSelectedAdmin(null);
+              }}
+              className="mt-6 w-full bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300"
+            >
+              Tutup
+            </button>
+          </div>
+        </div>
+      )}
 
-      {/* Edit User Modal */}
-      <EditUserModal
+      {/* Edit User Modal - TODO: Update for backend */}
+      {/* <EditUserModal
         isOpen={showEditModal}
         onClose={() => {
           setShowEditModal(false);
-          setSelectedUser(null);
+          setSelectedAdmin(null);
         }}
-        user={selectedUser}
+        user={selectedAdmin}
         onUpdateUser={handleUpdateUser}
-      />
+      /> */}
 
       {/* Toast Notifications */}
       <ToastNotification toasts={toasts} onClose={removeToast} />

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { X, Download, Loader2 } from "lucide-react";
+import QRCode from "qrcode";
 
 interface QRCodeModalProps {
   isOpen: boolean;
@@ -20,29 +21,25 @@ export function QRCodeModal({ isOpen, onClose, voucher }: QRCodeModalProps) {
       setError("");
       setQrDataUrl(null);
 
-      // Panggil API Route Next.js
-      fetch("/api/qr/create", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      console.log("[QRCodeModal] Generating QR for voucher code:", voucher.code);
+
+      // Generate QR Code langsung di frontend menggunakan library qrcode
+      QRCode.toDataURL(voucher.code, {
+        width: 300,
+        margin: 2,
+        color: {
+          dark: "#000000",
+          light: "#FFFFFF",
         },
-        body: JSON.stringify({ text: voucher.code }), // Kirim kode voucher
+        errorCorrectionLevel: "M",
       })
-        .then(async (res) => {
-          if (!res.ok) throw new Error("Gagal memuat QR Code");
-          return res.json();
-        })
-        .then((result) => {
-          // Asumsi response dari backend Hapi wrapper: { data: { dataUrl: "..." } }
-          if (result.data && result.data.dataUrl) {
-            setQrDataUrl(result.data.dataUrl);
-          } else {
-            throw new Error("Format data QR tidak sesuai");
-          }
+        .then((dataUrl) => {
+          console.log("[QRCodeModal] QR Code generated successfully");
+          setQrDataUrl(dataUrl);
         })
         .catch((err) => {
-          console.error("QR Generation Error:", err);
-          setError("Gagal memuat QR Code");
+          console.error("[QRCodeModal] QR Generation Error:", err);
+          setError("Gagal membuat QR Code");
         })
         .finally(() => {
           setIsLoading(false);
@@ -64,8 +61,14 @@ export function QRCodeModal({ isOpen, onClose, voucher }: QRCodeModalProps) {
   if (!isOpen || !voucher) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg max-w-md w-full">
+    <div 
+      className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+      onClick={onClose}
+    >
+      <div 
+        className="bg-white rounded-lg max-w-md w-full shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="flex justify-between items-center p-6 border-b border-gray-200">
           <h2 className="text-xl font-bold text-gray-900">QR Code Voucher</h2>

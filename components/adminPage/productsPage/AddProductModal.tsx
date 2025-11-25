@@ -30,16 +30,16 @@ interface Product {
 interface AddProductModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAddProduct: (product: Omit<Product, 'id' | 'created_at' | 'updated_at' | 'sales' | 'rating'>) => void;
+  onAddProduct: (product: Partial<Product>) => void;
 }
 
 interface FormData {
-  nama: string;
+  nama_id: string;
+  nama_en: string;
   deskripsi: string;
   harga: string;
   stok: string;
   kategori: string;
-  status: 'active' | 'inactive';
   images: File[];
   hari_tersedia: string[];
 }
@@ -47,12 +47,12 @@ interface FormData {
 export function AddProductModal({ isOpen, onClose, onAddProduct }: AddProductModalProps) {
   const { categories: contextCategories } = useCategories();
   const [formData, setFormData] = useState<FormData>({
-    nama: '',
+    nama_id: '',
+    nama_en: '',
     deskripsi: '',
     harga: '',
     stok: '',
     kategori: '',
-    status: 'active',
     images: [],
     hari_tersedia: []
   });
@@ -118,8 +118,11 @@ export function AddProductModal({ isOpen, onClose, onAddProduct }: AddProductMod
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
 
-    if (!formData.nama.trim()) {
-      newErrors.nama = 'Nama produk harus diisi';
+    if (!formData.nama_id.trim()) {
+      newErrors.nama_id = 'Nama produk (ID) harus diisi';
+    }
+    if (!formData.nama_en.trim()) {
+      newErrors.nama_en = 'Nama produk (EN) harus diisi';
     }
     if (!formData.deskripsi.trim()) {
       newErrors.deskripsi = 'Deskripsi harus diisi';
@@ -154,11 +157,12 @@ export function AddProductModal({ isOpen, onClose, onAddProduct }: AddProductMod
       const selectedCategory = contextCategories.find(cat => cat.nama === formData.kategori);
       
       const newProduct = {
-        nama: formData.nama,
+        nama_id: formData.nama_id,
+        nama_en: formData.nama_en,
+        nama: formData.nama_id, // Keep nama for backward compatibility
         deskripsi: formData.deskripsi,
         harga: parseFloat(formData.harga),
         stok: parseInt(formData.stok),
-        status: formData.status,
         jenis: selectedCategory ? [selectedCategory] : [],
         hari_tersedia: formData.hari_tersedia,
         gambars: formData.images.map((file, index) => ({
@@ -181,12 +185,12 @@ export function AddProductModal({ isOpen, onClose, onAddProduct }: AddProductMod
 
   const resetForm = () => {
     setFormData({
-      nama: '',
+      nama_id: '',
+      nama_en: '',
       deskripsi: '',
       harga: '',
       stok: '',
       kategori: '',
-      status: 'active',
       images: [],
       hari_tersedia: []
     });
@@ -231,21 +235,38 @@ export function AddProductModal({ isOpen, onClose, onAddProduct }: AddProductMod
             <div className="p-6 overflow-y-auto bg-white" style={{ maxHeight: 'calc(80vh - 160px)' }}>
               <div className="space-y-6">
                 
-                {/* Product Name */}
+                {/* Product Name - Indonesian */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Nama Produk *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Nama Produk (Bahasa Indonesia) *</label>
                   <input
                     type="text"
-                    name="nama"
-                    value={formData.nama}
+                    name="nama_id"
+                    value={formData.nama_id}
                     onChange={handleInputChange}
-                    placeholder="Contoh: Chocolate Cake"
+                    placeholder="Contoh: Roti Cokelat"
                     className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 ${
-                      errors.nama ? 'border-red-500' : 'border-gray-300'
+                      errors.nama_id ? 'border-red-500' : 'border-gray-300'
                     }`}
                     disabled={isSubmitting}
                   />
-                  {errors.nama && <p className="mt-1 text-sm text-red-600">{errors.nama}</p>}
+                  {errors.nama_id && <p className="mt-1 text-sm text-red-600">{errors.nama_id}</p>}
+                </div>
+
+                {/* Product Name - English */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Nama Produk (English) *</label>
+                  <input
+                    type="text"
+                    name="nama_en"
+                    value={formData.nama_en}
+                    onChange={handleInputChange}
+                    placeholder="Example: Chocolate Bread"
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 ${
+                      errors.nama_en ? 'border-red-500' : 'border-gray-300'
+                    }`}
+                    disabled={isSubmitting}
+                  />
+                  {errors.nama_en && <p className="mt-1 text-sm text-red-600">{errors.nama_en}</p>}
                 </div>
 
                 {/* Description */}
@@ -333,8 +354,8 @@ export function AddProductModal({ isOpen, onClose, onAddProduct }: AddProductMod
                   </p>
                 </div>
 
-                {/* Category and Status */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Category */}
+                <div className="grid grid-cols-1 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Kategori *</label>
                     <select
@@ -352,20 +373,6 @@ export function AddProductModal({ isOpen, onClose, onAddProduct }: AddProductMod
                       ))}
                     </select>
                     {errors.kategori && <p className="mt-1 text-sm text-red-600">{errors.kategori}</p>}
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                    <select
-                      name="status"
-                      value={formData.status}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                      disabled={isSubmitting}
-                    >
-                      <option value="active">Active</option>
-                      <option value="inactive">Inactive</option>
-                    </select>
                   </div>
                 </div>
 
