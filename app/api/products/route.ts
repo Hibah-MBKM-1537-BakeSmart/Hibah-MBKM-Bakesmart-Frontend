@@ -6,9 +6,9 @@ const EXTERNAL_API_URL = `http://${host}:${port}/products`;
 
 export async function GET(request: Request) {
   try {
-    console.log(`[Products API] GET all products from: ${BACKEND_URL}`);
+    console.log(`[Products API] GET all products from: ${EXTERNAL_API_URL}`);
 
-    const response = await fetch(BACKEND_URL, {
+    const response = await fetch(EXTERNAL_API_URL, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -22,7 +22,11 @@ export async function GET(request: Request) {
     }
 
     const data = await response.json();
-    console.log(`[Products API] Success, received ${data?.data?.data?.length || 0} products`);
+    console.log(
+      `[Products API] Success, received ${
+        data?.data?.data?.length || 0
+      } products`
+    );
 
     return NextResponse.json(data);
   } catch (error) {
@@ -39,7 +43,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     console.log(`[Products API] POST new product:`, body);
 
-    const response = await fetch(BACKEND_URL, {
+    const response = await fetch(EXTERNAL_API_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -60,7 +64,10 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("[Products API] POST Error:", error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to create product" },
+      {
+        error:
+          error instanceof Error ? error.message : "Failed to create product",
+      },
       { status: 500 }
     );
   }
