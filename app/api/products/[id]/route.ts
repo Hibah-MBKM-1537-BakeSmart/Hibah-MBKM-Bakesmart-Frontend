@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-
-const BACKEND_URL = "http://127.0.0.1:5000/products";
+const host = process.env.API_HOST;
+const port = process.env.API_PORT;
+const BACKEND_URL = `http://${host}:${port}/products`;
 
 export async function GET(
   request: Request,

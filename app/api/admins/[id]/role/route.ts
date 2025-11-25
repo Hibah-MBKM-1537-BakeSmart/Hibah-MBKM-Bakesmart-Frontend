@@ -1,6 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from "next/server";
 
-const BACKEND_URL = 'http://127.0.0.1:5000';
+const host = process.env.API_HOST;
+const port = process.env.API_PORT;
+const BACKEND_URL = `http://${host}:${port}`;
 
 export async function PUT(
   request: NextRequest,
@@ -8,11 +10,11 @@ export async function PUT(
 ) {
   try {
     const body = await request.json();
-    
+
     const response = await fetch(`${BACKEND_URL}/admins/${params.id}/role`, {
-      method: 'PUT',
+      method: "PUT",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
         // TODO: Add authorization header when auth is implemented
         // 'Authorization': `Bearer ${token}`
       },
@@ -21,18 +23,23 @@ export async function PUT(
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.message || `Backend responded with status: ${response.status}`);
+      throw new Error(
+        errorData.message || `Backend responded with status: ${response.status}`
+      );
     }
 
     const data = await response.json();
-    
+
     return NextResponse.json(data, { status: 200 });
   } catch (error) {
-    console.error('Error updating admin role:', error);
+    console.error("Error updating admin role:", error);
     return NextResponse.json(
-      { 
-        success: false, 
-        message: error instanceof Error ? error.message : 'Failed to update admin role' 
+      {
+        success: false,
+        message:
+          error instanceof Error
+            ? error.message
+            : "Failed to update admin role",
       },
       { status: 500 }
     );
