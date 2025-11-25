@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-
-const BACKEND_VOUCHER_URL = "http://localhost:5000/voucher";
+const host = process.env.API_HOST;
+const port = process.env.API_PORT;
+const BACKEND_VOUCHER_URL = `http://${host}:${port}/voucher`;
 
 /**
  * GET /api/vouchers/[id] - Get voucher by ID
