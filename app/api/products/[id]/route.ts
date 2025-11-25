@@ -5,10 +5,10 @@ const BACKEND_URL = `http://${host}:${port}/products`;
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
     console.log(`[Products API] GET product by ID: ${id}`);
 
     const response = await fetch(`${BACKEND_URL}/${id}`, {
@@ -39,10 +39,10 @@ export async function GET(
 
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const body = await request.json();
     console.log(`[Products API] PUT product ID: ${id}`, body);
 
@@ -62,6 +62,7 @@ export async function PUT(
 
     const data = await response.json();
     console.log(`[Products API] PUT Success for ID: ${id}`);
+    console.log(`[Products API] PUT Response data:`, JSON.stringify(data));
 
     return NextResponse.json(data);
   } catch (error) {
@@ -75,10 +76,10 @@ export async function PUT(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
     console.log(`[Products API] DELETE product ID: ${id}`);
 
     const response = await fetch(`${BACKEND_URL}/${id}`, {

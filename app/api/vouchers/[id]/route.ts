@@ -8,10 +8,10 @@ const BACKEND_VOUCHER_URL = `http://${host}:${port}/voucher`;
  */
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
 
     const response = await fetch(`${BACKEND_VOUCHER_URL}/${id}`, {
       method: "GET",
@@ -46,10 +46,10 @@ export async function GET(
  */
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const payload = await request.json();
 
     console.log("[API Vouchers PUT] Updating voucher:", id, payload);
@@ -87,10 +87,10 @@ export async function PUT(
  */
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
 
     console.log("[API Vouchers DELETE] Deleting voucher:", id);
 
