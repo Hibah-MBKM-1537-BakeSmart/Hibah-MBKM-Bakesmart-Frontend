@@ -18,7 +18,6 @@ export function AddVoucherModal({ isOpen, onClose }: AddVoucherModalProps) {
     nama: "",
     code: "",
     discount: "",
-    discountType: "percentage" as "percentage" | "fixed",
     expiryDate: "",
     maxUsage: "",
   });
@@ -26,11 +25,11 @@ export function AddVoucherModal({ isOpen, onClose }: AddVoucherModalProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.code || !formData.discount) {
+    if (!formData.code || !formData.discount || !formData.maxUsage) {
       addToast({
         type: "error",
         title: "Validasi Gagal",
-        message: "Silakan isi kode dan diskon voucher",
+        message: "Silakan isi kode voucher, diskon, dan penggunaan maksimal",
       });
       return;
     }
@@ -38,13 +37,11 @@ export function AddVoucherModal({ isOpen, onClose }: AddVoucherModalProps) {
     try {
       await addVoucher({
         nama: formData.nama || `Voucher ${formData.code}`,
-        code: formData.code.toUpperCase(),
         kode: formData.code.toUpperCase(),
-        discount: Number.parseInt(formData.discount),
-        persen: Number.parseInt(formData.discount),
-        discountType: formData.discountType,
-        expiryDate: formData.expiryDate || new Date().toISOString().split("T")[0],
-        maxUsage: formData.maxUsage ? Number.parseInt(formData.maxUsage) : null,
+        persen: formData.discount,
+        tanggal_mulai: null,
+        tanggal_selesai: formData.expiryDate || null,
+        batas_penggunaan: Number.parseInt(formData.maxUsage),
       } as any);
 
       addToast({
@@ -57,7 +54,6 @@ export function AddVoucherModal({ isOpen, onClose }: AddVoucherModalProps) {
         nama: "",
         code: "",
         discount: "",
-        discountType: "percentage",
         expiryDate: "",
         maxUsage: "",
       });
@@ -130,29 +126,6 @@ export function AddVoucherModal({ isOpen, onClose }: AddVoucherModalProps) {
             />
           </div>
 
-          {/* Discount Type */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Tipe Diskon
-            </label>
-            <select
-              value={formData.discountType}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  discountType: e.target.value as "percentage" | "fixed",
-                })
-              }
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500"
-            >
-              <option value="percentage">Persentase (%)</option>
-              <option value="fixed">Jumlah Tetap (Rp)</option>
-            </select>
-            <p className="text-xs text-gray-500 mt-1">
-              Note: Backend saat ini hanya mendukung persentase
-            </p>
-          </div>
-
           {/* Discount Amount */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -190,7 +163,7 @@ export function AddVoucherModal({ isOpen, onClose }: AddVoucherModalProps) {
           {/* Max Usage */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Penggunaan Maksimal (Opsional)
+              Penggunaan Maksimal <span className="text-red-500">*</span>
             </label>
             <input
               type="number"
@@ -198,8 +171,10 @@ export function AddVoucherModal({ isOpen, onClose }: AddVoucherModalProps) {
               onChange={(e) =>
                 setFormData({ ...formData, maxUsage: e.target.value })
               }
-              placeholder="Kosongkan untuk unlimited"
+              placeholder="Minimal 1 kali penggunaan"
+              min="1"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500"
+              required
             />
           </div>
 

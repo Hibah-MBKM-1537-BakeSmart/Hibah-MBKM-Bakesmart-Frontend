@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const host = process.env.API_HOST;
-const port = process.env.API_PORT;
+const host = process.env.API_HOST || 'localhost';
+const port = process.env.API_PORT || '5000';
 const EXTERNAL_API_URL = `http://${host}:${port}/orders`;
 
 function transformPayloadForBackend(payload: any) {
@@ -130,11 +130,15 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const relation = searchParams.get('relation');
     
+    console.log('[Orders API] GET request, relation:', relation);
+    
     // Build URL with query parameters
     const url = new URL(EXTERNAL_API_URL);
     if (relation) {
       url.searchParams.append('relation', relation);
     }
+
+    console.log('[Orders API] Fetching from:', url.toString());
 
     const response = await fetch(url.toString(), {
       method: 'GET',
@@ -145,19 +149,31 @@ export async function GET(request: NextRequest) {
     });
 
     if (!response.ok) {
+      console.error('[Orders API] Backend error:', response.status);
       throw new Error(`Backend responded with status: ${response.status}`);
     }
 
     const data = await response.json();
+    console.log('[Orders API] Backend response:', JSON.stringify(data).substring(0, 200));
     
-    return NextResponse.json(data, { 
+    // Backend format: {"message":"Orders retrieved","data":[...]}
+    // Transform to frontend format: {"success":true,"data":[...]}
+    const transformedResponse = {
+      success: true,
+      message: data.message || 'Orders retrieved',
+      data: data.data || []
+    };
+
+    console.log('[Orders API] Returning', transformedResponse.data.length, 'orders');
+    
+    return NextResponse.json(transformedResponse, { 
       status: 200,
       headers: {
         'Cache-Control': 'no-store, must-revalidate',
       }
     });
   } catch (error) {
-    console.error('[API Route] Error fetching orders:', error);
+    console.error('[Orders API] Error fetching orders:', error);
     return NextResponse.json(
       { 
         success: false, 

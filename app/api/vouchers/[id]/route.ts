@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-const host = process.env.API_HOST || 'localhost';
+const host = process.env.API_HOST || '192.168.1.29';
 const port = process.env.API_PORT || '5000';
 const BACKEND_VOUCHER_URL = `http://${host}:${port}/voucher`;
 
@@ -52,7 +52,9 @@ export async function PUT(
     const { id } = await params;
     const payload = await request.json();
 
-    console.log("[API Vouchers PUT] Updating voucher:", id, payload);
+    console.log("[API Vouchers PUT] Updating voucher ID:", id);
+    console.log("[API Vouchers PUT] Payload:", JSON.stringify(payload, null, 2));
+    console.log("[API Vouchers PUT] Backend URL:", `${BACKEND_VOUCHER_URL}/${id}`);
 
     const response = await fetch(`${BACKEND_VOUCHER_URL}/${id}`, {
       method: "PUT",
@@ -62,21 +64,28 @@ export async function PUT(
       body: JSON.stringify(payload),
     });
 
+    console.log("[API Vouchers PUT] Response status:", response.status);
+
     const data = await response.json();
+    console.log("[API Vouchers PUT] Response data:", JSON.stringify(data, null, 2));
 
     if (!response.ok) {
       console.error("[API Vouchers PUT] Backend Error:", data);
       return NextResponse.json(
-        { message: data.message || "Gagal mengupdate voucher" },
+        { success: false, message: data.message || "Gagal mengupdate voucher" },
         { status: response.status }
       );
     }
 
-    return NextResponse.json(data);
+    return NextResponse.json({
+      success: true,
+      message: data.message || "Voucher berhasil diperbarui",
+      data: data.data || data
+    });
   } catch (error: any) {
     console.error("[API Vouchers PUT] Server Error:", error);
     return NextResponse.json(
-      { message: error.message || "Internal Server Error" },
+      { success: false, message: error.message || "Internal Server Error" },
       { status: 500 }
     );
   }

@@ -23,22 +23,18 @@ export function EditVoucherModal({
     nama: "",
     code: "",
     discount: "",
-    discountType: "percentage" as "percentage" | "fixed",
     expiryDate: "",
     maxUsage: "",
-    status: "active" as "active" | "inactive" | "expired",
   });
 
   useEffect(() => {
     if (voucher) {
       setFormData({
         nama: voucher.nama || "",
-        code: voucher.code || voucher.kode || "",
-        discount: (voucher.discount || voucher.persen || 0).toString(),
-        discountType: voucher.discountType || "percentage",
-        expiryDate: voucher.expiryDate || "",
-        maxUsage: voucher.maxUsage ? voucher.maxUsage.toString() : "",
-        status: voucher.status || "active",
+        code: voucher.kode || "",
+        discount: voucher.persen ? voucher.persen.toString() : "0",
+        expiryDate: voucher.tanggal_selesai || "",
+        maxUsage: voucher.batas_penggunaan ? voucher.batas_penggunaan.toString() : "1",
       });
     }
   }, [voucher, isOpen]);
@@ -46,11 +42,11 @@ export function EditVoucherModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.code || !formData.discount) {
+    if (!formData.code || !formData.discount || !formData.maxUsage) {
       addToast({
         type: "error",
         title: "Validasi Gagal",
-        message: "Silakan isi kode dan diskon voucher",
+        message: "Silakan isi kode voucher, diskon, dan penggunaan maksimal",
       });
       return;
     }
@@ -58,14 +54,11 @@ export function EditVoucherModal({
     try {
       await updateVoucher(voucher.id, {
         nama: formData.nama || `Voucher ${formData.code}`,
-        code: formData.code.toUpperCase(),
         kode: formData.code.toUpperCase(),
-        discount: Number.parseInt(formData.discount),
-        persen: Number.parseInt(formData.discount),
-        discountType: formData.discountType,
-        expiryDate: formData.expiryDate,
-        maxUsage: formData.maxUsage ? Number.parseInt(formData.maxUsage) : null,
-        status: formData.status,
+        persen: formData.discount,
+        tanggal_mulai: null,
+        tanggal_selesai: formData.expiryDate || null,
+        batas_penggunaan: Number.parseInt(formData.maxUsage),
       } as any);
 
       addToast({
@@ -95,7 +88,6 @@ export function EditVoucherModal({
         className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
         <div className="flex justify-between items-center p-6 border-b border-gray-200">
           <h2 className="text-xl font-bold text-gray-900">Edit Voucher</h2>
           <button
@@ -106,9 +98,7 @@ export function EditVoucherModal({
           </button>
         </div>
 
-        {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {/* Voucher Name */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Nama Voucher
@@ -123,7 +113,6 @@ export function EditVoucherModal({
             />
           </div>
 
-          {/* Voucher Code */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Kode Voucher <span className="text-red-500">*</span>
@@ -139,30 +128,6 @@ export function EditVoucherModal({
             />
           </div>
 
-          {/* Discount Type */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Tipe Diskon
-            </label>
-            <select
-              value={formData.discountType}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  discountType: e.target.value as "percentage" | "fixed",
-                })
-              }
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500"
-            >
-              <option value="percentage">Persentase (%)</option>
-              <option value="fixed">Jumlah Tetap (Rp)</option>
-            </select>
-            <p className="text-xs text-gray-500 mt-1">
-              Note: Backend saat ini hanya mendukung persentase
-            </p>
-          </div>
-
-          {/* Discount Amount */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Jumlah Diskon (%) <span className="text-red-500">*</span>
@@ -180,7 +145,6 @@ export function EditVoucherModal({
             />
           </div>
 
-          {/* Expiry Date */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Tanggal Kadaluarsa
@@ -195,10 +159,9 @@ export function EditVoucherModal({
             />
           </div>
 
-          {/* Max Usage */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Penggunaan Maksimal (Opsional)
+              Penggunaan Maksimal <span className="text-red-500">*</span>
             </label>
             <input
               type="number"
@@ -206,29 +169,12 @@ export function EditVoucherModal({
               onChange={(e) =>
                 setFormData({ ...formData, maxUsage: e.target.value })
               }
+              min="1"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500"
+              required
             />
           </div>
 
-          {/* Status */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Status
-            </label>
-            <select
-              value={formData.status}
-              onChange={(e) =>
-                setFormData({ ...formData, status: e.target.value as any })
-              }
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500"
-            >
-              <option value="active">Aktif</option>
-              <option value="inactive">Tidak Aktif</option>
-              <option value="expired">Kadaluarsa</option>
-            </select>
-          </div>
-
-          {/* Buttons */}
           <div className="flex gap-3 pt-4">
             <button
               type="button"
