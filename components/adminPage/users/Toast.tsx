@@ -9,6 +9,7 @@ interface ToastProps {
   title: string;
   message?: string;
   duration?: number;
+  persistent?: boolean; // Tidak auto-close dan tidak bisa ditutup
   onClose: (id: string) => void;
 }
 
@@ -17,14 +18,17 @@ interface ToastNotificationProps {
   onClose: (id: string) => void;
 }
 
-export function Toast({ id, type, title, message, duration = 5000, onClose }: ToastProps) {
+export function Toast({ id, type, title, message, duration = 5000, persistent = false, onClose }: ToastProps) {
   useEffect(() => {
+    // Jika persistent, jangan auto-close
+    if (persistent) return;
+    
     const timer = setTimeout(() => {
       onClose(id);
     }, duration);
 
     return () => clearTimeout(timer);
-  }, [id, duration, onClose]);
+  }, [id, duration, persistent, onClose]);
 
   const getIcon = () => {
     switch (type) {
@@ -68,14 +72,16 @@ export function Toast({ id, type, title, message, duration = 5000, onClose }: To
             <p className="mt-1 text-sm opacity-90">{message}</p>
           )}
         </div>
-        <div className="ml-auto pl-3">
-          <button
-            onClick={() => onClose(id)}
-            className="inline-flex rounded-md p-1.5 hover:bg-black/5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-green-50 focus:ring-green-600"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
+        {!persistent && (
+          <div className="ml-auto pl-3">
+            <button
+              onClick={() => onClose(id)}
+              className="inline-flex rounded-md p-1.5 hover:bg-black/5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-green-50 focus:ring-green-600"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -113,7 +119,7 @@ export function useToast() {
     showToast,
     removeToast,
     showSuccess: (title: string, message?: string) => showToast({ type: 'success', title, message }),
-    showError: (title: string, message?: string) => showToast({ type: 'error', title, message }),
+    showError: (title: string, message?: string, persistent = true) => showToast({ type: 'error', title, message, persistent }),
     showWarning: (title: string, message?: string) => showToast({ type: 'warning', title, message }),
     showInfo: (title: string, message?: string) => showToast({ type: 'info', title, message }),
   };

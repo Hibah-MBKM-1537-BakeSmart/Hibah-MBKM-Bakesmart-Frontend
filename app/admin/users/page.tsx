@@ -64,6 +64,7 @@ export default function UsersPage() {
   
   // Toast and confirm dialog state
   const { toasts, showSuccess, showError, showWarning, removeToast } = useToast();
+  const [errorShown, setErrorShown] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState<{
     isOpen: boolean;
     title: string;
@@ -131,12 +132,16 @@ export default function UsersPage() {
     }
   };
 
-  // Show error toast if there's an error from context
+  // Show error toast if there's an error from context (only once)
   useEffect(() => {
-    if (error) {
+    if (error && !errorShown) {
       showError('Gagal memuat data admin', error);
+      setErrorShown(true);
+    } else if (!error && errorShown) {
+      // Reset flag when error is cleared
+      setErrorShown(false);
     }
-  }, [error, showError]);
+  }, [error, errorShown]);
 
   // Get unique roles from backend roles data
   const roleOptions = ['all', ...roles.map(r => r.name)];
