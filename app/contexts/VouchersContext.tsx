@@ -11,12 +11,16 @@ export interface Voucher {
   code: string; // Untuk kompatibilitas frontend, kita map dari 'kode'
   kode: string; // Field asli dari backend
   discount: number; // Untuk kompatibilitas, map dari 'persen'
-  persen: number; // Field asli dari backend
+  persen: number | string; // Field asli dari backend (bisa string atau number)
   discountType: "percentage" | "fixed";
   expiryDate: string;
+  tanggal_mulai: string | null; // Field asli dari backend
+  tanggal_selesai: string | null; // Field asli dari backend
   usageCount: number;
   maxUsage: number | null;
+  batas_penggunaan: number; // Field asli dari backend
   status: "active" | "inactive" | "expired";
+  qr_code?: string; // Field dari backend
   createdAt: string;
   created_at?: string;
   updated_at?: string;
@@ -49,13 +53,15 @@ export function VouchersProvider({ children }: { children: ReactNode }) {
     const today = new Date();
     today.setHours(0, 0, 0, 0); // Set to start of day for accurate comparison
     
-    const expiryDate = backendVoucher.expiryDate ? new Date(backendVoucher.expiryDate) : null;
+    // Use tanggal_selesai from backend, fallback to expiryDate
+    const expiryDateStr = backendVoucher.tanggal_selesai || backendVoucher.expiryDate;
+    const expiryDate = expiryDateStr ? new Date(expiryDateStr) : null;
     if (expiryDate) {
       expiryDate.setHours(0, 0, 0, 0); // Set to start of day
     }
     
     const usageCount = backendVoucher.usageCount || 0;
-    const maxUsage = backendVoucher.maxUsage || null;
+    const maxUsage = backendVoucher.batas_penggunaan || backendVoucher.maxUsage || null;
     
     // Determine status based on expiry date and usage limit
     let status: "active" | "inactive" | "expired";
@@ -81,10 +87,14 @@ export function VouchersProvider({ children }: { children: ReactNode }) {
       discount: backendVoucher.persen || backendVoucher.discount || 0,
       persen: backendVoucher.persen || backendVoucher.discount || 0,
       discountType: "percentage", // Backend hanya support percentage
-      expiryDate: backendVoucher.expiryDate || new Date().toISOString().split("T")[0],
+      expiryDate: expiryDateStr || new Date().toISOString().split("T")[0],
+      tanggal_mulai: backendVoucher.tanggal_mulai || null,
+      tanggal_selesai: backendVoucher.tanggal_selesai || null,
       usageCount: usageCount,
       maxUsage: maxUsage,
+      batas_penggunaan: backendVoucher.batas_penggunaan || 0,
       status: status,
+      qr_code: backendVoucher.qr_code,
       createdAt: backendVoucher.created_at || backendVoucher.createdAt || new Date().toISOString().split("T")[0],
       created_at: backendVoucher.created_at,
       updated_at: backendVoucher.updated_at,
@@ -166,12 +176,17 @@ export function VouchersProvider({ children }: { children: ReactNode }) {
     newVoucher: Omit<Voucher, "id" | "createdAt" | "usageCount" | "status">
   ) => {
     try {
-      // Backend expects: { nama, persen, kode }
-      const payload = {
+      // Backend expects: { nama, persen, kode, tanggal_mulai?, tanggal_selesai?, batas_penggunaan? }
+      const payload: any = {
         nama: newVoucher.nama || `Voucher ${newVoucher.code}`,
         persen: newVoucher.discount || newVoucher.persen,
-        kode: newVoucher.code || newVoucher.kode,
+        kode: (newVoucher.code || newVoucher.kode).toUpperCase(),
       };
+      
+      // Add optional fields if present
+      if (newVoucher.tanggal_mulai !== undefined) payload.tanggal_mulai = newVoucher.tanggal_mulai;
+      if (newVoucher.tanggal_selesai !== undefined) payload.tanggal_selesai = newVoucher.tanggal_selesai;
+      if (newVoucher.batas_penggunaan !== undefined) payload.batas_penggunaan = newVoucher.batas_penggunaan;
 
       console.log("[VouchersContext] Creating voucher with payload:", payload);
 
@@ -212,13 +227,17 @@ export function VouchersProvider({ children }: { children: ReactNode }) {
 
   const updateVoucher = async (id: string, updates: Partial<Voucher>) => {
     try {
-      // Backend expects: { nama?, persen?, kode? }
+      // Backend expects: { nama?, persen?, kode?, tanggal_mulai?, tanggal_selesai?, batas_penggunaan? }
       const payload: any = {};
+      
       if (updates.nama) payload.nama = updates.nama;
       if (updates.code || updates.kode) payload.kode = updates.code || updates.kode;
       if (updates.discount !== undefined || updates.persen !== undefined) {
         payload.persen = updates.discount !== undefined ? updates.discount : updates.persen;
       }
+      if (updates.tanggal_mulai !== undefined) payload.tanggal_mulai = updates.tanggal_mulai;
+      if (updates.tanggal_selesai !== undefined) payload.tanggal_selesai = updates.tanggal_selesai;
+      if (updates.batas_penggunaan !== undefined) payload.batas_penggunaan = updates.batas_penggunaan;
 
       console.log("[VouchersContext] Updating voucher:", id, "with payload:", payload);
 

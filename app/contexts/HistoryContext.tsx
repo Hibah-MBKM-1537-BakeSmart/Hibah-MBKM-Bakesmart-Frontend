@@ -2,6 +2,8 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
+const BACKEND_API_URL = '/api/orders';
+
 // Based on order_product table structure
 export interface OrderItem {
   id: number;
@@ -15,17 +17,17 @@ export interface OrderItem {
   nama_en?: string;
 }
 
-// Based on orders table structure
+// Based on orders table structure and backend response
 export interface Order {
   id: number;
   bukti_path?: string;
-  status: 'verifying' | 'paid' | 'processing' | 'completed' | 'cancelled';
+  status: 'pending' | 'verifying' | 'paid' | 'processing' | 'completed' | 'cancelled';
   waktu_ambil?: string;
   user_id?: number;
-  total_harga?: number;
+  total_harga?: number | string;
   provider?: string;
   courier_name?: string;
-  shipping_cost?: number;
+  shipping_cost?: number | string;
   tracking_link?: string;
   note?: string;
   biteship_id?: string;
@@ -84,9 +86,10 @@ export function HistoryProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const fetchOrders = async () => {
       try {
+        console.log('[HistoryContext] Fetching orders from backend...');
         setState(prev => ({ ...prev, isLoading: true }));
         
-        const response = await fetch('/api/orders?relation=products', {
+        const response = await fetch(`${BACKEND_API_URL}?relation=products`, {
           method: 'GET',
           cache: 'no-store',
         });
@@ -96,20 +99,34 @@ export function HistoryProvider({ children }: { children: React.ReactNode }) {
         }
 
         const result = await response.json();
+        console.log('[HistoryContext] Backend response:', result);
         
         if (result.success && result.data) {
+          // Normalize data: convert string numbers to numbers
+          const normalizedOrders = result.data.map((order: any) => ({
+            ...order,
+            total_harga: typeof order.total_harga === 'string' 
+              ? parseFloat(order.total_harga) 
+              : order.total_harga,
+            shipping_cost: typeof order.shipping_cost === 'string'
+              ? parseFloat(order.shipping_cost)
+              : order.shipping_cost,
+          }));
+
+          console.log('[HistoryContext] Loaded', normalizedOrders.length, 'orders');
+          
           setState(prev => ({
             ...prev,
-            orders: result.data,
-            filteredOrders: result.data,
+            orders: normalizedOrders,
+            filteredOrders: normalizedOrders,
             isLoading: false
           }));
         } else {
-          console.error('Invalid response format:', result);
+          console.error('[HistoryContext] Invalid response format:', result);
           setState(prev => ({ ...prev, isLoading: false }));
         }
       } catch (error) {
-        console.error('Error fetching orders:', error);
+        console.error('[HistoryContext] Error fetching orders:', error);
         setState(prev => ({ ...prev, isLoading: false }));
       }
     };
@@ -204,7 +221,13 @@ export function HistoryProvider({ children }: { children: React.ReactNode }) {
 
   const exportToCSV = () => {
     const csvData = state.filteredOrders.map(order => {
-      const totalAmount = order.total_harga || 0;
+      const totalAmount = typeof order.total_harga === 'string' 
+        ? parseFloat(order.total_harga) 
+        : (order.total_harga || 0);
+      const shippingCost = typeof order.shipping_cost === 'string'
+        ? parseFloat(order.shipping_cost)
+        : (order.shipping_cost || 0);
+        
       const itemsText = order.products?.map((item: OrderItem) => 
         `${item.nama_id || item.nama_en || 'Unknown'} (${item.jumlah}x)`
       ).join(', ') || '';
@@ -219,7 +242,9 @@ export function HistoryProvider({ children }: { children: React.ReactNode }) {
         'Pickup Time': order.waktu_ambil ? new Date(order.waktu_ambil).toLocaleString('id-ID') : '',
         'Provider': order.provider || '',
         'Courier': order.courier_name || '',
-        'Shipping Cost': order.shipping_cost ? `Rp ${order.shipping_cost.toLocaleString('id-ID')}` : '',
+        'Shipping Cost': `Rp ${shippingCost.toLocaleString('id-ID')}`,
+        'Tracking Link': order.tracking_link || '',
+        'Biteship ID': order.biteship_id || '',
         'Note': order.note || ''
       };
     });
@@ -239,9 +264,10 @@ export function HistoryProvider({ children }: { children: React.ReactNode }) {
 
   const refreshOrders = async () => {
     try {
+      console.log('[HistoryContext] Refreshing orders...');
       setState(prev => ({ ...prev, isLoading: true }));
       
-      const response = await fetch('/api/orders?relation=products', {
+      const response = await fetch(`${BACKEND_API_URL}?relation=products`, {
         method: 'GET',
         cache: 'no-store',
       });
@@ -253,16 +279,29 @@ export function HistoryProvider({ children }: { children: React.ReactNode }) {
       const result = await response.json();
       
       if (result.success && result.data) {
+        // Normalize data
+        const normalizedOrders = result.data.map((order: any) => ({
+          ...order,
+          total_harga: typeof order.total_harga === 'string' 
+            ? parseFloat(order.total_harga) 
+            : order.total_harga,
+          shipping_cost: typeof order.shipping_cost === 'string'
+            ? parseFloat(order.shipping_cost)
+            : order.shipping_cost,
+        }));
+
+        console.log('[HistoryContext] Refreshed', normalizedOrders.length, 'orders');
+
         setState(prev => ({
           ...prev,
-          orders: result.data,
+          orders: normalizedOrders,
           isLoading: false
         }));
       } else {
         setState(prev => ({ ...prev, isLoading: false }));
       }
     } catch (error) {
-      console.error('Error refreshing orders:', error);
+      console.error('[HistoryContext] Error refreshing orders:', error);
       setState(prev => ({ ...prev, isLoading: false }));
     }
   };

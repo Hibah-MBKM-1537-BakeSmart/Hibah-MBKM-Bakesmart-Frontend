@@ -52,6 +52,14 @@ export function VoucherDetailModal({
 
         {/* Content */}
         <div className="p-6 space-y-6">
+          {/* Voucher Name */}
+          {voucher.nama && voucher.nama !== voucher.code && (
+            <div>
+              <p className="text-sm text-gray-600 mb-2">Nama Voucher</p>
+              <p className="text-xl font-bold text-gray-900">{voucher.nama}</p>
+            </div>
+          )}
+
           {/* Voucher Code */}
           <div>
             <p className="text-sm text-gray-600 mb-2">Kode Voucher</p>
@@ -75,19 +83,9 @@ export function VoucherDetailModal({
           </div>
 
           {/* Discount Info */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <p className="text-sm text-gray-600 mb-1">Jumlah Diskon</p>
-              <p className="text-lg font-bold text-gray-900">{discountText}</p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-600 mb-1">Tipe Diskon</p>
-              <p className="text-lg font-bold text-gray-900">
-                {voucher.discountType === "percentage"
-                  ? "Persentase"
-                  : "Jumlah Tetap"}
-              </p>
-            </div>
+          <div>
+            <p className="text-sm text-gray-600 mb-1">Jumlah Diskon</p>
+            <p className="text-lg font-bold text-gray-900">{discountText}</p>
           </div>
 
           {/* Expiry Date */}

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-const host = process.env.API_HOST || 'localhost';
+const host = process.env.API_HOST || '192.168.1.29';
 const port = process.env.API_PORT || '5000';
 const BACKEND_VOUCHER_URL = `http://${host}:${port}/voucher`;
 

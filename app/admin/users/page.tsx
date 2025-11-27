@@ -18,19 +18,12 @@ import {
   Loader2,
   RefreshCw
 } from 'lucide-react';
+import { useAdmin, AdminData } from '@/app/contexts/UsersContext';
 import { AddUserModal } from '@/components/adminPage/users/AddUserModal';
 import { ViewUserModal } from '@/components/adminPage/users/ViewUserModal';
 import { EditUserModal } from '@/components/adminPage/users/EditUserModal';
 import { ToastNotification, useToast } from '@/components/adminPage/users/Toast';
 import { ConfirmDialog } from '@/components/adminPage/users/ConfirmDialog';
-
-// Backend admin structure (from users table joined with roles)
-interface AdminData {
-  id: number;
-  nama: string;
-  no_hp: string;
-  role: string; // role name from roles table
-}
 
 // Backend role structure
 interface Role {
@@ -39,7 +32,11 @@ interface Role {
 }
 
 // Dynamic role colors generator
-const getRoleColor = (roleName: string): string => {
+const getRoleColor = (roleName: string | undefined): string => {
+  if (!roleName) {
+    return 'bg-gray-100 text-gray-800';
+  }
+  
   const colors: Record<string, string> = {
     owner: 'bg-purple-100 text-purple-800',
     baker: 'bg-orange-100 text-orange-800',
@@ -54,11 +51,12 @@ const getRoleColor = (roleName: string): string => {
 };
 
 export default function UsersPage() {
-  const [admins, setAdmins] = useState<AdminData[]>([]);
+  const { state, fetchAdmins, createAdmin, updateAdmin, deleteAdmin } = useAdmin();
+  const { admins, loading, error } = state;
+  
   const [roles, setRoles] = useState<Role[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRole, setSelectedRole] = useState('all');
-  const [isLoading, setIsLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -66,6 +64,7 @@ export default function UsersPage() {
   
   // Toast and confirm dialog state
   const { toasts, showSuccess, showError, showWarning, removeToast } = useToast();
+  const [errorShown, setErrorShown] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState<{
     isOpen: boolean;
     title: string;
@@ -80,11 +79,11 @@ export default function UsersPage() {
     onConfirm: () => {},
   });
 
-  // Fetch admins from backend
+  // Fetch data on mount
   useEffect(() => {
     fetchAdmins();
     fetchRoles();
-  }, []);
+  }, [fetchAdmins]);
 
   const fetchRoles = async () => {
     try {
@@ -95,7 +94,7 @@ export default function UsersPage() {
 
       if (!response.ok) {
         console.warn('Failed to fetch roles, using fallback');
-        // Use fallback roles for development
+        // Use fallback roles for development (admin roles only)
         setRoles([
           { id: 1, name: 'owner' },
           { id: 2, name: 'baker' },
@@ -108,10 +107,12 @@ export default function UsersPage() {
       const result = await response.json();
       
       if (result.success && result.data && result.data.length > 0) {
-        setRoles(result.data);
+        // Filter out customer role - only keep admin roles
+        const adminRoles = result.data.filter((role: Role) => role.name !== 'customer');
+        setRoles(adminRoles);
       } else {
         console.warn('No roles data returned, using fallback');
-        // Use fallback roles
+        // Use fallback roles (admin roles only)
         setRoles([
           { id: 1, name: 'owner' },
           { id: 2, name: 'baker' },
@@ -121,7 +122,7 @@ export default function UsersPage() {
       }
     } catch (error) {
       console.error('Error fetching roles:', error);
-      // Use fallback roles on error
+      // Use fallback roles on error (admin roles only)
       setRoles([
         { id: 1, name: 'owner' },
         { id: 2, name: 'baker' },
@@ -131,49 +132,28 @@ export default function UsersPage() {
     }
   };
 
-  const fetchAdmins = async () => {
-    try {
-      setIsLoading(true);
-      const response = await fetch('/api/admins', {
-        method: 'GET',
-        cache: 'no-store',
-      });
-
-      if (!response.ok) {
-        console.warn('Failed to fetch admins, showing empty state');
-        setAdmins([]);
-        setIsLoading(false);
-        return;
-      }
-
-      const result = await response.json();
-      
-      if (result.success && result.data) {
-        setAdmins(result.data);
-      } else {
-        console.warn('Invalid response format:', result);
-        setAdmins([]);
-      }
-    } catch (error) {
-      console.error('Error fetching admins:', error);
-      setAdmins([]);
-      showWarning(
-        'Tidak dapat memuat data admin', 
-        'Pastikan backend server berjalan dan endpoint /admins tersedia'
-      );
-    } finally {
-      setIsLoading(false);
+  // Show error toast if there's an error from context (only once)
+  useEffect(() => {
+    if (error && !errorShown) {
+      showError('Gagal memuat data admin', error);
+      setErrorShown(true);
+    } else if (!error && errorShown) {
+      // Reset flag when error is cleared
+      setErrorShown(false);
     }
-  };
+  }, [error, errorShown]);
 
   // Get unique roles from backend roles data
   const roleOptions = ['all', ...roles.map(r => r.name)];
 
   const filteredAdmins = admins.filter(admin => {
+    // Exclude customer role admins from display
+    if (admin.role === 'customer') return false;
+    
     const matchesSearch = 
       admin.nama.toLowerCase().includes(searchTerm.toLowerCase()) ||
       admin.no_hp.includes(searchTerm) ||
-      admin.role.toLowerCase().includes(searchTerm.toLowerCase());
+      (admin.role && admin.role.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesRole = selectedRole === 'all' || admin.role === selectedRole;
     return matchesSearch && matchesRole;
   });
@@ -188,41 +168,43 @@ export default function UsersPage() {
 
   const handleUpdateRole = async (adminId: number, newRoleId: number) => {
     try {
-      const response = await fetch(`/api/admins/${adminId}/role`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ role_id: newRoleId }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to update role');
-      }
-
-      const result = await response.json();
-      
-      if (result.success) {
-        showSuccess('Role berhasil diperbarui!', 'Perubahan role telah disimpan.');
-        fetchAdmins(); // Refresh data
-      } else {
-        showError('Gagal memperbarui role', result.message || 'Terjadi kesalahan');
-      }
+      await updateAdmin(adminId, { role_id: newRoleId });
+      showSuccess('Role berhasil diperbarui!', 'Perubahan role telah disimpan.');
     } catch (error) {
       console.error('Error updating role:', error);
-      showError('Gagal memperbarui role', 'Tidak dapat menyimpan perubahan');
+      const errorMessage = error instanceof Error ? error.message : 'Gagal memperbarui role';
+      showError('Gagal memperbarui role', errorMessage);
     }
   };
 
-  const handleAddUser = (userData: {
+  const handleAddUser = async (userData: {
     name: string;
     email: string;
     phone: string;
     role: string;
     password: string;
   }) => {
-    // TODO: Implement add user API call
-    showWarning('Fitur belum tersedia', 'Penambahan user akan diimplementasikan nanti');
+    try {
+      // Find role_id from role name
+      const role = roles.find(r => r.name.toLowerCase() === userData.role.toLowerCase());
+      if (!role) {
+        showError('Role tidak valid', `Role "${userData.role}" tidak ditemukan`);
+        return;
+      }
+
+      await createAdmin({
+        nama: userData.name,
+        no_hp: userData.phone,
+        role_id: role.id,
+        password: userData.password,
+      });
+
+      showSuccess('Admin berhasil ditambahkan!', `User ${userData.name} telah dibuat`);
+      setShowAddModal(false);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Gagal menambahkan admin';
+      showError('Gagal menambahkan admin', errorMessage);
+    }
   };
 
   const handleViewUser = (admin: AdminData) => {
@@ -235,9 +217,32 @@ export default function UsersPage() {
     setShowEditModal(true);
   };
 
-  const handleUpdateUser = (userId: number, userData: any) => {
-    // TODO: Implement update user API call
-    showWarning('Fitur belum tersedia', 'Edit user akan diimplementasikan nanti');
+  const handleUpdateUser = async (userId: number, userData: any) => {
+    try {
+      // Find role_id from role name if role is being updated
+      let updateData = { ...userData };
+      if (userData.role && typeof userData.role === 'string') {
+        const role = roles.find(r => r.name.toLowerCase() === userData.role.toLowerCase());
+        if (role) {
+          updateData.role_id = role.id;
+          delete updateData.role; // Remove role name, keep role_id
+        }
+      }
+
+      await updateAdmin(userId, {
+        nama: updateData.name || updateData.nama,
+        no_hp: updateData.phone || updateData.no_hp,
+        role_id: updateData.role_id,
+        ...(updateData.password && { password: updateData.password })
+      });
+
+      showSuccess('Admin berhasil diperbarui!', 'Perubahan telah disimpan');
+      setShowEditModal(false);
+      setSelectedAdmin(null);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Gagal memperbarui admin';
+      showError('Gagal memperbarui admin', errorMessage);
+    }
   };
 
   const handleDeleteUser = (userId: number, userName: string) => {
@@ -245,16 +250,22 @@ export default function UsersPage() {
       isOpen: true,
       title: 'Hapus User',
       message: `Apakah Anda yakin ingin menghapus user ${userName}?\n\nTindakan ini tidak dapat dibatalkan.`,
-      onConfirm: () => {
-        // TODO: Implement delete user API call
-        showWarning('Fitur belum tersedia', 'Penghapusan user akan diimplementasikan nanti');
+      onConfirm: async () => {
+        try {
+          await deleteAdmin(userId);
+          showSuccess('Admin berhasil dihapus!', `User ${userName} telah dihapus`);
+          setConfirmDialog({ ...confirmDialog, isOpen: false });
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Gagal menghapus admin';
+          showError('Gagal menghapus admin', errorMessage);
+        }
       },
       type: 'danger',
       confirmText: 'Hapus'
     });
   };
 
-  if (isLoading) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
@@ -328,7 +339,7 @@ export default function UsersPage() {
           </div>
 
           <div className="text-sm text-gray-600">
-            {filteredAdmins.length} dari {admins.length} admin
+            {filteredAdmins.length} dari {admins.filter(a => a.role !== 'customer').length} admin
           </div>
         </div>
       </div>
@@ -382,7 +393,7 @@ export default function UsersPage() {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRoleColor(admin.role)}`}>
                       <Shield className="w-3 h-3 mr-1" />
-                      {admin.role.toUpperCase()}
+                      {admin.role ? admin.role.toUpperCase() : 'NO ROLE'}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -431,7 +442,7 @@ export default function UsersPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Total Admin</p>
-              <p className="text-2xl font-bold text-gray-900">{admins.length}</p>
+              <p className="text-2xl font-bold text-gray-900">{admins.filter(a => a.role !== 'customer').length}</p>
             </div>
             <div className="bg-blue-100 p-3 rounded-lg">
               <Shield className="w-6 h-6 text-blue-600" />
@@ -469,23 +480,33 @@ export default function UsersPage() {
         onAddUser={handleAddUser}
       /> */}
 
-      {/* View User Modal - TODO: Update for backend */}
+      {/* View User Modal */}
       {selectedAdmin && showViewModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full">
-            <h2 className="text-xl font-bold mb-4">Detail Admin</h2>
-            <div className="space-y-3">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Backdrop */}
+          <div 
+            className="absolute inset-0 bg-black/40" 
+            onClick={() => {
+              setShowViewModal(false);
+              setSelectedAdmin(null);
+            }} 
+          />
+          
+          {/* Modal */}
+          <div className="relative z-10 bg-white rounded-lg p-6 max-w-md w-full shadow-xl border border-gray-200">
+            <h2 className="text-xl font-bold mb-4 text-gray-900">Detail Admin</h2>
+            <div className="space-y-4">
               <div>
-                <label className="text-sm font-medium text-gray-600">Nama</label>
-                <p className="text-gray-900">{selectedAdmin.nama}</p>
+                <label className="block text-sm font-medium text-gray-600 mb-1">Nama</label>
+                <p className="text-gray-900 bg-gray-50 px-3 py-2 rounded-lg">{selectedAdmin.nama}</p>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-600">No HP</label>
-                <p className="text-gray-900">{selectedAdmin.no_hp}</p>
+                <label className="block text-sm font-medium text-gray-600 mb-1">No HP</label>
+                <p className="text-gray-900 bg-gray-50 px-3 py-2 rounded-lg">{selectedAdmin.no_hp}</p>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-600">Role</label>
-                <p className="text-gray-900">{selectedAdmin.role}</p>
+                <label className="block text-sm font-medium text-gray-600 mb-1">Role</label>
+                <p className="text-gray-900 bg-gray-50 px-3 py-2 rounded-lg capitalize">{selectedAdmin.role || 'No Role'}</p>
               </div>
             </div>
             <button
@@ -493,7 +514,7 @@ export default function UsersPage() {
                 setShowViewModal(false);
                 setSelectedAdmin(null);
               }}
-              className="mt-6 w-full bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300"
+              className="mt-6 w-full bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors font-medium"
             >
               Tutup
             </button>

@@ -1,9 +1,11 @@
 import type React from "react";
 import { Poppins, Inter } from "next/font/google";
-import { AdminProvider } from "@/app/contexts/AdminContext";
-import { AuthProvider } from "@/app/contexts/AuthContext";
 import { AdminTranslationProvider } from "@/app/contexts/AdminTranslationContext";
 import AdminAuthWrapper from "./AdminAuthWrapper";
+import { AdminProvider } from '@/app/contexts/AdminContext';
+import { AdminProvider as UsersProvider } from '@/app/contexts/UsersContext';
+import { AuthProvider } from '@/app/contexts/AuthContext';
+import { ToastProvider } from '@/app/contexts/ToastContext';
 
 const poppins = Poppins({
   subsets: ["latin"],
