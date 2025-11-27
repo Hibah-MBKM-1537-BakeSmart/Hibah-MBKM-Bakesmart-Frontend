@@ -56,20 +56,20 @@ export function AboutUs() {
     {
       nameKey: "aboutUs.chef1.name",
       descriptionKey: "aboutUs.chef1.description",
-      image: "/professional-baker-in-apron-with-bakery-background.jpg",
+      image: "/img/owner_image.svg",
     },
     {
       nameKey: "aboutUs.chef2.name",
       descriptionKey: "aboutUs.chef2.description",
-      image: "/chef-with-bread-shelves-background-in-bakery.jpg",
+      image: "/img/chef_image.svg",
     },
   ];
 
   // Data untuk proud bakers images
   const proudBakersImages = [
-    "/baker-kneading-dough-in-traditional-bakery.jpg",
-    "/baker-arranging-bread-on-shelves.jpg",
-    "/baker-in-white-uniform-working-in-bakery.jpg",
+    "/img/baker.svg",
+    "/img/baker_4.svg",
+    "/img/baker_3.svg",
   ];
 
   return (
@@ -115,7 +115,7 @@ export function AboutUs() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center mb-16">
             <div className="order-2 lg:order-1">
               <Image
-                src="/bread-shelves-in-traditional-bakery.jpg"
+                src="/img/bread.svg"
                 alt={t("about.title")}
                 width={400}
                 height={500}
@@ -141,7 +141,7 @@ export function AboutUs() {
               >
                 {t("aboutUs.authenticity.title")}
               </h3>
-              <div className="space-y-4 text-gray-600 leading-relaxed text-sm md:text-base">
+              <div className="space-y-4 text-gray-600 leading-relaxed text-sm md:text-base whitespace-pre-line">
                 {t("aboutUs.authenticity.description")
                   .split("\\n\\n")
                   .map((paragraph, index) => (
@@ -151,10 +151,10 @@ export function AboutUs() {
             </div>
             <div className="flex justify-center lg:justify-end">
               <Image
-                src="/traditional-bread-loaves-stacked.jpg"
+                src="/img/bread_2.svg"
                 alt={t("menu.categories.bread")}
-                width={200}
-                height={300}
+                width={400}
+                height={500}
                 className="rounded-lg shadow-lg"
               />
             </div>

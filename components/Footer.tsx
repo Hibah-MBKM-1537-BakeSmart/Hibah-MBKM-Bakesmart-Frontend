@@ -119,7 +119,7 @@ export function Footer() {
           </div>
 
           {/* Kolom 3: Info Terbaru */}
-          <div>
+          {/* <div>
             <h3 className="font-semibold text-lg mb-4">
               {footerData.infoTerbaru.title}
             </h3>
@@ -138,7 +138,7 @@ export function Footer() {
                 </div>
               </div>
             ))}
-          </div>
+          </div> */}
         </div>
 
         {/* Copyright */}

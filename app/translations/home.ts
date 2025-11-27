@@ -21,17 +21,17 @@ export const homeTranslations = {
 
     // Chef Profiles
     "aboutUs.chef1.name": "Joris R.J Cooreman",
-    "aboutUs.chef1.description":
-      "Saya ingin membawa cita rasa yang pasti disukai dari negara saya. Dengan pengalaman lebih dari 15 tahun di industri roti, saya berkomitmen untuk menciptakan produk berkualitas tinggi yang memadukan teknik tradisional dengan inovasi modern. Setiap hari kami bekerja dengan dedikasi tinggi untuk menghadirkan roti dan kue terbaik untuk pelanggan kami. Kami percaya bahwa setiap gigitan harus memberikan kepuasan dan kebahagiaan bagi yang menikmatinya.",
+    "aboutUs.chef1.description": `Saya Joris, Baker dan pemilik yang telah memanjakan selera pelanggan kami sejak tahun 2020. Di Merpati Solo Bakery, kami percaya bahwa roti yang enak berawal dari bahan-bahan yang baik. Karena itu, kami hanya memanggang dengan bahan-bahan alami tanpa bahan pengawet.
+Di sini, setiap roti dibuat dengan penuh perhatian, menggunakan bahan-bahan yang ramah dan menyehatkan. Silakan jelajahi dan cicipi sedikit bagian dari filosofi kami di setiap gigita
+`,
     "aboutUs.chef2.name": "Chef Kami",
-    "aboutUs.chef2.description":
-      "Dengan pengalaman bertahun-tahun dalam seni membuat roti, kami selalu berusaha memberikan yang terbaik. Tim baker profesional kami bekerja dengan penuh semangat setiap hari untuk menciptakan produk berkualitas tinggi. Kami menggunakan bahan-bahan pilihan terbaik dan teknik pembuatan yang telah teruji waktu. Komitmen kami adalah memberikan produk segar, lezat, dan bernutrisi untuk keluarga Indonesia.",
+    "aboutUs.chef2.description": `Dengan bertahun-tahun pengalaman dalam seni membuat roti, kami selalu berusaha memberikan yang terbaik. Tim pembuat roti profesional kami bekerja dengan penuh semangat untuk menciptakan produk berkualitas tinggi. Kami menggunakan bahan terbaik dan teknik pembuatan yang telah teruji waktu. Komitmen kami adalah menyediakan produk yang Halal, segar, lezat, dan bergizi untuk keluarga Indonesia dengan harga terjangkau
+Sebagian dari roti yang kami buat adalah roti sourdough, dan kami sangat memperhatikan kualitas bahan. Kami tidak menggunakan margarin atau minyak biji; sebagai gantinya, kami hanya menggunakan mentega asli dan minyak kelapa extra virgin.`,
 
     // About Us Content
-    "aboutUs.authenticity.title": "Keaslian dan Tradisi",
+    "aboutUs.authenticity.title": "Autentik dan Tradisional",
     "aboutUs.authenticity.description":
-      "Sejak didirikan pada tahun 2003, Merpati Bakery telah menjadi bagian tak terpisahkan dari komunitas. Kami memulai perjalanan dengan visi sederhana: menghadirkan roti dan kue berkualitas tinggi yang dibuat dengan cinta dan dedikasi. Setiap produk kami dibuat menggunakan resep tradisional yang telah diwariskan turun-temurun, dikombinasikan dengan teknik modern untuk menjaga konsistensi dan kualitas.\\n\\nKami bangga menjadi toko roti keluarga yang tidak hanya menyajikan makanan, tetapi juga menciptakan momen kebahagiaan bagi setiap pelanggan. Dengan menggunakan bahan-bahan segar pilihan dan proses pembuatan yang teliti, kami memastikan setiap produk yang keluar dari dapur kami memenuhi standar kualitas tertinggi yang telah menjadi ciri khas Merpati Bakery.",
-
+      "Sejak didirikan pada tahun 2020, Merpati Solo Bakery telah menjadi bagian tak terpisahkan dari komunitas. Kami memulai perjalanan dengan visi sederhana: menyajikan roti berkualitas tinggi dari seluruh dunia, yang dibuat dengan cinta dan dedikasi. Setiap produk kami dibuat dengan resep tradisional yang telah diwariskan dari generasi ke generasi.\n\nKami bangga menjadi bakery keluarga yang tidak hanya menyajikan makanan, tetapi juga menciptakan momen kebahagiaan bagi setiap pelanggan. Dengan menggunakan bahan segar pilihan dan proses pembuatan yang teliti, kami memastikan setiap produk yang keluar dari dapur kami memenuhi standar kualitas tertinggi yang telah menjadi ciri khas Merpati Bakery",
     // Why Choose Us
     "whyChoose.title": "Mengapa Memilih Kami?",
     "whyChoose.fresh.title": "Selalu Segar",
