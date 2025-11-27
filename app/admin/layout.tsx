@@ -2,10 +2,10 @@ import type React from "react";
 import { Poppins, Inter } from "next/font/google";
 import { AdminTranslationProvider } from "@/app/contexts/AdminTranslationContext";
 import AdminAuthWrapper from "./AdminAuthWrapper";
-import { AdminProvider } from '@/app/contexts/AdminContext';
-import { AdminProvider as UsersProvider } from '@/app/contexts/UsersContext';
-import { AuthProvider } from '@/app/contexts/AuthContext';
-import { ToastProvider } from '@/app/contexts/ToastContext';
+import { AdminProvider } from "@/app/contexts/AdminContext";
+import { AdminProvider as UsersProvider } from "@/app/contexts/UsersContext";
+import { AuthProvider } from "@/app/contexts/AuthContext";
+import { ToastProvider } from "@/app/contexts/ToastContext";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -30,12 +30,14 @@ export default function AdminLayout({
     <AuthProvider>
       <AdminProvider>
         <AdminTranslationProvider>
-          <div
-            className={`${poppins.variable} ${inter.variable}`}
-            style={{ fontFamily: "var(--font-inter), sans-serif" }}
-          >
-            <AdminAuthWrapper>{children}</AdminAuthWrapper>
-          </div>
+          <ToastProvider>
+            <div
+              className={`${poppins.variable} ${inter.variable}`}
+              style={{ fontFamily: "var(--font-inter), sans-serif" }}
+            >
+              <AdminAuthWrapper>{children}</AdminAuthWrapper>
+            </div>
+          </ToastProvider>
         </AdminTranslationProvider>
       </AdminProvider>
     </AuthProvider>
