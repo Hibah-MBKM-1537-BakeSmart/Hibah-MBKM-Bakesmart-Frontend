@@ -79,7 +79,7 @@ function BreadStockCard(item: MenuItem) {
 
           {/* Stock Counter */}
           <div className="absolute bottom-3 left-3 bg-black/70 text-white px-3 py-1 rounded-full text-sm font-semibold">
-            {t("menu.stockavailable")}: {stock}
+            {t("stock available") || "Stok"}: {stock}
           </div>
         </div>
 
@@ -113,20 +113,13 @@ function BreadStockCard(item: MenuItem) {
                   : ""
               }`}
               style={{
-                backgroundColor:
-                  isOutOfStock || storeIsClosed ? "#9CA3AF" : "#8B6F47",
+                backgroundColor: "#9CA3AF",
               }}
               onClick={handleOrderClick}
-              disabled={isOutOfStock || storeIsClosed}
-              title={
-                isOutOfStock
-                  ? t("menu.outOfStock")
-                  : storeIsClosed
-                  ? "Toko sedang tutup"
-                  : t("menu.addToCart")
-              }
+              disabled={true}
+              title={t("stock.infoOnly") || "Hanya untuk informasi"}
             >
-              {t("menu.order") || "Pesan"}
+              {t("stock.viewOnly") || "Lihat Saja"}
             </Button>
           </div>
         </CardContent>
@@ -288,7 +281,7 @@ export function DailyBreadStock() {
                 className="font-serif text-3xl md:text-4xl lg:text-5xl font-bold mb-4"
                 style={{ color: "#5D4037" }}
               >
-                {t("home.dailyBreadStock")}
+                {t("stock todays Bread") || "Roti Hari Ini"}
               </h2>
             </div>
           </div>

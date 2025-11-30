@@ -179,7 +179,7 @@ export function BestSeller() {
   const { isStoreClosed } = useStoreClosure();
   const storeIsClosed = isStoreClosed();
   const [currentIndex, setCurrentIndex] = useState(0);
-  const itemsPerPage = 4;
+  const itemsPerPage = 5;
 
   // [PERUBAHAN] Tambahkan useEffect untuk fetch data
   useEffect(() => {

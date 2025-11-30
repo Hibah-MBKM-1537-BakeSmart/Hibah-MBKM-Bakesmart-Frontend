@@ -433,6 +433,11 @@ export function Menu() {
                     {category.name}
                   </button>
                 ))}
+                {menuCategories.length > 4 && (
+                  <div className="pointer-events-none flex items-center ml-4 text-gray-400">
+                    <ChevronRight className="w-5 h-5 animate-pulse" />
+                  </div>
+                )}
               </div>
             </div>
           </div>
