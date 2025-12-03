@@ -5,9 +5,11 @@ import { X, Plus, Edit2, Trash2, ToggleLeft, ToggleRight } from 'lucide-react';
 
 export interface ProductAddon {
   id: number;
-  nama: string;
-  harga_tambahan: number;
-  is_active: boolean;
+  nama_id: string;
+  nama_en: string;
+  nama?: string; // For backward compatibility
+  harga: number; // Changed from harga_tambahan to harga
+  is_active?: boolean; // Optional for backend attributes
 }
 
 interface ProductAddonsManagerProps {
@@ -28,52 +30,64 @@ export function ProductAddonsManager({
   const [addons, setAddons] = useState<ProductAddon[]>(initialAddons);
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [formData, setFormData] = useState({ nama: '', harga_tambahan: 0 });
+  const [formData, setFormData] = useState({ nama_id: '', nama_en: '', harga: 0 });
 
   if (!isOpen) return null;
 
   const handleAdd = () => {
     setIsAdding(true);
-    setFormData({ nama: '', harga_tambahan: 0 });
+    setFormData({ nama_id: '', nama_en: '', harga: 0 });
   };
 
   const handleEdit = (addon: ProductAddon) => {
     setEditingId(addon.id);
-    setFormData({ nama: addon.nama, harga_tambahan: addon.harga_tambahan });
+    setFormData({ 
+      nama_id: addon.nama_id || addon.nama || '', 
+      nama_en: addon.nama_en || addon.nama || '', 
+      harga: addon.harga 
+    });
   };
 
   const handleSaveNew = () => {
-    if (!formData.nama.trim()) return;
+    if (!formData.nama_id.trim() || !formData.nama_en.trim()) return;
     
     const newAddon: ProductAddon = {
-      id: Date.now(), // Temporary ID, will be replaced by API
-      nama: formData.nama.trim(),
-      harga_tambahan: formData.harga_tambahan,
+      id: Date.now(), // Temporary ID, will be replaced by backend
+      nama_id: formData.nama_id.trim(),
+      nama_en: formData.nama_en.trim(),
+      nama: formData.nama_id.trim(), // For backward compatibility
+      harga: formData.harga,
       is_active: true
     };
     
     setAddons([...addons, newAddon]);
     setIsAdding(false);
-    setFormData({ nama: '', harga_tambahan: 0 });
+    setFormData({ nama_id: '', nama_en: '', harga: 0 });
   };
 
   const handleSaveEdit = () => {
-    if (!formData.nama.trim()) return;
+    if (!formData.nama_id.trim() || !formData.nama_en.trim()) return;
     
     setAddons(addons.map(addon => 
       addon.id === editingId
-        ? { ...addon, nama: formData.nama.trim(), harga_tambahan: formData.harga_tambahan }
+        ? { 
+            ...addon, 
+            nama_id: formData.nama_id.trim(), 
+            nama_en: formData.nama_en.trim(),
+            nama: formData.nama_id.trim(),
+            harga: formData.harga 
+          }
         : addon
     ));
     
     setEditingId(null);
-    setFormData({ nama: '', harga_tambahan: 0 });
+    setFormData({ nama_id: '', nama_en: '', harga: 0 });
   };
 
   const handleCancel = () => {
     setIsAdding(false);
     setEditingId(null);
-    setFormData({ nama: '', harga_tambahan: 0 });
+    setFormData({ nama_id: '', nama_en: '', harga: 0 });
   };
 
   const handleDelete = (id: number) => {
@@ -150,28 +164,40 @@ export function ProductAddonsManager({
               <div className="space-y-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Addon Name
+                    Nama Addon (Bahasa Indonesia) *
                   </label>
                   <input
                     type="text"
-                    value={formData.nama}
-                    onChange={(e) => setFormData({ ...formData, nama: e.target.value })}
-                    placeholder="e.g., Extra Cheese"
+                    value={formData.nama_id}
+                    onChange={(e) => setFormData({ ...formData, nama_id: e.target.value })}
+                    placeholder="Contoh: Potong"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Additional Price
+                    Addon Name (English) *
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.nama_en}
+                    onChange={(e) => setFormData({ ...formData, nama_en: e.target.value })}
+                    placeholder="Example: Cut"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Harga Tambahan (IDR)
                   </label>
                   <input
                     type="text"
                     inputMode="numeric"
-                    value={formData.harga_tambahan || ''}
+                    value={formData.harga || ''}
                     onChange={(e) => {
                       const value = e.target.value.replace(/\D/g, ''); // Remove non-digits
                       const numValue = value === '' ? 0 : parseInt(value, 10);
-                      setFormData({ ...formData, harga_tambahan: numValue });
+                      setFormData({ ...formData, harga: numValue });
                     }}
                     placeholder="0"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
@@ -207,7 +233,7 @@ export function ProductAddonsManager({
                 <div
                   key={addon.id}
                   className={`p-4 rounded-lg border transition-all ${
-                    addon.is_active
+                    addon.is_active !== false
                       ? 'bg-white border-gray-200'
                       : 'bg-gray-50 border-gray-200 opacity-60'
                   }`}
@@ -215,35 +241,39 @@ export function ProductAddonsManager({
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-3">
-                        <h4 className="font-semibold text-gray-900">
-                          {addon.nama}
+                        <h4 className="font-medium text-gray-900">
+                          {addon.nama_id || addon.nama || 'Unnamed Addon'}
                         </h4>
-                        {!addon.is_active && (
-                          <span className="px-2 py-0.5 bg-gray-200 text-gray-600 text-xs rounded-full">
-                            Inactive
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-sm text-gray-600 mt-1">
-                        {addon.harga_tambahan > 0 
-                          ? `+${formatPrice(addon.harga_tambahan)}`
-                          : 'Free'
-                        }
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {/* Toggle Active */}
-                      <button
-                        onClick={() => handleToggleActive(addon.id)}
-                        className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                        title={addon.is_active ? 'Deactivate' : 'Activate'}
-                      >
-                        {addon.is_active ? (
-                          <ToggleRight className="w-5 h-5 text-green-600" />
+                        {addon.is_active !== false ? (
+                          <ToggleRight className="w-5 h-5 text-green-500" />
                         ) : (
                           <ToggleLeft className="w-5 h-5 text-gray-400" />
                         )}
-                      </button>
+                      </div>
+                      <div className="mt-1 space-y-0.5">
+                        {addon.nama_en && (
+                          <p className="text-xs text-gray-500">EN: {addon.nama_en}</p>
+                        )}
+                        <p className="text-sm font-semibold text-orange-600">
+                          {addon.harga > 0 ? formatPrice(addon.harga) : 'Gratis'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {/* Toggle Active - Only show for managed addons */}
+                      {addon.is_active !== undefined && (
+                        <button
+                          onClick={() => handleToggleActive(addon.id)}
+                          className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                          title={addon.is_active ? 'Deactivate' : 'Activate'}
+                        >
+                          {addon.is_active ? (
+                            <ToggleRight className="w-5 h-5 text-green-600" />
+                          ) : (
+                            <ToggleLeft className="w-5 h-5 text-gray-400" />
+                          )}
+                        </button>
+                      )}
                       
                       {/* Edit Button */}
                       <button
@@ -275,7 +305,7 @@ export function ProductAddonsManager({
         {/* Footer */}
         <div className="flex items-center justify-between p-6 border-t border-gray-200 bg-gray-50">
           <div className="text-sm text-gray-600">
-            {addons.length} addon(s) • {addons.filter(a => a.is_active).length} active
+            {addons.length} addon(s) • {addons.filter(a => a.is_active !== false).length} active
           </div>
           <div className="flex gap-3">
             <button

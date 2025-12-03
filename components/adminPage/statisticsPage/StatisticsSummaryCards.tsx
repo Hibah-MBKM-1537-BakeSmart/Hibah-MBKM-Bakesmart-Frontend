@@ -17,10 +17,20 @@ export function StatisticsSummaryCards({
   highestMonth,
   customerStats,
 }: StatisticsSummaryCardsProps) {
+  // Format currency to full Rupiah with thousand separators
+  const formatRupiah = (value: number) => {
+    return new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: 'IDR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(value);
+  };
+
   const summaryCards = [
     {
       title: "Total Revenue",
-      value: `Rp ${(totalRevenue / 1000000).toFixed(1)}M`,
+      value: formatRupiah(totalRevenue),
       subtitle: "All time sales",
       icon: DollarSign,
       color: "#10B981",
@@ -38,7 +48,7 @@ export function StatisticsSummaryCards({
     },
     {
       title: "Avg Monthly Revenue",
-      value: `Rp ${(averageMonthlyRevenue / 1000000).toFixed(1)}M`,
+      value: formatRupiah(averageMonthlyRevenue),
       subtitle: `Highest: ${highestMonth.month}`,
       icon: TrendingUp,
       color: "#F59E0B",

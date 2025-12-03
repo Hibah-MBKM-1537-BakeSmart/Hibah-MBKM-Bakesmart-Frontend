@@ -15,6 +15,10 @@ export interface OrderItem {
   // Related product data via join
   nama_id?: string;
   nama_en?: string;
+  // Backend response format
+  product_name_id?: string;
+  product_name_en?: string;
+  product_price?: number;
 }
 
 // Based on orders table structure and backend response

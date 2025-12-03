@@ -16,11 +16,9 @@ export function ProductDetailModal({ isOpen, onClose, product }: ProductDetailMo
   const formatPrice = (price: number) =>
     new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(price);
 
-  // TEMPORARY: Preview data untuk hari ketersediaan
-  // TODO: Nanti akan diganti dengan data dari backend
-  const previewHariTersedia = product.hari_tersedia && product.hari_tersedia.length > 0 
-    ? product.hari_tersedia 
-    : ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu']; // Data preview/dummy
+  // Get hari from backend
+  const hariFromBackend = product.hari || [];
+  const hasHari = hariFromBackend.length > 0;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -54,7 +52,26 @@ export function ProductDetailModal({ isOpen, onClose, product }: ProductDetailMo
               {product.jenis?.[0]?.nama && (
                 <p className="text-sm text-gray-600">Kategori: {product.jenis[0].nama}</p>
               )}
-              <p className="mt-2 text-gray-700 whitespace-pre-line">{product.deskripsi}</p>
+              
+              {/* Deskripsi Bilingual */}
+              {(product.deskripsi_id || product.deskripsi_en) ? (
+                <div className="mt-3 space-y-2">
+                  {product.deskripsi_id && (
+                    <div>
+                      <p className="text-xs font-medium text-gray-500 mb-1">Deskripsi (ID):</p>
+                      <p className="text-sm text-gray-700 whitespace-pre-line">{product.deskripsi_id}</p>
+                    </div>
+                  )}
+                  {product.deskripsi_en && (
+                    <div>
+                      <p className="text-xs font-medium text-gray-500 mb-1">Description (EN):</p>
+                      <p className="text-sm text-gray-700 whitespace-pre-line">{product.deskripsi_en}</p>
+                    </div>
+                  )}
+                </div>
+              ) : product.deskripsi ? (
+                <p className="mt-2 text-gray-700 whitespace-pre-line">{product.deskripsi}</p>
+              ) : null}
             </div>
           </div>
 
@@ -73,41 +90,8 @@ export function ProductDetailModal({ isOpen, onClose, product }: ProductDetailMo
             </div>
           </div>
 
-          {/* Hari Ketersediaan Section - PREVIEW MODE */}
-          <div className="rounded-lg border border-gray-200">
-            <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 rounded-t-lg">
-              <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-gray-600" />
-                <h4 className="text-sm font-semibold text-gray-900">Hari Ketersediaan</h4>
-                <span className="ml-auto text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full font-medium">
-                  Preview Mode
-                </span>
-              </div>
-              <p className="text-xs text-gray-600 mt-0.5">
-                Produk tersedia pada {previewHariTersedia.length} hari (data preview)
-              </p>
-            </div>
-            <div className="p-4">
-              <div className="flex flex-wrap gap-2">
-                {previewHariTersedia.map((hari, index) => (
-                  <span
-                    key={index}
-                    className="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-blue-50 text-blue-700 border border-blue-200"
-                  >
-                    {hari}
-                  </span>
-                ))}
-              </div>
-              <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <p className="text-xs text-yellow-800">
-                  <strong>⚠️ Preview:</strong> Ini adalah data contoh. Setelah backend siap, data akan diambil dari <code className="bg-yellow-100 px-1 py-0.5 rounded">product.hari</code> atau <code className="bg-yellow-100 px-1 py-0.5 rounded">product.hari_tersedia</code>
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Hari Ketersediaan Section - ORIGINAL (akan aktif saat backend siap)
-          {product.hari_tersedia && product.hari_tersedia.length > 0 && (
+          {/* Hari Ketersediaan Section - From Backend */}
+          {hasHari && (
             <div className="rounded-lg border border-gray-200">
               <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 rounded-t-lg">
                 <div className="flex items-center gap-2">
@@ -115,17 +99,17 @@ export function ProductDetailModal({ isOpen, onClose, product }: ProductDetailMo
                   <h4 className="text-sm font-semibold text-gray-900">Hari Ketersediaan</h4>
                 </div>
                 <p className="text-xs text-gray-600 mt-0.5">
-                  Produk tersedia pada {product.hari_tersedia.length} hari
+                  Produk tersedia pada {hariFromBackend.length} hari
                 </p>
               </div>
               <div className="p-4">
                 <div className="flex flex-wrap gap-2">
-                  {product.hari_tersedia.map((hari, index) => (
+                  {hariFromBackend.map((hari) => (
                     <span
-                      key={index}
+                      key={hari.id}
                       className="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-blue-50 text-blue-700 border border-blue-200"
                     >
-                      {hari}
+                      {hari.nama_id}
                     </span>
                   ))}
                 </div>
@@ -133,15 +117,13 @@ export function ProductDetailModal({ isOpen, onClose, product }: ProductDetailMo
             </div>
           )}
 
-          */}
-
           {/* Attributes/Add-ons from Backend */}
           {product.attributes && product.attributes.length > 0 && (
             <div className="rounded-lg border border-gray-200">
               <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 rounded-t-lg">
-                <h4 className="text-sm font-semibold text-gray-900">Add-ons Tersedia</h4>
+                <h4 className="text-sm font-semibold text-gray-900">Product Addons</h4>
                 <p className="text-xs text-gray-600 mt-0.5">
-                  {product.attributes.length} add-on(s) tersedia
+                  {product.attributes.length} addon(s) tersedia
                 </p>
               </div>
               <div className="p-4">
@@ -155,13 +137,11 @@ export function ProductDetailModal({ isOpen, onClose, product }: ProductDetailMo
                         <CheckCircle className="w-5 h-5 text-orange-600 flex-shrink-0" />
                         <div>
                           <p className="font-medium text-gray-900">
-                            {attribute.nama}
+                            {attribute.nama_id || attribute.nama || 'Unnamed'}
                           </p>
-                          {(attribute.nama_id || attribute.nama_en) && (
+                          {attribute.nama_en && (
                             <p className="text-xs text-gray-600">
-                              {attribute.nama_id && `ID: ${attribute.nama_id}`}
-                              {attribute.nama_id && attribute.nama_en && ' • '}
-                              {attribute.nama_en && `EN: ${attribute.nama_en}`}
+                              EN: {attribute.nama_en}
                             </p>
                           )}
                         </div>

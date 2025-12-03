@@ -1,13 +1,17 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Upload, Plus, Trash2 } from 'lucide-react';
 import { useCategories } from '../../../app/contexts/CategoriesContext';
 
 interface Product {
   id: number;
   nama: string;
+  nama_id?: string;
+  nama_en?: string;
   deskripsi: string;
+  deskripsi_id?: string;
+  deskripsi_en?: string;
   harga: number;
   stok: number;
   created_at: string;
@@ -36,12 +40,13 @@ interface AddProductModalProps {
 interface FormData {
   nama_id: string;
   nama_en: string;
-  deskripsi: string;
+  deskripsi_id: string;
+  deskripsi_en: string;
   harga: string;
   stok: string;
-  kategori: string;
+  jenis_id: number | null; // Single kategori roti selection
   images: File[];
-  hari_tersedia: string[];
+  hari_ids: number[]; // Changed from hari_tersedia to hari_ids array
 }
 
 export function AddProductModal({ isOpen, onClose, onAddProduct }: AddProductModalProps) {
@@ -49,19 +54,58 @@ export function AddProductModal({ isOpen, onClose, onAddProduct }: AddProductMod
   const [formData, setFormData] = useState<FormData>({
     nama_id: '',
     nama_en: '',
-    deskripsi: '',
+    deskripsi_id: '',
+    deskripsi_en: '',
     harga: '',
     stok: '',
-    kategori: '',
+    jenis_id: null,
     images: [],
-    hari_tersedia: []
+    hari_ids: []
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [availableJenis, setAvailableJenis] = useState<Array<{id: number, nama_id: string, nama_en: string}>>([]);
+  const [availableHari, setAvailableHari] = useState<Array<{id: number, nama_id: string, nama_en: string}>>([]);
 
-  const daysOfWeek = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
+  // Fetch available jenis and hari from backend
+  useEffect(() => {
+    const fetchJenisAndHari = async () => {
+      try {
+        const response = await fetch('/api/products');
+        const data = await response.json();
+        
+        if (data.data && Array.isArray(data.data)) {
+          // Extract unique jenis
+          const jenisMap = new Map<number, {id: number, nama_id: string, nama_en: string}>();
+          const hariMap = new Map<number, {id: number, nama_id: string, nama_en: string}>();
+          
+          data.data.forEach((product: any) => {
+            product.jenis?.forEach((j: any) => {
+              if (j.id && j.nama_id) {
+                jenisMap.set(j.id, {id: j.id, nama_id: j.nama_id, nama_en: j.nama_en || j.nama_id});
+              }
+            });
+            product.hari?.forEach((h: any) => {
+              if (h.id && h.nama_id) {
+                hariMap.set(h.id, {id: h.id, nama_id: h.nama_id, nama_en: h.nama_en || h.nama_id});
+              }
+            });
+          });
+          
+          setAvailableJenis(Array.from(jenisMap.values()).sort((a, b) => a.id - b.id));
+          setAvailableHari(Array.from(hariMap.values()).sort((a, b) => a.id - b.id));
+        }
+      } catch (error) {
+        console.error('Error fetching jenis and hari:', error);
+      }
+    };
+    
+    if (isOpen) {
+      fetchJenisAndHari();
+    }
+  }, [isOpen]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -106,12 +150,19 @@ export function AddProductModal({ isOpen, onClose, onAddProduct }: AddProductMod
     setImagePreviews(prev => prev.filter((_, i) => i !== index));
   };
 
-  const toggleDay = (day: string) => {
+  const toggleHari = (hariId: number) => {
     setFormData(prev => ({
       ...prev,
-      hari_tersedia: prev.hari_tersedia.includes(day)
-        ? prev.hari_tersedia.filter(d => d !== day)
-        : [...prev.hari_tersedia, day]
+      hari_ids: prev.hari_ids.includes(hariId)
+        ? prev.hari_ids.filter(id => id !== hariId)
+        : [...prev.hari_ids, hariId]
+    }));
+  };
+
+  const selectJenis = (jenisId: number) => {
+    setFormData(prev => ({
+      ...prev,
+      jenis_id: prev.jenis_id === jenisId ? null : jenisId // Toggle or select single
     }));
   };
 
@@ -124,8 +175,11 @@ export function AddProductModal({ isOpen, onClose, onAddProduct }: AddProductMod
     if (!formData.nama_en.trim()) {
       newErrors.nama_en = 'Nama produk (EN) harus diisi';
     }
-    if (!formData.deskripsi.trim()) {
-      newErrors.deskripsi = 'Deskripsi harus diisi';
+    if (!formData.deskripsi_id.trim()) {
+      newErrors.deskripsi_id = 'Deskripsi (ID) harus diisi';
+    }
+    if (!formData.deskripsi_en.trim()) {
+      newErrors.deskripsi_en = 'Deskripsi (EN) harus diisi';
     }
     if (!formData.harga || parseFloat(formData.harga) <= 0) {
       newErrors.harga = 'Harga harus lebih dari 0';
@@ -133,8 +187,8 @@ export function AddProductModal({ isOpen, onClose, onAddProduct }: AddProductMod
     if (!formData.stok || parseInt(formData.stok) < 0) {
       newErrors.stok = 'Stok tidak boleh negatif';
     }
-    if (!formData.kategori) {
-      newErrors.kategori = 'Kategori harus dipilih';
+    if (!formData.jenis_id) {
+      newErrors.jenis_id = 'Kategori roti harus dipilih';
     }
     if (formData.images.length === 0) {
       newErrors.images = 'Minimal 1 gambar produk';
@@ -154,17 +208,17 @@ export function AddProductModal({ isOpen, onClose, onAddProduct }: AddProductMod
     try {
       await new Promise(resolve => setTimeout(resolve, 1000));
 
-      const selectedCategory = contextCategories.find(cat => cat.nama === formData.kategori);
-      
       const newProduct = {
         nama_id: formData.nama_id,
         nama_en: formData.nama_en,
         nama: formData.nama_id, // Keep nama for backward compatibility
-        deskripsi: formData.deskripsi,
+        deskripsi_id: formData.deskripsi_id,
+        deskripsi_en: formData.deskripsi_en,
+        deskripsi: formData.deskripsi_id, // Keep deskripsi for backward compatibility
         harga: parseFloat(formData.harga),
         stok: parseInt(formData.stok),
-        jenis: selectedCategory ? [selectedCategory] : [],
-        hari_tersedia: formData.hari_tersedia,
+        jenis_id: formData.jenis_id, // Send single jenis_id
+        hari_ids: formData.hari_ids, // Send hari_ids array
         gambars: formData.images.map((file, index) => ({
           id: Date.now() + index,
           file_path: URL.createObjectURL(file),
@@ -187,12 +241,13 @@ export function AddProductModal({ isOpen, onClose, onAddProduct }: AddProductMod
     setFormData({
       nama_id: '',
       nama_en: '',
-      deskripsi: '',
+      deskripsi_id: '',
+      deskripsi_en: '',
       harga: '',
       stok: '',
-      kategori: '',
+      jenis_id: null,
       images: [],
-      hari_tersedia: []
+      hari_ids: []
     });
     setImagePreviews([]);
     setErrors({});
@@ -270,20 +325,37 @@ export function AddProductModal({ isOpen, onClose, onAddProduct }: AddProductMod
                 </div>
 
                 {/* Description */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Deskripsi *</label>
-                  <textarea
-                    name="deskripsi"
-                    value={formData.deskripsi}
-                    onChange={handleInputChange}
-                    rows={3}
-                    placeholder="Deskripsikan produk Anda..."
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 ${
-                      errors.deskripsi ? 'border-red-500' : 'border-gray-300'
-                    }`}
-                    disabled={isSubmitting}
-                  />
-                  {errors.deskripsi && <p className="mt-1 text-sm text-red-600">{errors.deskripsi}</p>}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Deskripsi Produk (Bahasa Indonesia) *</label>
+                    <textarea
+                      name="deskripsi_id"
+                      value={formData.deskripsi_id}
+                      onChange={handleInputChange}
+                      rows={3}
+                      placeholder="Masukkan deskripsi produk dalam Bahasa Indonesia"
+                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 ${
+                        errors.deskripsi_id ? 'border-red-500' : 'border-gray-300'
+                      }`}
+                      disabled={isSubmitting}
+                    />
+                    {errors.deskripsi_id && <p className="mt-1 text-sm text-red-600">{errors.deskripsi_id}</p>}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Deskripsi Produk (English) *</label>
+                    <textarea
+                      name="deskripsi_en"
+                      value={formData.deskripsi_en}
+                      onChange={handleInputChange}
+                      rows={3}
+                      placeholder="Enter product description in English"
+                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 ${
+                        errors.deskripsi_en ? 'border-red-500' : 'border-gray-300'
+                      }`}
+                      disabled={isSubmitting}
+                    />
+                    {errors.deskripsi_en && <p className="mt-1 text-sm text-red-600">{errors.deskripsi_en}</p>}
+                  </div>
                 </div>
 
                 {/* Price and Stock */}
@@ -330,50 +402,59 @@ export function AddProductModal({ isOpen, onClose, onAddProduct }: AddProductMod
                     Hari Ketersediaan
                   </label>
                   <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
-                    {daysOfWeek.map((day) => (
+                    {availableHari.map((hari) => (
                       <button
-                        key={day}
+                        key={hari.id}
                         type="button"
-                        onClick={() => toggleDay(day)}
+                        onClick={() => toggleHari(hari.id)}
                         disabled={isSubmitting}
                         className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors border ${
-                          formData.hari_tersedia.includes(day)
+                          formData.hari_ids.includes(hari.id)
                             ? 'bg-orange-500 text-white border-orange-500'
                             : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
                         } disabled:opacity-50 disabled:cursor-not-allowed`}
                       >
-                        {day}
+                        {hari.nama_id}
                       </button>
                     ))}
                   </div>
                   <p className="text-xs text-gray-500 mt-2">
-                    {formData.hari_tersedia.length === 0 
+                    {formData.hari_ids.length === 0 
                       ? 'Tidak ada hari dipilih (produk tidak tersedia)'
-                      : `Tersedia di: ${formData.hari_tersedia.join(', ')}`
+                      : `Tersedia di ${formData.hari_ids.length} hari`
                     }
                   </p>
                 </div>
 
-                {/* Category */}
-                <div className="grid grid-cols-1 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Kategori *</label>
-                    <select
-                      name="kategori"
-                      value={formData.kategori}
-                      onChange={handleInputChange}
-                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 ${
-                        errors.kategori ? 'border-red-500' : 'border-gray-300'
-                      }`}
-                      disabled={isSubmitting}
-                    >
-                      <option value="">Pilih Kategori</option>
-                      {contextCategories.map(category => (
-                        <option key={category.id} value={category.nama}>{category.nama}</option>
-                      ))}
-                    </select>
-                    {errors.kategori && <p className="mt-1 text-sm text-red-600">{errors.kategori}</p>}
+                {/* Kategori Roti */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    Kategori Roti * (Pilih minimal 1)
+                  </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {availableJenis.map((jenis) => (
+                      <button
+                        key={jenis.id}
+                        type="button"
+                        onClick={() => selectJenis(jenis.id)}
+                        disabled={isSubmitting}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors border ${
+                          formData.jenis_id === jenis.id
+                            ? 'bg-blue-500 text-white border-blue-500'
+                            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                        } disabled:opacity-50 disabled:cursor-not-allowed`}
+                      >
+                        {jenis.nama_id}
+                      </button>
+                    ))}
                   </div>
+                  {errors.jenis_id && <p className="mt-2 text-sm text-red-600">{errors.jenis_id}</p>}
+                  <p className="text-xs text-gray-500 mt-2">
+                    {!formData.jenis_id
+                      ? 'Belum ada jenis dipilih'
+                      : `1 kategori terpilih`
+                    }
+                  </p>
                 </div>
 
                 {/* Images Upload */}

@@ -45,8 +45,19 @@ export default function ProductsPage() {
   const { categories } = useCategories();
   const { products, addProduct, deleteProduct, updateProduct } = useProducts();
 
-  // Combine 'all' with actual category names
-  const categoryOptions = ['all', ...categories.map(cat => cat.nama)];
+  // Extract unique jenis from backend products
+  const uniqueJenis = React.useMemo(() => {
+    const jenisSet = new Set<string>();
+    products.forEach(product => {
+      product.jenis?.forEach(j => {
+        if (j.nama_id) jenisSet.add(j.nama_id);
+      });
+    });
+    return Array.from(jenisSet).sort();
+  }, [products]);
+
+  // Combine 'all' with actual jenis from backend
+  const categoryOptions = ['all', ...uniqueJenis];
 
   // Sort and filter products
   const filteredProducts = products
@@ -57,9 +68,9 @@ export default function ProductsPage() {
       // Search filter
       const matchesSearch = product.nama.toLowerCase().includes(searchTerm.toLowerCase());
       
-      // Category filter
-      const productCategory = product.jenis?.[0]?.nama || '';
-      const matchesCategory = selectedCategory === 'all' || productCategory === selectedCategory;
+      // Category filter - check all jenis for match
+      const matchesCategory = selectedCategory === 'all' || 
+        product.jenis?.some(j => j.nama_id === selectedCategory) || false;
       
       // Price range filter
       const matchesPrice = product.harga >= priceRange.min && product.harga <= priceRange.max;

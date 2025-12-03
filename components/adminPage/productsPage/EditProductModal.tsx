@@ -18,21 +18,59 @@ export function EditProductModal({ isOpen, onClose, onEditProduct, product }: Ed
   const [formData, setFormData] = useState({
     nama_id: '',
     nama_en: '',
-    deskripsi: '',
+    deskripsi_id: '',
+    deskripsi_en: '',
     harga: 0,
     stok: 0,
-    jenis: [] as Array<{ id: number; nama: string }>,
-    hari_tersedia: [] as string[],
+    jenis_id: null as number | null,
+    hari_ids: [] as number[],
     addons: [] as ProductAddon[],
     images: [] as File[],
   });
-  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAddonsManager, setShowAddonsManager] = useState(false);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [existingImages, setExistingImages] = useState<Array<{ id: number; file_path: string }>>([]);
+  const [availableJenis, setAvailableJenis] = useState<Array<{id: number, nama_id: string, nama_en: string}>>([]);
+  const [availableHari, setAvailableHari] = useState<Array<{id: number, nama_id: string, nama_en: string}>>([]);
 
-  const daysOfWeek = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
+  // Fetch available jenis and hari from backend
+  useEffect(() => {
+    const fetchJenisAndHari = async () => {
+      try {
+        const response = await fetch('/api/products');
+        const data = await response.json();
+        
+        if (data.data && Array.isArray(data.data)) {
+          // Extract unique jenis
+          const jenisMap = new Map<number, {id: number, nama_id: string, nama_en: string}>();
+          const hariMap = new Map<number, {id: number, nama_id: string, nama_en: string}>();
+          
+          data.data.forEach((prod: any) => {
+            prod.jenis?.forEach((j: any) => {
+              if (j.id && j.nama_id) {
+                jenisMap.set(j.id, {id: j.id, nama_id: j.nama_id, nama_en: j.nama_en || j.nama_id});
+              }
+            });
+            prod.hari?.forEach((h: any) => {
+              if (h.id && h.nama_id) {
+                hariMap.set(h.id, {id: h.id, nama_id: h.nama_id, nama_en: h.nama_en || h.nama_id});
+              }
+            });
+          });
+          
+          setAvailableJenis(Array.from(jenisMap.values()).sort((a, b) => a.id - b.id));
+          setAvailableHari(Array.from(hariMap.values()).sort((a, b) => a.id - b.id));
+        }
+      } catch (error) {
+        console.error('Error fetching jenis and hari:', error);
+      }
+    };
+    
+    if (isOpen) {
+      fetchJenisAndHari();
+    }
+  }, [isOpen]);
 
   // Reset form when product changes
   useEffect(() => {
@@ -40,15 +78,15 @@ export function EditProductModal({ isOpen, onClose, onEditProduct, product }: Ed
       setFormData({
         nama_id: product.nama_id || product.nama || '',
         nama_en: product.nama_en || product.nama || '',
-        deskripsi: product.deskripsi,
+        deskripsi_id: product.deskripsi_id || product.deskripsi || '',
+        deskripsi_en: product.deskripsi_en || product.deskripsi || '',
         harga: product.harga,
         stok: product.stok,
-        jenis: product.jenis || [],
-        hari_tersedia: product.hari_tersedia || [],
-        addons: product.addons || [],
+        jenis_id: product.jenis?.[0]?.id || null,
+        hari_ids: product.hari?.map(h => h.id) || [],
+        addons: product.attributes || [], // Load attributes from backend
         images: [],
       });
-      setSelectedCategoryId(product.jenis?.[0]?.id || null);
       setExistingImages(product.gambars || []);
       setImagePreviews([]);
     }
@@ -59,7 +97,7 @@ export function EditProductModal({ isOpen, onClose, onEditProduct, product }: Ed
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.nama_id.trim() || !formData.nama_en.trim() || !formData.deskripsi.trim() || formData.harga <= 0) {
+    if (!formData.nama_id.trim() || !formData.nama_en.trim() || !formData.deskripsi_id.trim() || !formData.deskripsi_en.trim() || formData.harga <= 0) {
       alert('Harap isi semua field yang wajib');
       return;
     }
@@ -67,8 +105,6 @@ export function EditProductModal({ isOpen, onClose, onEditProduct, product }: Ed
     setIsSubmitting(true);
     
     try {
-      const selectedCategory = categories.find(cat => cat.id === selectedCategoryId);
-      
       // Combine existing images with new images
       const allImages = [
         ...existingImages.map(img => ({
@@ -86,7 +122,10 @@ export function EditProductModal({ isOpen, onClose, onEditProduct, product }: Ed
       const productData = {
         ...formData,
         nama: formData.nama_id, // Keep nama for backward compatibility
-        jenis: selectedCategory ? [{ id: selectedCategory.id, nama: selectedCategory.nama }] : [],
+        deskripsi: formData.deskripsi_id, // Keep deskripsi for backward compatibility
+        jenis_id: formData.jenis_id,
+        hari_ids: formData.hari_ids,
+        attribute_ids: formData.addons.map(a => a.id), // Send attribute IDs to backend
         gambars: allImages,
       };
 
@@ -103,15 +142,15 @@ export function EditProductModal({ isOpen, onClose, onEditProduct, product }: Ed
     setFormData({
       nama_id: '',
       nama_en: '',
-      deskripsi: '',
+      deskripsi_id: '',
+      deskripsi_en: '',
       harga: 0,
       stok: 0,
-      jenis: [],
-      hari_tersedia: [],
+      jenis_id: null,
+      hari_ids: [],
       addons: [],
       images: [],
     });
-    setSelectedCategoryId(null);
     setImagePreviews([]);
     setExistingImages([]);
     onClose();
@@ -155,12 +194,19 @@ export function EditProductModal({ isOpen, onClose, onEditProduct, product }: Ed
     setExistingImages(prev => prev.filter((_, i) => i !== index));
   };
 
-  const toggleDay = (day: string) => {
+  const toggleHari = (hariId: number) => {
     setFormData(prev => ({
       ...prev,
-      hari_tersedia: prev.hari_tersedia.includes(day)
-        ? prev.hari_tersedia.filter(d => d !== day)
-        : [...prev.hari_tersedia, day]
+      hari_ids: prev.hari_ids.includes(hariId)
+        ? prev.hari_ids.filter(id => id !== hariId)
+        : [...prev.hari_ids, hariId]
+    }));
+  };
+
+  const selectJenis = (jenisId: number) => {
+    setFormData(prev => ({
+      ...prev,
+      jenis_id: prev.jenis_id === jenisId ? null : jenisId
     }));
   };
 
@@ -310,41 +356,65 @@ export function EditProductModal({ isOpen, onClose, onEditProduct, product }: Ed
             />
           </div>
 
-          {/* Description */}
+          {/* Description - Indonesian */}
           <div>
-            <label htmlFor="deskripsi" className="block text-sm font-medium text-gray-700 mb-2">
-              Deskripsi *
+            <label htmlFor="deskripsi_id" className="block text-sm font-medium text-gray-700 mb-2">
+              Deskripsi Produk (Bahasa Indonesia) *
             </label>
             <textarea
-              id="deskripsi"
-              value={formData.deskripsi}
-              onChange={(e) => setFormData(prev => ({ ...prev, deskripsi: e.target.value }))}
+              id="deskripsi_id"
+              value={formData.deskripsi_id}
+              onChange={(e) => setFormData(prev => ({ ...prev, deskripsi_id: e.target.value }))}
               rows={3}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-              placeholder="Masukkan deskripsi produk"
+              placeholder="Masukkan deskripsi produk dalam Bahasa Indonesia"
               required
             />
           </div>
 
-          {/* Category */}
+          {/* Description - English */}
           <div>
-            <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-2">
-              Kategori *
+            <label htmlFor="deskripsi_en" className="block text-sm font-medium text-gray-700 mb-2">
+              Deskripsi Produk (English) *
             </label>
-            <select
-              id="category"
-              value={selectedCategoryId || ''}
-              onChange={(e) => setSelectedCategoryId(Number(e.target.value))}
+            <textarea
+              id="deskripsi_en"
+              value={formData.deskripsi_en}
+              onChange={(e) => setFormData(prev => ({ ...prev, deskripsi_en: e.target.value }))}
+              rows={3}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+              placeholder="Enter product description in English"
               required
-            >
-              <option value="">Pilih kategori</option>
-              {categories.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.nama}
-                </option>
+            />
+          </div>
+
+          {/* Kategori Roti */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-3">
+              Kategori Roti * (Pilih minimal 1)
+            </label>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {availableJenis.map((jenis) => (
+                <button
+                  key={jenis.id}
+                  type="button"
+                  onClick={() => selectJenis(jenis.id)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors border ${
+                    formData.jenis_id === jenis.id
+                      ? 'bg-blue-500 text-white border-blue-500'
+                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  {jenis.nama_id}
+                </button>
               ))}
-            </select>
+            </div>
+            <p className="text-xs text-gray-500 mt-2">
+              {!formData.jenis_id
+                ? 'Belum ada jenis dipilih'
+                : `1 kategori terpilih`
+              }
+            </p>
           </div>
 
           {/* Price and Stock */}
@@ -358,8 +428,11 @@ export function EditProductModal({ isOpen, onClose, onEditProduct, product }: Ed
                 <input
                   type="number"
                   id="harga"
-                  value={formData.harga}
-                  onChange={(e) => setFormData(prev => ({ ...prev, harga: Number(e.target.value) }))}
+                  value={formData.harga || ''}
+                  onChange={(e) => {
+                    const value = e.target.value === '' ? 0 : parseInt(e.target.value, 10);
+                    setFormData(prev => ({ ...prev, harga: isNaN(value) ? 0 : value }));
+                  }}
                   className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                   placeholder="0"
                   min="0"
@@ -380,25 +453,25 @@ export function EditProductModal({ isOpen, onClose, onEditProduct, product }: Ed
               Hari Ketersediaan
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
-              {daysOfWeek.map((day) => (
+              {availableHari.map((hari) => (
                 <button
-                  key={day}
+                  key={hari.id}
                   type="button"
-                  onClick={() => toggleDay(day)}
+                  onClick={() => toggleHari(hari.id)}
                   className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors border ${
-                    formData.hari_tersedia.includes(day)
+                    formData.hari_ids.includes(hari.id)
                       ? 'bg-orange-500 text-white border-orange-500'
                       : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
                   }`}
                 >
-                  {day}
+                  {hari.nama_id}
                 </button>
               ))}
             </div>
             <p className="text-xs text-gray-500 mt-2">
-              {formData.hari_tersedia.length === 0 
+              {formData.hari_ids.length === 0 
                 ? 'Tidak ada hari dipilih (produk tidak tersedia)'
-                : `Tersedia di: ${formData.hari_tersedia.join(', ')}`
+                : `Tersedia di ${formData.hari_ids.length} hari`
               }
             </p>
           </div>
@@ -415,7 +488,7 @@ export function EditProductModal({ isOpen, onClose, onEditProduct, product }: Ed
                   <span className="text-sm text-gray-700">
                     {formData.addons.length === 0 
                       ? 'No addons configured' 
-                      : `${formData.addons.length} addon(s) • ${formData.addons.filter(a => a.is_active).length} active`
+                      : `${formData.addons.length} addon(s)`
                     }
                   </span>
                 </div>
@@ -430,17 +503,17 @@ export function EditProductModal({ isOpen, onClose, onEditProduct, product }: Ed
               </div>
               {formData.addons.length > 0 && (
                 <div className="space-y-1 max-h-24 overflow-y-auto">
-                  {formData.addons.filter(a => a.is_active).slice(0, 3).map((addon) => (
+                  {formData.addons.slice(0, 3).map((addon) => (
                     <div key={addon.id} className="text-xs text-gray-600 flex items-center justify-between bg-white px-2 py-1 rounded">
-                      <span>{addon.nama}</span>
+                      <span>{addon.nama_id || addon.nama || 'Unnamed'}</span>
                       <span className="text-gray-500">
-                        {addon.harga_tambahan > 0 ? `+Rp ${addon.harga_tambahan.toLocaleString('id-ID')}` : 'Free'}
+                        {addon.harga > 0 ? `+Rp ${addon.harga.toLocaleString('id-ID')}` : 'Gratis'}
                       </span>
                     </div>
                   ))}
-                  {formData.addons.filter(a => a.is_active).length > 3 && (
+                  {formData.addons.length > 3 && (
                     <p className="text-xs text-gray-500 italic px-2">
-                      +{formData.addons.filter(a => a.is_active).length - 3} more active addon(s)
+                      +{formData.addons.length - 3} more addon(s)
                     </p>
                   )}
                 </div>

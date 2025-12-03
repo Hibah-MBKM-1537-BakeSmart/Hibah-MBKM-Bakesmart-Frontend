@@ -152,28 +152,126 @@ export function OrderDetailModal() {
       {/* Print Styles */}
       <style jsx global>{`
         @media print {
-          * {
+          @page {
+            size: auto;
+            margin: 10mm;
+          }
+          
+          body * {
             visibility: hidden;
           }
-          .print-content, .print-content * {
+          
+          .print-receipt, 
+          .print-receipt * {
             visibility: visible;
           }
-          .print-content {
+          
+          .print-receipt {
             position: absolute;
             left: 0;
             top: 0;
             width: 100%;
+            max-width: 80mm;
+            margin: 0 auto;
             background: white !important;
+            padding: 5mm;
+            font-family: 'Courier New', monospace;
+            font-size: 10pt;
+            line-height: 1.4;
           }
+          
           .no-print {
             display: none !important;
           }
-          .fixed {
-            position: static !important;
-            background: white !important;
+          
+          .print-receipt .receipt-header {
+            text-align: center;
+            margin-bottom: 5mm;
+            padding-bottom: 3mm;
+            border-bottom: 1px dashed #000;
           }
-          body {
-            background: white !important;
+          
+          .print-receipt .receipt-title {
+            font-size: 16pt;
+            font-weight: bold;
+            margin-bottom: 2mm;
+          }
+          
+          .print-receipt .receipt-info {
+            font-size: 9pt;
+            margin: 1mm 0;
+          }
+          
+          .print-receipt .receipt-section {
+            margin: 4mm 0;
+            padding: 2mm 0;
+          }
+          
+          .print-receipt .section-title {
+            font-weight: bold;
+            font-size: 10pt;
+            margin-bottom: 2mm;
+            padding-bottom: 1mm;
+            border-bottom: 1px solid #000;
+          }
+          
+          .print-receipt .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 1mm 0;
+            font-size: 9pt;
+          }
+          
+          .print-receipt .product-item {
+            margin: 2mm 0;
+            padding: 1mm 0;
+            border-bottom: 1px dashed #ccc;
+          }
+          
+          .print-receipt .product-name {
+            font-weight: bold;
+            margin-bottom: 1mm;
+          }
+          
+          .print-receipt .product-details {
+            display: flex;
+            justify-content: space-between;
+            font-size: 9pt;
+          }
+          
+          .print-receipt .totals {
+            margin-top: 3mm;
+            padding-top: 2mm;
+            border-top: 1px solid #000;
+          }
+          
+          .print-receipt .total-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 1mm 0;
+            font-size: 10pt;
+          }
+          
+          .print-receipt .grand-total {
+            font-weight: bold;
+            font-size: 12pt;
+            margin-top: 2mm;
+            padding-top: 2mm;
+            border-top: 2px double #000;
+          }
+          
+          .print-receipt .receipt-footer {
+            text-align: center;
+            margin-top: 5mm;
+            padding-top: 3mm;
+            border-top: 1px dashed #000;
+            font-size: 9pt;
+          }
+        }
+        
+        @media screen {
+          .print-receipt {
+            display: none;
           }
         }
       `}</style>
@@ -192,9 +290,93 @@ export function OrderDetailModal() {
         }}
         onClick={closeOrderDetail}
       >
-        {/* Modal Content */}
+        {/* Hidden Print Receipt (Only visible when printing) */}
+        <div className="print-receipt">
+          <div className="receipt-header">
+            <div className="receipt-title">BAKESMART</div>
+            <div className="receipt-info">Order #{order.id}</div>
+            <div className="receipt-info">{formatDate(order.created_at)}</div>
+            <div className="receipt-info">{formatTime(order.created_at)}</div>
+          </div>
+
+          <div className="receipt-section">
+            <div className="section-title">INFORMASI PESANAN</div>
+            <div className="info-row">
+              <span>Provider:</span>
+              <span>{order.provider || 'N/A'}</span>
+            </div>
+            {order.courier_name && (
+              <div className="info-row">
+                <span>Kurir:</span>
+                <span>{order.courier_name}</span>
+              </div>
+            )}
+            <div className="info-row">
+              <span>Status:</span>
+              <span>{getStatusText(order.status)}</span>
+            </div>
+          </div>
+
+          <div className="receipt-section">
+            <div className="section-title">DETAIL PESANAN</div>
+            {order.products && order.products.length > 0 ? (
+              <>
+                {order.products.map((item) => (
+                  <div key={item.id} className="product-item">
+                    <div className="product-name">
+                      {item.product_name_id || item.nama_id || item.product_name_en || item.nama_en || 'Unknown Product'}
+                    </div>
+                    <div className="product-details">
+                      <span>{item.jumlah} x {formatCurrency(item.harga_beli / item.jumlah)}</span>
+                      <span>{formatCurrency(item.harga_beli)}</span>
+                    </div>
+                    {item.note && (
+                      <div style={{ fontSize: '8pt', fontStyle: 'italic', marginTop: '1mm' }}>
+                        Note: {item.note}
+                      </div>
+                    )}
+                  </div>
+                ))}
+                
+                <div className="totals">
+                  {order.shipping_cost && order.shipping_cost > 0 && (
+                    <div className="total-row">
+                      <span>Ongkos Kirim:</span>
+                      <span>{formatCurrency(order.shipping_cost)}</span>
+                    </div>
+                  )}
+                  <div className="total-row grand-total">
+                    <span>TOTAL:</span>
+                    <span>{formatCurrency(order.total_harga)}</span>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '3mm 0' }}>
+                Tidak ada item
+              </div>
+            )}
+          </div>
+
+          <div className="receipt-footer">
+            <div>Terima kasih atas pesanan Anda!</div>
+            <div style={{ marginTop: '2mm' }}>BakeSmart - Roti Berkualitas</div>
+            {order.waktu_ambil && (
+              <div style={{ marginTop: '2mm', fontSize: '8pt' }}>
+                Waktu Ambil: {formatDateTime(order.waktu_ambil)}
+              </div>
+            )}
+            {order.note && (
+              <div style={{ marginTop: '2mm', fontSize: '8pt', fontStyle: 'italic' }}>
+                Catatan: {order.note}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Modal Content (Screen View) */}
         <div 
-          className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto print-content relative z-[10000]"
+          className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto relative z-[10000] no-print"
           style={{
             backgroundColor: '#ffffff',
             boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
@@ -219,7 +401,7 @@ export function OrderDetailModal() {
           <div className="flex items-center space-x-2">
             <button
               onClick={handlePrint}
-              className="p-2 rounded-lg border transition-colors no-print"
+              className="p-2 rounded-lg border transition-colors"
               style={{ borderColor: '#e0d5c7', color: '#8b6f47' }}
               title="Print"
             >
@@ -227,7 +409,7 @@ export function OrderDetailModal() {
             </button>
             <button
               onClick={closeOrderDetail}
-              className="p-2 rounded-lg border transition-colors no-print"
+              className="p-2 rounded-lg border transition-colors"
               style={{ borderColor: '#e0d5c7', color: '#8b6f47' }}
             >
               <X className="w-5 h-5" />
@@ -350,7 +532,7 @@ export function OrderDetailModal() {
                     order.products.map((item) => (
                       <tr key={item.id} className="border-t" style={{ borderColor: '#e0d5c7' }}>
                         <td className="p-3 font-admin-body" style={{ color: '#5d4037' }}>
-                          {item.nama_id || item.nama_en || 'Unknown Product'}
+                          {item.product_name_id || item.nama_id || item.product_name_en || item.nama_en || 'Unknown Product'}
                           {item.note && (
                             <div className="text-xs text-gray-500 mt-1">
                               Note: {item.note}
