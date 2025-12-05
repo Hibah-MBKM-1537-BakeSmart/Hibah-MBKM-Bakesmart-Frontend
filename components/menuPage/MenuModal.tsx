@@ -13,9 +13,10 @@ interface MenuModalProps {
   isOpen: boolean;
   onClose: () => void;
   selectedOrderDay?: string | null;
+  viewMode?: "order" | "allMenu";
 }
 
-export function MenuModal({ item, isOpen, onClose }: MenuModalProps) {
+export function MenuModal({ item, isOpen, onClose, viewMode = "order" }: MenuModalProps) {
   const { t, language } = useTranslation();
   const { addToCart, cartItems, selectedOrderDay } = useCart();
   const { isStoreClosed } = useStoreClosure();
@@ -242,38 +243,41 @@ export function MenuModal({ item, isOpen, onClose }: MenuModalProps) {
             {/* Scrollable Content */}
             <div className="flex-1 overflow-y-auto px-4 md:px-6 py-3 md:py-4 min-h-0">
               <div className="space-y-4 md:space-y-5">
-                <div>
-                  <h3 className="font-semibold text-[#5D4037] mb-2 md:mb-3 text-sm md:text-base">
-                    {t("menuModal.selectOrderDay")}
-                  </h3>
-                  <div className="flex flex-wrap gap-2">
-                    {availableDays.map((day) => (
-                      <button
-                        key={day}
-                        onClick={() => handleDaySelection(day)}
-                        disabled={isStoreClosed()}
-                        className={`px-3 py-2 md:px-4 md:py-2.5 text-sm rounded-lg font-medium transition-all duration-200 min-w-[70px] md:min-w-[80px] ${
-                          tempOrderDay === day
-                            ? "bg-[#5D4037] text-white shadow-md"
-                            : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 hover:border-[#8B6F47]"
-                        } ${
-                          isStoreClosed() ? "opacity-50 cursor-not-allowed" : ""
-                        }`}
-                        data-day={day}
-                      >
-                        {getDayLabel(day)}
-                      </button>
-                    ))}
+                {/* Day Selection - Only in order mode */}
+                {viewMode === "order" && (
+                  <div>
+                    <h3 className="font-semibold text-[#5D4037] mb-2 md:mb-3 text-sm md:text-base">
+                      {t("menuModal.selectOrderDay")}
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                      {availableDays.map((day) => (
+                        <button
+                          key={day}
+                          onClick={() => handleDaySelection(day)}
+                          disabled={isStoreClosed()}
+                          className={`px-3 py-2 md:px-4 md:py-2.5 text-sm rounded-lg font-medium transition-all duration-200 min-w-[70px] md:min-w-[80px] ${
+                            tempOrderDay === day
+                              ? "bg-[#5D4037] text-white shadow-md"
+                              : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 hover:border-[#8B6F47]"
+                          } ${
+                            isStoreClosed() ? "opacity-50 cursor-not-allowed" : ""
+                          }`}
+                          data-day={day}
+                        >
+                          {getDayLabel(day)}
+                        </button>
+                      ))}
+                    </div>
+                    {!tempOrderDay && (
+                      <p className="text-orange-600 text-sm mt-2 font-medium">
+                        {t("menuModal.selectDayFirst")}
+                      </p>
+                    )}
                   </div>
-                  {!tempOrderDay && (
-                    <p className="text-orange-600 text-sm mt-2 font-medium">
-                      {t("menuModal.selectDayFirst")}
-                    </p>
-                  )}
-                </div>
+                )}
 
-                {/* Attributes Selection - Only if available */}
-                {item.attributes && item.attributes.length > 0 && (
+                {/* Attributes Selection - Only in order mode and if available */}
+                {viewMode === "order" && item.attributes && item.attributes.length > 0 && (
                   <div>
                     <h3 className="font-semibold text-[#5D4037] mb-2 text-sm md:text-base">
                       Pilihan Tambahan
@@ -322,6 +326,42 @@ export function MenuModal({ item, isOpen, onClose }: MenuModalProps) {
                   </div>
                 )}
 
+                {/* Attributes Display - Only in allMenu mode for viewing */}
+                {viewMode === "allMenu" && item.attributes && item.attributes.length > 0 && (
+                  <div>
+                    <h3 className="font-semibold text-[#5D4037] mb-2 text-sm md:text-base">
+                      Pilihan Tambahan Tersedia
+                    </h3>
+                    <div className="space-y-2">
+                      {item.attributes.map((attribute) => {
+                        const attributeName =
+                          language === "en"
+                            ? attribute.nama_en
+                            : attribute.nama_id;
+                        return (
+                          <div
+                            key={attribute.id}
+                            className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
+                          >
+                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                              <div className="w-4 h-4 rounded border-2 border-gray-300 flex-shrink-0 bg-white"></div>
+                              <span className="text-gray-700 font-medium text-sm truncate">
+                                {attributeName}
+                              </span>
+                            </div>
+                            <span className="text-[#5D4037] font-semibold text-sm ml-2 flex-shrink-0">
+                              +Rp{attribute.harga.toLocaleString("id-ID")}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-2">
+                      Pilihan ini dapat dipilih saat mode Pesan
+                    </p>
+                  </div>
+                )}
+
                 {/* Product Details */}
                 <div className="space-y-3 md:space-y-4">
                   <div>
@@ -347,98 +387,128 @@ export function MenuModal({ item, isOpen, onClose }: MenuModalProps) {
 
             {/* Footer - Fixed */}
             <div className="p-4 md:p-6 pt-3 md:pt-4 border-t border-[#8B6F47]/20 flex-shrink-0 bg-white">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-4">
-                <div className="flex flex-col">
-                  {shouldShowDiscount ? (
-                    <>
-                      <span className="text-base md:text-lg text-gray-400 line-through">
-                        {originalPrice}
+              {viewMode === "order" ? (
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-4">
+                  <div className="flex flex-col">
+                    {shouldShowDiscount ? (
+                      <>
+                        <span className="text-base md:text-lg text-gray-400 line-through">
+                          {originalPrice}
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-2xl md:text-3xl font-bold text-[#8B6F47]">
+                            {formattedTotalPrice}
+                          </span>
+                          <span className="bg-red-100 text-red-600 text-xs md:text-sm px-2 py-1 rounded">
+                            {t("menuModal.promo")}
+                          </span>
+                        </div>
+                      </>
+                    ) : (
+                      <span className="text-2xl md:text-3xl font-bold text-[#8B6F47]">
+                        {formattedTotalPrice}
                       </span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-2xl md:text-3xl font-bold text-[#8B6F47]">
-                          {formattedTotalPrice}
-                        </span>
-                        <span className="bg-red-100 text-red-600 text-xs md:text-sm px-2 py-1 rounded">
-                          {t("menuModal.promo")}
-                        </span>
-                      </div>
-                    </>
-                  ) : (
-                    <span className="text-2xl md:text-3xl font-bold text-[#8B6F47]">
-                      {formattedTotalPrice}
-                    </span>
-                  )}
-                  {selectedAttributes.length > 0 && (
-                    <div className="text-xs md:text-sm text-gray-600 mt-1">
-                      Termasuk {selectedAttributes.length} pilihan tambahan
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex flex-col items-stretch md:items-end gap-2">
-                  {/* Quantity Controls */}
-                  <div className="flex items-center gap-2 mb-2 justify-end">
-                    <button
-                      onClick={() => handleQuantityChange(-1)}
-                      disabled={quantity <= 1 || isStoreClosed()}
-                      className={`w-8 h-8 flex items-center justify-center rounded-full ${
-                        quantity <= 1 || isStoreClosed()
-                          ? "bg-gray-100 text-gray-400"
-                          : "bg-[#5D4037] text-white hover:bg-[#8B6F47]"
-                      }`}
-                    >
-                      -
-                    </button>
-                    <span className="w-12 text-center font-medium">
-                      {quantity}
-                    </span>
-                    <button
-                      onClick={() => handleQuantityChange(1)}
-                      disabled={
-                        quantity >= (item?.stok || 0) || isStoreClosed()
-                      }
-                      className={`w-8 h-8 flex items-center justify-center rounded-full ${
-                        quantity >= (item?.stok || 0) || isStoreClosed()
-                          ? "bg-gray-100 text-gray-400"
-                          : "bg-[#5D4037] text-white hover:bg-[#8B6F47]"
-                      }`}
-                    >
-                      +
-                    </button>
-                  </div>
-                  <button
-                    className={`px-6 md:px-8 py-3 md:py-3.5 rounded-lg font-medium transition-all duration-300 text-sm md:text-base w-full md:w-auto ${
-                      isOutOfStock || !tempOrderDay || isStoreClosed()
-                        ? "bg-gray-400 text-gray-600 cursor-not-allowed"
-                        : "bg-[#5D4037] text-white hover:bg-[#8B6F47] shadow-md hover:shadow-lg"
-                    }`}
-                    onClick={handleAddToCart}
-                    disabled={isOutOfStock || !tempOrderDay || isStoreClosed()}
-                  >
-                    {isStoreClosed()
-                      ? t("menu.storeIsClosed")
-                      : isOutOfStock
-                      ? t("menuModal.stockEmpty")
-                      : !tempOrderDay
-                      ? t("menuModal.selectDayFirst")
-                      : hasItemInCart
-                      ? "Tambah Kustomisasi Baru"
-                      : "Tambah ke Keranjang"}
-                  </button>
-
-                  {item.attributes &&
-                    item.attributes.length > 0 &&
-                    hasCustomization && (
-                      <button
-                        className="px-4 md:px-6 py-2 md:py-2.5 text-sm md:text-base border border-[#8B6F47] text-[#8B6F47] rounded-lg hover:bg-[#8B6F47] hover:text-white transition-all duration-300 w-full md:w-auto"
-                        onClick={handleResetCustomization}
-                        disabled={isStoreClosed()}
-                      >
-                        Reset Pilihan
-                      </button>
                     )}
+                    {selectedAttributes.length > 0 && (
+                      <div className="text-xs md:text-sm text-gray-600 mt-1">
+                        Termasuk {selectedAttributes.length} pilihan tambahan
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex flex-col items-stretch md:items-end gap-2">
+                    {/* Quantity Controls */}
+                    <div className="flex items-center gap-2 mb-2 justify-end">
+                      <button
+                        onClick={() => handleQuantityChange(-1)}
+                        disabled={quantity <= 1 || isStoreClosed()}
+                        className={`w-8 h-8 flex items-center justify-center rounded-full ${
+                          quantity <= 1 || isStoreClosed()
+                            ? "bg-gray-100 text-gray-400"
+                            : "bg-[#5D4037] text-white hover:bg-[#8B6F47]"
+                        }`}
+                      >
+                        -
+                      </button>
+                      <span className="w-12 text-center font-medium">
+                        {quantity}
+                      </span>
+                      <button
+                        onClick={() => handleQuantityChange(1)}
+                        disabled={
+                          quantity >= (item?.stok || 0) || isStoreClosed()
+                        }
+                        className={`w-8 h-8 flex items-center justify-center rounded-full ${
+                          quantity >= (item?.stok || 0) || isStoreClosed()
+                            ? "bg-gray-100 text-gray-400"
+                            : "bg-[#5D4037] text-white hover:bg-[#8B6F47]"
+                        }`}
+                      >
+                        +
+                      </button>
+                    </div>
+                    <button
+                      className={`px-6 md:px-8 py-3 md:py-3.5 rounded-lg font-medium transition-all duration-300 text-sm md:text-base w-full md:w-auto ${
+                        isOutOfStock || !tempOrderDay || isStoreClosed()
+                          ? "bg-gray-400 text-gray-600 cursor-not-allowed"
+                          : "bg-[#5D4037] text-white hover:bg-[#8B6F47] shadow-md hover:shadow-lg"
+                      }`}
+                      onClick={handleAddToCart}
+                      disabled={isOutOfStock || !tempOrderDay || isStoreClosed()}
+                    >
+                      {isStoreClosed()
+                        ? t("menu.storeIsClosed")
+                        : isOutOfStock
+                        ? t("menuModal.stockEmpty")
+                        : !tempOrderDay
+                        ? t("menuModal.selectDayFirst")
+                        : hasItemInCart
+                        ? "Tambah Kustomisasi Baru"
+                        : "Tambah ke Keranjang"}
+                    </button>
+
+                    {item.attributes &&
+                      item.attributes.length > 0 &&
+                      hasCustomization && (
+                        <button
+                          className="px-4 md:px-6 py-2 md:py-2.5 text-sm md:text-base border border-[#8B6F47] text-[#8B6F47] rounded-lg hover:bg-[#8B6F47] hover:text-white transition-all duration-300 w-full md:w-auto"
+                          onClick={handleResetCustomization}
+                          disabled={isStoreClosed()}
+                        >
+                          Reset Pilihan
+                        </button>
+                      )}
+                  </div>
                 </div>
-              </div>
+              ) : (
+                // AllMenu mode - Only show price, no order buttons
+                <div className="flex flex-col items-center justify-center gap-3">
+                  <div className="flex flex-col items-center">
+                    {shouldShowDiscount ? (
+                      <>
+                        <span className="text-base md:text-lg text-gray-400 line-through">
+                          {originalPrice}
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-2xl md:text-3xl font-bold text-[#8B6F47]">
+                            {formattedTotalPrice}
+                          </span>
+                          <span className="bg-red-100 text-red-600 text-xs md:text-sm px-2 py-1 rounded">
+                            {t("menuModal.promo")}
+                          </span>
+                        </div>
+                      </>
+                    ) : (
+                      <span className="text-2xl md:text-3xl font-bold text-[#8B6F47]">
+                        {formattedTotalPrice}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-sm text-gray-600 text-center">
+                    Untuk memesan produk ini, silakan klik tombol "Pesan" di menu utama
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>

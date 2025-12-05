@@ -84,7 +84,9 @@ export function MenuWeekRangePicker({
                   p-1.5 rounded text-xs font-medium transition-all
                   flex flex-col items-center justify-center relative
                   ${
-                    isSelected
+                    isToday
+                      ? "bg-red-500 text-white shadow-md cursor-pointer transform scale-105 z-10 ring-2 ring-red-600"
+                      : isSelected
                       ? "bg-[#8B6F47] text-white shadow-md cursor-pointer transform scale-105 z-10 ring-1 ring-[#5D4037]"
                       : "bg-gray-50 text-gray-700 hover:bg-gray-100 cursor-pointer border border-gray-100"
                   }
@@ -92,7 +94,7 @@ export function MenuWeekRangePicker({
               >
                 <span
                   className={`text-[10px] font-semibold leading-tight uppercase ${
-                    isSelected ? "text-gray-200" : "text-gray-500"
+                    isToday || isSelected ? "text-white" : "text-gray-500"
                   }`}
                 >
                   {dayName.substring(0, 3)}
@@ -100,11 +102,6 @@ export function MenuWeekRangePicker({
                 <span className="font-bold text-xs leading-tight mt-0.5">
                   {format(date, "d")}
                 </span>
-
-                {/* Indikator Hari Ini */}
-                {isToday && !isSelected && (
-                  <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-400 rounded-full border border-white"></div>
-                )}
               </button>
             );
           })}

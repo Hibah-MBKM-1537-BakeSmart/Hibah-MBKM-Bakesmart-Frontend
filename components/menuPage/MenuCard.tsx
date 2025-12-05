@@ -152,11 +152,8 @@ export function MenuCard({
       return;
     }
 
-    if (
-      cartItems.length > 0 &&
-      selectedOrderDay &&
-      !availableDays.includes(selectedOrderDay)
-    ) {
+    // Validasi apakah produk tersedia di hari yang dipilih
+    if (selectedOrderDay && !availableDays.includes(selectedOrderDay)) {
       alert(
         `Produk ini tidak tersedia untuk hari ${selectedOrderDay}. Silakan pilih produk lain atau ubah hari pesanan.`
       );
@@ -237,7 +234,7 @@ export function MenuCard({
   return (
     <div
       className={`bg-white border-b border-gray-100 p-4 md:p-6 cursor-pointer transition-all duration-300 ${
-        isDisabled || isStoreClosed() ? "opacity-60" : ""
+        isDisabled || isStoreClosed() ? "opacity-50" : ""
       }`}
       style={{
         backgroundColor: "white",

@@ -21,7 +21,6 @@ interface ApiResponse {
 }
 
 export function MenuGrid() {
-  const [activeDay, setActiveDay] = useState("all");
   const [activeCategory, setActiveCategory] = useState("all");
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -134,16 +133,7 @@ export function MenuGrid() {
     fetchProducts();
   }, []);
 
-  const dayFilters = [
-    { id: "all", name: t("menuGrid.allDays"), active: activeDay === "all" },
-    { id: "Senin", name: t("day.monday"), active: activeDay === "Senin" },
-    { id: "Selasa", name: t("day.tuesday"), active: activeDay === "Selasa" },
-    { id: "Rabu", name: t("day.wednesday"), active: activeDay === "Rabu" },
-    { id: "Kamis", name: t("day.thursday"), active: activeDay === "Kamis" },
-    { id: "Jumat", name: t("day.friday"), active: activeDay === "Jumat" },
-    { id: "Sabtu", name: t("day.saturday"), active: activeDay === "Sabtu" },
-    { id: "Minggu", name: t("day.sunday"), active: activeDay === "Minggu" },
-  ];
+
 
   const menuCategories = [
     {
@@ -215,12 +205,9 @@ export function MenuGrid() {
   };
 
   const handleDayFilter = (dayId: string) => {
-    console.log("[MenuGrid] Day filter selected:", dayId);
-    setActiveDay(dayId);
-    if (dayId !== "all" && cartItems.length > 0) {
-      setSelectedOrderDay(dayId);
-    } else if (dayId !== "all") {
-      // If no items in cart, allow user to pre-select a day
+    console.log("[MenuGrid] Day selected for order:", dayId);
+    // Set the selected order day (used for cart items)
+    if (dayId !== "all") {
       setSelectedOrderDay(dayId);
     }
   };
@@ -238,10 +225,6 @@ export function MenuGrid() {
 
   const handleViewModeChange = (mode: "order" | "allMenu") => {
     setViewMode(mode);
-    if (mode === "allMenu") {
-      // Reset day filter to "all" in all menu mode
-      setActiveDay("all");
-    }
   };
 
   const handleShowDateValidation = () => {
@@ -282,15 +265,18 @@ export function MenuGrid() {
           item.jenis.some((j) => `cat-${j.id}` === activeCategory)
         );
 
+  // Filter products based on selected order day
+  // Only filter when in "order" mode and a specific day is selected
+  // In "allMenu" mode, show all products regardless of day
   const dayFilteredItems =
-    activeDay === "all"
+    viewMode === "allMenu" || !selectedOrderDay || selectedOrderDay === "all"
       ? filteredItems
       : filteredItems.filter((item) => {
           const availableDays = (item.hari || [])
             .filter((day) => day !== null)
             .map((day) => day.nama_id);
           return (
-            availableDays.length === 0 || availableDays.includes(activeDay)
+            availableDays.length === 0 || availableDays.includes(selectedOrderDay)
           );
         });
 
@@ -298,12 +284,28 @@ export function MenuGrid() {
     <>
       <div className="sticky top-0 z-10 bg-white border-b shadow-sm">
         <div className="container mx-auto px-4 py-2">
-          <MenuWeekRangePicker
-            onDateSelect={handleWeekDateSelect}
-            selectedOrderDay={selectedOrderDay}
-            onViewModeChange={handleViewModeChange}
-            viewMode={viewMode}
-          />
+          {viewMode === "order" && (
+            <MenuWeekRangePicker
+              onDateSelect={handleWeekDateSelect}
+              selectedOrderDay={selectedOrderDay}
+              onViewModeChange={handleViewModeChange}
+              viewMode={viewMode}
+            />
+          )}
+
+          {viewMode === "allMenu" && (
+            <div className="flex justify-center py-3">
+              <button
+                onClick={() => handleViewModeChange("order")}
+                className="px-6 py-2.5 text-base font-bold rounded-full text-white shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105"
+                style={{
+                  background: "linear-gradient(135deg, #8B6F47 0%, #6B5535 100%)",
+                }}
+              >
+                🛒 Pesan Sekarang
+              </button>
+            </div>
+          )}
 
           <div className="mt-3">
             <h3 className="text-sm font-medium text-gray-600 mb-2 text-center">
@@ -396,6 +398,7 @@ export function MenuGrid() {
             item={selectedItem}
             isOpen={isModalOpen}
             onClose={handleCloseModal}
+            viewMode={viewMode}
           />
         )}
 

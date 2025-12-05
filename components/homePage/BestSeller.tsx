@@ -4,8 +4,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { useCart } from "@/app/contexts/CartContext";
-import { MenuModal } from "@/components/menuPage/MenuModal";
 // [PERUBAHAN] Impor useState dan useEffect
 import { useState, useEffect } from "react";
 import { useTranslation } from "@/app/contexts/TranslationContext";
@@ -24,8 +22,6 @@ interface ApiResponse {
 }
 
 function ProductCard(item: MenuItem) {
-  const { addToCart, selectedOrderDay } = useCart();
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const { t, language } = useTranslation();
   const { isStoreClosed } = useStoreClosure();
   const storeIsClosed = isStoreClosed();
@@ -57,17 +53,11 @@ function ProductCard(item: MenuItem) {
 
   const isOutOfStock = stock <= 0;
 
-  const handleOrderClick = () => {
-    setIsModalOpen(true);
-  };
-
   return (
     <>
-      <Card className="overflow-hidden bg-white shadow-lg transition-shadow hover:shadow-xl">
-        <div
-          className="aspect-square overflow-hidden relative cursor-pointer"
-          onClick={() => setIsModalOpen(true)}
-        >
+      <Link href="/menu">
+        <Card className="overflow-hidden bg-white shadow-lg transition-shadow hover:shadow-xl">
+          <div className="aspect-square overflow-hidden relative cursor-pointer">
           <Image
             src={image || "/placeholder.svg"}
             alt={name}
@@ -86,7 +76,6 @@ function ProductCard(item: MenuItem) {
             <h3
               className="font-serif text-lg font-bold cursor-pointer hover:text-[#8B6F47] transition-colors line-clamp-1"
               style={{ color: "#5D4037" }}
-              onClick={() => setIsModalOpen(true)}
             >
               {name}
             </h3>
@@ -141,7 +130,6 @@ function ProductCard(item: MenuItem) {
                 backgroundColor:
                   isOutOfStock || storeIsClosed ? "#9CA3AF" : "#8B6F47",
               }}
-              onClick={handleOrderClick}
               disabled={isOutOfStock || storeIsClosed}
               title={
                 isOutOfStock
@@ -155,13 +143,8 @@ function ProductCard(item: MenuItem) {
             </Button>
           </div>
         </CardContent>
-      </Card>
-
-      <MenuModal
-        item={item}
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-      />
+        </Card>
+      </Link>
     </>
   );
 }
@@ -380,7 +363,7 @@ export function BestSeller() {
           )}
 
           {/* Products Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6">
             {visibleProducts.map((product) => (
               <ProductCard key={product.id} {...product} />
             ))}

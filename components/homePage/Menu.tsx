@@ -31,17 +31,8 @@ interface ApiResponse {
 
 export function Menu() {
   const [activeCategory, setActiveCategory] = useState("all");
-  const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [
-    isExistingCustomizationModalOpen,
-    setIsExistingCustomizationModalOpen,
-  ] = useState(false);
-  const [isRemoveCustomizationModalOpen, setIsRemoveCustomizationModalOpen] =
-    useState(false);
   const [carouselIndex, setCarouselIndex] = useState(0);
   const { t, language } = useTranslation();
-  const { addToCart, cartItems } = useCart();
   const { isStoreClosed } = useStoreClosure();
   const storeIsClosed = isStoreClosed();
   const carouselRef = useRef<HTMLDivElement>(null);
@@ -140,17 +131,6 @@ export function Menu() {
     fetchMenuData();
   }, []); // <-- Dependency array kosong, fetch sekali saat mount
 
-  // Helper functions to replace missing context methods
-  const getItemQuantityInCart = (itemId: number): number => {
-    return cartItems
-      .filter((cartItem) => cartItem.id === itemId)
-      .reduce((total, item) => total + item.quantity, 0);
-  };
-
-  const hasCustomizations = (itemId: number): boolean => {
-    return cartItems.some((cartItem) => cartItem.id === itemId);
-  };
-
   const menuCategories = [
     {
       id: "all",
@@ -202,92 +182,19 @@ export function Menu() {
     (carouselIndex + 1) * itemsPerView
   );
 
-  const handleItemClick = (item: MenuItem) => {
-    const itemInCart = hasCustomizations(item.id);
-    if (itemInCart) {
-      setSelectedItem(item);
-      setIsExistingCustomizationModalOpen(true);
-    } else {
-      setSelectedItem(item);
-      setIsModalOpen(true);
-    }
+  const canGoPrevious = carouselIndex > 0;
+  const canGoNext = carouselIndex < maxIndex;
+
+  const handleItemClick = () => {
+    // Redirect to menu page handled by Link component
   };
 
-  const handleQuickAdd = (item: MenuItem, e: React.MouseEvent) => {
-    e.stopPropagation();
-    // Check if item has attributes (customizations)
-    if (item.attributes && item.attributes.length > 0) {
-      handleItemClick(item);
-    } else {
-      // Add item without customizations
-      // Objek ini HARUS sesuai dengan tipe Omit<CartItem, "quantity" | "cartId">
-      const itemToAdd = {
-        id: item.id,
-        name: language === "id" ? item.nama_id : item.nama_en,
-        discountPrice:
-          item.harga_diskon && item.harga_diskon < item.harga
-            ? `Rp ${item.harga_diskon.toLocaleString("id-ID")}`
-            : `Rp ${item.harga.toLocaleString("id-ID")}`,
-        originalPrice:
-          item.harga_diskon && item.harga_diskon < item.harga
-            ? `Rp ${item.harga.toLocaleString("id-ID")}`
-            : undefined,
-        isDiscount: !!item.harga_diskon && item.harga_diskon < item.harga,
-        image: item.gambars?.[0]?.file_path || "/placeholder.svg",
-        category: item.jenis?.[0]
-          ? language === "id"
-            ? item.jenis[0].nama_id
-            : item.jenis[0].nama_en
-          : "",
-        stock: item.stok,
-        availableDays: item.hari.map((h) => h.nama_id),
-        orderDay: item.hari[0]?.nama_id || "Senin", // CartContext akan menimpa ini jika hari sudah dipilih
-        selectedAttributes: [],
-        note: "", // Asumsi 'note' adalah bagian dari tipe CartItem
-      };
-
-      // Kirim objek yang sudah bersih
-      addToCart(itemToAdd);
-    }
-  };
-
-  // ... (Sisa handler modal tetap sama) ...
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setIsExistingCustomizationModalOpen(false);
-    setIsRemoveCustomizationModalOpen(false);
-    setTimeout(() => {
-      setSelectedItem(null);
-    }, 200);
-  };
-
-  const handleCloseExistingCustomizationModal = () => {
-    setIsExistingCustomizationModalOpen(false);
-    setIsModalOpen(false);
-    setIsRemoveCustomizationModalOpen(false);
-    setTimeout(() => {
-      setSelectedItem(null);
-    }, 200);
-  };
-
-  const handleCloseRemoveCustomizationModal = () => {
-    setIsRemoveCustomizationModalOpen(false);
-    setIsModalOpen(false);
-    setIsExistingCustomizationModalOpen(false);
-    setTimeout(() => {
-      setSelectedItem(null);
-    }, 200);
-  };
-
-  const handleAddNewCustomization = () => {
-    setIsExistingCustomizationModalOpen(false);
-    setTimeout(() => {
-      setIsModalOpen(true);
-    }, 100);
+  const handleQuickAdd = (e: React.MouseEvent) => {
+    // Redirect to menu page for ordering
+    e.preventDefault();
   };
 
   if (loading) {
-    // ... (JSX Loading state tidak berubah) ...
     return (
       <section className="w-full">
         <div className="relative h-[400px] md:h-[500px] lg:h-[600px] overflow-hidden">
@@ -330,7 +237,6 @@ export function Menu() {
   }
 
   if (error) {
-    // ... (JSX Error state tidak berubah) ...
     return (
       <section className="w-full">
         <div className="relative h-[400px] md:h-[500px] lg:h-[600px] overflow-hidden">
@@ -377,7 +283,6 @@ export function Menu() {
     );
   }
 
-  // ... (JSX Render state) ...
   return (
     <section className="w-full">
       <div className="relative h-[400px] md:h-[500px] lg:h-[600px] overflow-hidden">
@@ -443,36 +348,30 @@ export function Menu() {
           </div>
 
           <div className="relative mb-12">
-            {carouselIndex > 0 && (
+            {canGoPrevious && (
               <button
                 onClick={handlePrevious}
                 className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10 bg-white rounded-full p-2 shadow-lg hover:bg-gray-50 transition-colors"
+                style={{ color: "#5D4037" }}
                 aria-label="Previous"
                 disabled={storeIsClosed}
               >
-                <ChevronLeft
-                  className={`w-6 h-6 ${
-                    storeIsClosed ? "text-gray-400" : "text-gray-700"
-                  }`}
-                />
+                <ChevronLeft className="w-6 h-6" />
               </button>
             )}
 
             <div ref={carouselRef} className="overflow-hidden">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {/* [PERUBAHAN] Render 'visibleItems' */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6">
                 {visibleItems.map((item) => {
-                  const quantity = getItemQuantityInCart(item.id);
                   return (
-                    <div
-                      key={item.id}
-                      className={`bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow ${
-                        storeIsClosed
-                          ? "cursor-not-allowed opacity-60"
-                          : "cursor-pointer"
-                      }`}
-                      onClick={() => !storeIsClosed && handleItemClick(item)}
-                    >
+                    <Link href="/menu" key={item.id}>
+                      <div
+                        className={`bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow ${
+                          storeIsClosed
+                            ? "cursor-not-allowed opacity-60"
+                            : "cursor-pointer"
+                        }`}
+                      >
                       <div className="relative h-48 w-full">
                         <Image
                           src={
@@ -510,9 +409,6 @@ export function Menu() {
                             )}
                           </span>
                           <Button
-                            onClick={(e) =>
-                              !storeIsClosed && handleQuickAdd(item, e)
-                            }
                             disabled={storeIsClosed}
                             className={`text-white px-4 py-2 text-sm ${
                               storeIsClosed
@@ -520,31 +416,27 @@ export function Menu() {
                                 : "bg-[#5D4037] hover:bg-[#4E342E]"
                             }`}
                           >
-                            {quantity > 0
-                              ? `${t("menu.inCart")} (${quantity})`
-                              : t("menu.order")}
+                            {t("menu.order")}
                           </Button>
                         </div>
                       </div>
-                    </div>
+                      </div>
+                    </Link>
                   );
                 })}
+
               </div>
             </div>
 
-            {/* [PERUBAHAN] Gunakan 'maxIndex' */}
-            {carouselIndex < maxIndex && (
+            {canGoNext && (
               <button
                 onClick={handleNext}
                 className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10 bg-white rounded-full p-2 shadow-lg hover:bg-gray-50 transition-colors"
+                style={{ color: "#5D4037" }}
                 aria-label="Next"
                 disabled={storeIsClosed}
               >
-                <ChevronRight
-                  className={`w-6 h-6 ${
-                    storeIsClosed ? "text-gray-400" : "text-gray-700"
-                  }`}
-                />
+                <ChevronRight className="w-6 h-6" />
               </button>
             )}
           </div>
@@ -583,31 +475,6 @@ export function Menu() {
         </div>
       </div>
 
-      {/* ... (Modal JSX tidak berubah) ... */}
-      {!isExistingCustomizationModalOpen && !isRemoveCustomizationModalOpen && (
-        <MenuModal
-          item={selectedItem}
-          isOpen={isModalOpen}
-          onClose={handleCloseModal}
-        />
-      )}
-
-      {!isModalOpen && !isRemoveCustomizationModalOpen && (
-        <ExistingCustomizationModal
-          item={selectedItem}
-          isOpen={isExistingCustomizationModalOpen}
-          onClose={handleCloseExistingCustomizationModal}
-          onAddNewCustomization={handleAddNewCustomization}
-        />
-      )}
-
-      {!isModalOpen && !isExistingCustomizationModalOpen && (
-        <RemoveCustomizationModal
-          item={selectedItem}
-          isOpen={isRemoveCustomizationModalOpen}
-          onClose={handleCloseRemoveCustomizationModal}
-        />
-      )}
     </section>
   );
 }

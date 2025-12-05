@@ -1,19 +1,13 @@
 "use client";
 
 import Image from "next/image";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { useCart } from "@/app/contexts/CartContext";
-import { MenuModal } from "@/components/menuPage/MenuModal";
-// [PERUBAHAN] Impor useState dan useEffect
 import { useState, useEffect } from "react";
 import { useTranslation } from "@/app/contexts/TranslationContext";
-// [PERUBAHAN] Hapus impor useMenuData
-// import { useMenuData } from "@/app/hooks/useMenuData";
 
 // [PERUBAHAN] Ganti path impor agar konsisten dengan MenuGrid.tsx
 import type { MenuItem, ApiProduct } from "@/lib/types";
-import { AlertCircle, Flame } from "lucide-react";
+import { AlertCircle, Flame, ChevronLeft, ChevronRight } from "lucide-react";
 import { useStoreClosure } from "@/app/contexts/StoreClosureContext";
 
 // [PERUBAHAN] Tipe untuk respons API (sama seperti di MenuGrid)
@@ -23,8 +17,6 @@ interface ApiResponse {
 }
 
 function BreadStockCard(item: MenuItem) {
-  const { addToCart } = useCart();
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const { t, language } = useTranslation();
   const { isStoreClosed } = useStoreClosure();
   const storeIsClosed = isStoreClosed();
@@ -41,18 +33,10 @@ function BreadStockCard(item: MenuItem) {
       ? item.gambars[0].file_path
       : "/placeholder.svg";
 
-  const handleOrderClick = () => {
-    setIsModalOpen(true);
-  };
-
   return (
-    <>
-      <Card className="overflow-hidden bg-white shadow-lg transition-all hover:shadow-xl hover:scale-105">
-        <div className="relative">
-          <div
-            className="aspect-square overflow-hidden relative cursor-pointer"
-            onClick={handleOrderClick} // [SARAN] Klik gambar juga buka modal
-          >
+    <Card className="overflow-hidden bg-white shadow-lg transition-shadow hover:shadow-xl">
+      <div className="relative">
+        <div className="aspect-square overflow-hidden relative">
             <Image
               src={image || "/placeholder.svg"}
               alt={name}
@@ -86,9 +70,8 @@ function BreadStockCard(item: MenuItem) {
         <CardContent className="p-4">
           <div className="mb-3">
             <h3
-              className="font-serif text-lg font-bold cursor-pointer hover:text-[#8B6F47] transition-colors line-clamp-1"
+              className="font-serif text-lg font-bold line-clamp-1"
               style={{ color: "#5D4037" }}
-              onClick={() => setIsModalOpen(true)}
             >
               {name}
             </h3>
@@ -102,35 +85,23 @@ function BreadStockCard(item: MenuItem) {
               className="font-semibold text-base"
               style={{ color: "#5D4037" }}
             >
-              {/* Card ini tidak menampilkan harga diskon, hanya harga normal */}
               Rp {item.harga.toLocaleString("id-ID")}
             </span>
-            <Button
-              size="sm"
-              className={`px-3 py-1 text-xs font-medium text-white hover:opacity-90 ${
-                isOutOfStock || storeIsClosed
-                  ? "opacity-50 cursor-not-allowed"
-                  : ""
-              }`}
-              style={{
-                backgroundColor: "#9CA3AF",
-              }}
-              onClick={handleOrderClick}
-              disabled={true}
-              title={t("stock.infoOnly") || "Hanya untuk informasi"}
-            >
-              {t("stock.viewOnly") || "Lihat Saja"}
-            </Button>
+            <div className="flex items-center gap-2">
+              {!isOutOfStock && (
+                <span className="text-xs bg-green-100 text-green-600 px-3 py-1 rounded-full font-medium">
+                  ✓ Tersedia
+                </span>
+              )}
+              {isOutOfStock && (
+                <span className="text-xs bg-red-100 text-red-600 px-3 py-1 rounded-full font-medium">
+                  ✗ Habis
+                </span>
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>
-
-      <MenuModal
-        item={item}
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-      />
-    </>
   );
 }
 
@@ -146,6 +117,27 @@ export function DailyBreadStock() {
 
   const { isStoreClosed } = useStoreClosure();
   const storeIsClosed = isStoreClosed();
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const itemsPerPage = 5;
+
+  const totalPages = Math.ceil(todaysBread.length / itemsPerPage);
+  const visibleProducts = todaysBread.slice(
+    currentIndex,
+    currentIndex + itemsPerPage
+  );
+
+  const handlePrevious = () => {
+    setCurrentIndex((prev) => Math.max(0, prev - itemsPerPage));
+  };
+
+  const handleNext = () => {
+    setCurrentIndex((prev) =>
+      Math.min(todaysBread.length - itemsPerPage, prev + itemsPerPage)
+    );
+  };
+
+  const canGoPrevious = currentIndex > 0;
+  const canGoNext = currentIndex + itemsPerPage < todaysBread.length;
 
   // [PERUBAHAN] Tambahkan useEffect untuk fetch data
   useEffect(() => {
@@ -287,13 +279,41 @@ export function DailyBreadStock() {
           </div>
         </div>
 
-        {/* Bread Grid */}
+        {/* Bread Grid with Carousel */}
         {todaysBread.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
-            {/* Render dari state 'todaysBread' yang sudah difilter */}
-            {todaysBread.map((bread) => (
-              <BreadStockCard key={bread.id} {...bread} />
-            ))}
+          <div className="relative mb-12">
+            {/* Left Arrow */}
+            {canGoPrevious && (
+              <button
+                onClick={handlePrevious}
+                className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10 bg-white rounded-full p-2 shadow-lg hover:bg-gray-50 transition-colors"
+                style={{ color: "#5D4037" }}
+                aria-label="Previous products"
+                disabled={storeIsClosed}
+              >
+                <ChevronLeft className="w-6 h-6" />
+              </button>
+            )}
+
+            {/* Products Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6">
+              {visibleProducts.map((bread) => (
+                <BreadStockCard key={bread.id} {...bread} />
+              ))}
+            </div>
+
+            {/* Right Arrow */}
+            {canGoNext && (
+              <button
+                onClick={handleNext}
+                className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10 bg-white rounded-full p-2 shadow-lg hover:bg-gray-50 transition-colors"
+                style={{ color: "#5D4037" }}
+                aria-label="Next products"
+                disabled={storeIsClosed}
+              >
+                <ChevronRight className="w-6 h-6" />
+              </button>
+            )}
           </div>
         ) : (
           <div className="text-center py-16">
