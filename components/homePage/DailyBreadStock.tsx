@@ -77,10 +77,10 @@ function BreadStockCard(item: MenuItem) {
             )}
           </div>
 
-          {/* Stock Counter */}
+          {/* Stock Counter
           <div className="absolute bottom-3 left-3 bg-black/70 text-white px-3 py-1 rounded-full text-sm font-semibold">
-            {t("stock available") || "Stok"}: {stock}
-          </div>
+            {t("stock available") || "Stok"}
+          </div> */}
         </div>
 
         <CardContent className="p-4">

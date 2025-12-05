@@ -11,6 +11,9 @@ interface CartContextType {
   cartItems: CartItem[];
   selectedOrderDay: string | null; // Hari yang dipilih untuk pesanan
   setSelectedOrderDay: (day: string | null) => void;
+  weekStartDate: string | null;
+  weekEndDate: string | null;
+  setWeekDateRange: (startDate: string | null, endDate: string | null) => void;
   addToCart: (item: Omit<CartItem, "quantity" | "cartId">) => boolean; // Return false jika gagal
   removeFromCart: (cartId: string) => void; // Use cartId instead of id + attributes
   updateQuantity: (cartId: string, quantity: number) => boolean; // Use cartId instead of id + attributes
@@ -38,6 +41,8 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 interface CartStorage {
   items: CartItem[];
   orderDay: string | null;
+  weekStartDate: string | null;
+  weekEndDate: string | null;
   timestamp: number;
 }
 
@@ -73,7 +78,9 @@ const loadCartFromStorage = (): CartStorage | null => {
 
 const saveCartToStorage = (
   items: CartItem[],
-  orderDay: string | null
+  orderDay: string | null,
+  weekStartDate: string | null,
+  weekEndDate: string | null
 ): void => {
   if (typeof window === "undefined") return;
 
@@ -81,6 +88,8 @@ const saveCartToStorage = (
     const cartData: CartStorage = {
       items,
       orderDay,
+      weekStartDate,
+      weekEndDate,
       timestamp: Date.now(),
     };
     localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cartData));
@@ -94,6 +103,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [selectedOrderDay, setSelectedOrderDayState] = useState<string | null>(
     null
   );
+  const [weekStartDate, setWeekStartDateState] = useState<string | null>(null);
+  const [weekEndDate, setWeekEndDateState] = useState<string | null>(null);
   const [showCartAnimation, setShowCartAnimation] = useState(false);
 
   // Generate unique cart ID
@@ -109,16 +120,36 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       if (savedCart.orderDay) {
         setSelectedOrderDayState(savedCart.orderDay);
       }
+      if (savedCart.weekStartDate) {
+        setWeekStartDateState(savedCart.weekStartDate);
+      }
+      if (savedCart.weekEndDate) {
+        setWeekEndDateState(savedCart.weekEndDate);
+      }
     }
   }, []);
 
   useEffect(() => {
-    saveCartToStorage(cartItems, selectedOrderDay);
-  }, [cartItems, selectedOrderDay]);
+    saveCartToStorage(cartItems, selectedOrderDay, weekStartDate, weekEndDate);
+  }, [cartItems, selectedOrderDay, weekStartDate, weekEndDate]);
 
   const setSelectedOrderDay = (day: string | null) => {
     console.log("[v0] CartContext - Setting selectedOrderDay:", day);
     setSelectedOrderDayState(day);
+  };
+
+  const setWeekDateRange = (
+    startDate: string | null,
+    endDate: string | null
+  ) => {
+    console.log(
+      "[v0] CartContext - Setting week date range:",
+      startDate,
+      "to",
+      endDate
+    );
+    setWeekStartDateState(startDate);
+    setWeekEndDateState(endDate);
   };
 
   const getCartItemKey = (item: Omit<CartItem, "quantity" | "cartId">) => {
@@ -140,18 +171,15 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
 
     if (cartItems.length > 0) {
-      // Get the locked day from the first cart item
-      const lockedDay = cartItems[0].orderDay;
-
-      // Check if the item is available on the locked day
-      if (!item.availableDays || !item.availableDays.includes(lockedDay)) {
+      // Use the selectedOrderDay if available, otherwise use the day from first cart item
+      const cartDay = selectedOrderDay || cartItems[0].orderDay;
+      // Check if item is available on the same day as cart items
+      console.log("Available days:", item.availableDays);
+      console.log("Cart day:", cartDay);
+      if (!item.availableDays || !item.availableDays.includes(cartDay)) {
         return {
           canAdd: false,
-          reason: `❌ Tabrakan Hari! Pesanan Anda untuk hari ${lockedDay}, tapi produk "${
-            item.name
-          }" hanya tersedia untuk hari: ${
-            item.availableDays?.join(", ") || "tidak ada"
-          }. Silakan pilih produk lain atau ubah hari pesanan.`,
+          reason: `Pesanan Anda untuk hari ${cartDay}. Produk ini tidak tersedia untuk hari tersebut.`,
         };
       }
     }
@@ -168,7 +196,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         reason: `Produk tidak tersedia untuk hari ${selectedOrderDay}`,
       };
     }
-
     const totalQuantityForProduct = cartItems
       .filter((cartItem) => cartItem.id === item.id)
       .reduce((total, cartItem) => total + cartItem.quantity, 0);
@@ -332,6 +359,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const clearCart = () => {
     setCartItems([]);
     setSelectedOrderDay(null);
+    setWeekDateRange(null, null);
   };
 
   const validateCartDay = () => {
@@ -444,6 +472,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         cartItems,
         selectedOrderDay,
         setSelectedOrderDay,
+        weekStartDate,
+        weekEndDate,
+        setWeekDateRange,
         addToCart,
         removeFromCart,
         updateQuantity,

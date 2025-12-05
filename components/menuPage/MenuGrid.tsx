@@ -1,14 +1,20 @@
 "use client";
 
 import { useState, useEffect } from "react";
+// Impor ini mengasumsikan file-file ini ada di struktur proyek kamu
+// Kompilator di sini tidak bisa melihatnya, tapi ini seharusnya bekerja di app kamu
 import { MenuCard } from "./MenuCard";
 import { MenuModal } from "./MenuModal";
 import { ExistingCustomizationModal } from "./ExistingCustomModal";
 import { RemoveCustomizationModal } from "./RemoveCustomizationModal";
 import { useCart } from "@/app/contexts/CartContext";
 import { useTranslation } from "@/app/contexts/TranslationContext";
+import { MenuWeekRangePicker } from "./MenuWeekRangePicker";
+import { DateValidationModal } from "./DateValidationModal";
+// Import tipe data dari file terpusat
 import type { MenuItem, ApiProduct } from "@/lib/types";
 
+// Tipe untuk respons API yang baru
 interface ApiResponse {
   message: string;
   data: ApiProduct[];
@@ -25,6 +31,9 @@ export function MenuGrid() {
   ] = useState(false);
   const [isRemoveCustomizationModalOpen, setIsRemoveCustomizationModalOpen] =
     useState(false);
+  const [isDateValidationModalOpen, setIsDateValidationModalOpen] =
+    useState(false);
+  const [viewMode, setViewMode] = useState<"order" | "allMenu">("allMenu");
 
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [categories, setCategories] = useState<
@@ -33,23 +42,21 @@ export function MenuGrid() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [weekStartDate, setWeekStartDate] = useState<Date | null>(null);
+  const [weekEndDate, setWeekEndDate] = useState<Date | null>(null);
+
   const { selectedOrderDay, setSelectedOrderDay, cartItems } = useCart();
   const { t, language } = useTranslation();
-
-  useEffect(() => {
-    if (cartItems.length === 0) {
-      setActiveDay("all");
-    }
-  }, [cartItems.length]);
 
   useEffect(() => {
     const fetchProducts = async () => {
       try {
         setLoading(true);
         setError(null);
+        // [PERUBAHAN] Memanggil API internal Next.js
         console.log("[v2] Fetching products from /api/products");
 
-        const response = await fetch("/api/products");
+        const response = await fetch("/api/products"); // <-- PERUBAHAN DI SINI
 
         if (!response.ok) {
           const errorData = await response.json();
@@ -59,6 +66,7 @@ export function MenuGrid() {
         const data: ApiResponse = await response.json();
         console.log("[v2] API Response (from /api/products):", data);
 
+        // Transform API response to MenuItem format
         const products: MenuItem[] = (data.data || []).map(
           (product: ApiProduct) => ({
             id: product.id,
@@ -70,6 +78,7 @@ export function MenuGrid() {
             harga_diskon: product.harga_diskon || null,
             stok: product.stok || 0,
             isBestSeller: product.isBestSeller || false,
+            // Sesuaikan dengan data dari API (berdasarkan contoh JSON kamu)
             isDaily: product.isDaily || false,
             dailyStock: product.daily_stock || 0,
             created_at: product.created_at || "",
@@ -79,8 +88,8 @@ export function MenuGrid() {
               .map((g) => ({
                 ...g,
                 product_id: product.id,
-                created_at: "",
-                updated_at: "",
+                created_at: "", // Sesuaikan jika ada datanya
+                updated_at: "", // Sesuaikan jika ada datanya
               })),
             jenis: product.jenis || [],
             hari: product.hari || [],
@@ -91,6 +100,7 @@ export function MenuGrid() {
 
         setMenuItems(products);
 
+        // Extract unique categories from products
         const categoryMap = new Map<
           number,
           { id: number; nama_id: string; nama_en: string }
@@ -174,6 +184,7 @@ export function MenuGrid() {
     setIsModalOpen(false);
     setIsExistingCustomizationModalOpen(false);
     setIsRemoveCustomizationModalOpen(false);
+    setIsDateValidationModalOpen(false);
     setTimeout(() => {
       setSelectedItem(null);
     }, 200);
@@ -183,6 +194,7 @@ export function MenuGrid() {
     setIsExistingCustomizationModalOpen(false);
     setIsModalOpen(false);
     setIsRemoveCustomizationModalOpen(false);
+    setIsDateValidationModalOpen(false);
     setTimeout(() => {
       setSelectedItem(null);
     }, 200);
@@ -192,20 +204,48 @@ export function MenuGrid() {
     setIsRemoveCustomizationModalOpen(false);
     setIsModalOpen(false);
     setIsExistingCustomizationModalOpen(false);
+    setIsDateValidationModalOpen(false);
     setTimeout(() => {
       setSelectedItem(null);
     }, 200);
   };
 
+  const handleCloseDateValidationModal = () => {
+    setIsDateValidationModalOpen(false);
+  };
+
   const handleDayFilter = (dayId: string) => {
     console.log("[MenuGrid] Day filter selected:", dayId);
-    if (dayId === "all") {
-      setSelectedOrderDay(null);
-      setActiveDay("all");
-    } else {
+    setActiveDay(dayId);
+    if (dayId !== "all" && cartItems.length > 0) {
       setSelectedOrderDay(dayId);
-      setActiveDay(dayId);
+    } else if (dayId !== "all") {
+      // If no items in cart, allow user to pre-select a day
+      setSelectedOrderDay(dayId);
     }
+  };
+
+  const handleWeekDateSelect = (
+    startDate: Date,
+    endDate: Date,
+    orderDay: string
+  ) => {
+    setWeekStartDate(startDate);
+    setWeekEndDate(endDate);
+    // Auto-select hari pertama minggu
+    handleDayFilter(orderDay);
+  };
+
+  const handleViewModeChange = (mode: "order" | "allMenu") => {
+    setViewMode(mode);
+    if (mode === "allMenu") {
+      // Reset day filter to "all" in all menu mode
+      setActiveDay("all");
+    }
+  };
+
+  const handleShowDateValidation = () => {
+    setIsDateValidationModalOpen(true);
   };
 
   if (loading) {
@@ -257,58 +297,15 @@ export function MenuGrid() {
   return (
     <>
       <div className="sticky top-0 z-10 bg-white border-b shadow-sm">
-        <div className="container mx-auto px-4 py-4">
-          <div className="mb-4">
-            <h3 className="text-sm font-medium text-gray-600 mb-2 text-center">
-              {t("menuGrid.selectOrderDay")}
-            </h3>
-            {!selectedOrderDay && (
-              <p className="text-xs text-orange-600 mb-2 text-center">
-                {t("menuGrid.selectDayToOrder")}
-              </p>
-            )}
-            <div className="overflow-x-auto pb-2">
-              <div className="flex gap-2 min-w-max px-2 justify-center">
-                {dayFilters.map((day) => (
-                  <button
-                    key={day.id}
-                    onClick={() => handleDayFilter(day.id)}
-                    className={`px-4 py-2 text-sm font-medium transition-all duration-300 rounded-full whitespace-nowrap flex-shrink-0 ${
-                      activeDay === day.id
-                        ? "text-white shadow-lg"
-                        : "text-gray-700 bg-gray-100 hover:bg-gray-200 hover:shadow-md"
-                    }`}
-                    style={{
-                      backgroundColor:
-                        activeDay === day.id ? "#5D4037" : undefined,
-                    }}
-                  >
-                    {day.name}
-                    {day.id === selectedOrderDay && day.id !== "all" && (
-                      <span className="ml-1 text-xs">✓</span>
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
+        <div className="container mx-auto px-4 py-2">
+          <MenuWeekRangePicker
+            onDateSelect={handleWeekDateSelect}
+            selectedOrderDay={selectedOrderDay}
+            onViewModeChange={handleViewModeChange}
+            viewMode={viewMode}
+          />
 
-          {selectedOrderDay &&
-            selectedOrderDay !== "all" &&
-            cartItems.length > 0 && (
-              <div className="mb-2 text-center">
-                <span className="text-sm bg-green-100 text-green-700 px-3 py-1 rounded-full">
-                  {t("menuGrid.orderForDay")}{" "}
-                  {selectedOrderDay.charAt(0).toUpperCase() +
-                    selectedOrderDay.slice(1)}
-                  {cartItems.length > 0 && (
-                    <span className="ml-2 font-semibold">🔒</span>
-                  )}
-                </span>
-              </div>
-            )}
-
-          <div className="mb-2">
+          <div className="mt-3">
             <h3 className="text-sm font-medium text-gray-600 mb-2 text-center">
               {t("menuGrid.productCategories")}
             </h3>
@@ -342,6 +339,21 @@ export function MenuGrid() {
               </div>
             </div>
           </div>
+
+          {selectedOrderDay &&
+            selectedOrderDay !== "all" &&
+            viewMode === "order" && (
+              <div className="mb-2 text-center">
+                <span className="text-sm bg-green-100 text-green-700 px-3 py-1 rounded-full">
+                  {t("menuGrid.orderForDay")}{" "}
+                  {selectedOrderDay.charAt(0).toUpperCase() +
+                    selectedOrderDay.slice(1)}
+                  {cartItems.length > 0 && (
+                    <span className="ml-2 font-semibold">🔒</span>
+                  )}
+                </span>
+              </div>
+            )}
         </div>
       </div>
 
@@ -361,6 +373,8 @@ export function MenuGrid() {
                 onClick={() => handleItemClick(item)}
                 onShowExistingCustomization={handleShowExistingCustomization}
                 onShowRemoveCustomization={handleShowRemoveCustomization}
+                onShowDateValidation={handleShowDateValidation}
+                viewMode={viewMode}
               />
             ))}
           </div>
@@ -375,28 +389,42 @@ export function MenuGrid() {
         </div>
       </div>
 
-      {!isExistingCustomizationModalOpen && !isRemoveCustomizationModalOpen && (
-        <MenuModal
-          item={selectedItem}
-          isOpen={isModalOpen}
-          onClose={handleCloseModal}
-        />
-      )}
+      {!isExistingCustomizationModalOpen &&
+        !isRemoveCustomizationModalOpen &&
+        !isDateValidationModalOpen && (
+          <MenuModal
+            item={selectedItem}
+            isOpen={isModalOpen}
+            onClose={handleCloseModal}
+          />
+        )}
 
-      {!isModalOpen && !isRemoveCustomizationModalOpen && (
-        <ExistingCustomizationModal
-          item={selectedItem}
-          isOpen={isExistingCustomizationModalOpen}
-          onClose={handleCloseExistingCustomizationModal}
-          onAddNewCustomization={handleAddNewCustomization}
-        />
-      )}
+      {!isModalOpen &&
+        !isRemoveCustomizationModalOpen &&
+        !isDateValidationModalOpen && (
+          <ExistingCustomizationModal
+            item={selectedItem}
+            isOpen={isExistingCustomizationModalOpen}
+            onClose={handleCloseExistingCustomizationModal}
+            onAddNewCustomization={handleAddNewCustomization}
+          />
+        )}
 
-      {!isModalOpen && !isExistingCustomizationModalOpen && (
-        <RemoveCustomizationModal
-          item={selectedItem}
-          isOpen={isRemoveCustomizationModalOpen}
-          onClose={handleCloseRemoveCustomizationModal}
+      {!isModalOpen &&
+        !isExistingCustomizationModalOpen &&
+        !isDateValidationModalOpen && (
+          <RemoveCustomizationModal
+            item={selectedItem}
+            isOpen={isRemoveCustomizationModalOpen}
+            onClose={handleCloseRemoveCustomizationModal}
+          />
+        )}
+
+      {isDateValidationModalOpen && (
+        <DateValidationModal
+          isOpen={isDateValidationModalOpen}
+          onClose={handleCloseDateValidationModal}
+          onSelectDate={handleCloseDateValidationModal}
         />
       )}
     </>

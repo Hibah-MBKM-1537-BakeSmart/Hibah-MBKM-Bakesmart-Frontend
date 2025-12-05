@@ -9,11 +9,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Button } from "@/components/ui/button";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -21,8 +16,7 @@ import {
 } from "@/components/ui/dialog"; // Import Dialog untuk Modal Peta
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
-import { CalendarIcon, MapPin, Loader2, Map as MapIcon } from "lucide-react";
-import { Calendar } from "@/components/ui/calendar";
+import { CalendarIcon, MapPin, Loader2, MapIcon } from "lucide-react";
 import { useTranslation } from "@/app/contexts/TranslationContext";
 import { useCart } from "@/app/contexts/CartContext";
 
@@ -56,6 +50,8 @@ export function OrderForm({
     selectedOrderDay: cartOrderDay,
     isCartLockedToDay,
     cartItems,
+    weekStartDate,
+    weekEndDate,
   } = useCart();
 
   const [formData, setFormData] = useState({
@@ -140,7 +136,7 @@ export function OrderForm({
       const weightPerItem = Math.max(1, Math.floor(1000 / totalItemsCount));
 
       const itemsPayload = cartItems.map((item) => {
-        const basePrice = parseInt(
+        const basePrice = Number.parseInt(
           item.discountPrice.replace(/\D/g, "") || "0"
         );
         const attributesPrice = item.attributesPrice || 0;
@@ -166,8 +162,8 @@ export function OrderForm({
       const ratesPayload = {
         origin_latitude: -7.566139,
         origin_longitude: 110.82303,
-        destination_latitude: parseFloat(formData.latitude),
-        destination_longitude: parseFloat(formData.longitude),
+        destination_latitude: Number.parseFloat(formData.latitude),
+        destination_longitude: Number.parseFloat(formData.longitude),
         couriers: "gojek,grab",
         items: itemsPayload,
       };
@@ -318,66 +314,41 @@ export function OrderForm({
         <CardHeader>
           <CardTitle className="text-xl font-semibold text-[#5D4037] flex items-center gap-2">
             <CalendarIcon className="h-5 w-5" />
-            {t("order.selectOrderDate")}
+            Informasi Pesanan
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-2">
-            <Label className="text-[#5D4037] font-medium">
-              {t("order.orderDate")}
-            </Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="w-full justify-start text-left font-normal border-[#8B6F47] bg-transparent"
-                >
-                  {selectedDate ? (
-                    format(selectedDate, "EEEE, dd MMMM yyyy", { locale: id }) +
-                    getDayLabel(selectedDate)
-                  ) : (
-                    <span>{t("order.selectDatePlaceholder")}</span>
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={selectedDate}
-                  selectedDayOfWeek={selectedDayOfWeek}
-                  onSelect={(date) => {
-                    if (date) {
-                      setSelectedDate(date);
-                      handleInputChange("orderDay", getIndonesianDayName(date));
-                      handleInputChange(
-                        "tanggalPemesanan",
-                        format(date, "yyyy-MM-dd")
-                      );
-                    }
-                  }}
-                  disabled={(date) => {
-                    const today = new Date();
-                    today.setHours(0, 0, 0, 0);
-                    const maxDate = new Date(today);
-                    maxDate.setDate(today.getDate() + maxDaysAhead);
-                    return date < today || date > maxDate;
-                  }}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
-            {formData.orderDay && selectedDate && (
-              <div className="mt-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                <p className="text-sm text-blue-800">
-                  <CalendarIcon className="h-4 w-4 inline mr-1" />
-                  {t("order.orderSelectedFor")}{" "}
-                  <span className="font-semibold">
-                    {format(selectedDate, "EEEE, dd MMMM yyyy", { locale: id })}
-                  </span>
+          {cartOrderDay && selectedDate && (
+            <div className="space-y-3">
+              <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <p className="text-sm font-medium text-blue-900">
+                  📅 Hari pesanan:{" "}
+                  <strong>
+                    {cartOrderDay.charAt(0).toUpperCase() +
+                      cartOrderDay.slice(1)}
+                  </strong>
+                </p>
+                <p className="text-sm text-blue-800 mt-1">
+                  Tanggal:{" "}
+                  <strong>
+                    {format(selectedDate, "dd MMMM yyyy", { locale: id })}
+                  </strong>
                 </p>
               </div>
-            )}
-          </div>
+              {weekStartDate && weekEndDate && (
+                <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+                  <p className="text-xs text-green-700">
+                    ✓ Periode minggu:{" "}
+                    {format(new Date(weekStartDate), "dd MMM", { locale: id })}{" "}
+                    -{" "}
+                    {format(new Date(weekEndDate), "dd MMM yyyy", {
+                      locale: id,
+                    })}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -546,7 +517,7 @@ export function OrderForm({
                 <RadioGroup
                   defaultValue="0"
                   onValueChange={(value) => {
-                    const selected = deliveryOptions[parseInt(value)];
+                    const selected = deliveryOptions[Number.parseInt(value)];
                     onDeliveryFeeChange?.(selected.price);
                   }}
                   className="space-y-2"

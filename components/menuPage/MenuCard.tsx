@@ -14,6 +14,8 @@ interface MenuCardProps {
   onClick: () => void;
   onShowExistingCustomization?: (item: MenuItem, cartItem: any) => void;
   onShowRemoveCustomization: (item: MenuItem, cartItem: any) => void;
+  onShowDateValidation?: () => void;
+  viewMode?: "order" | "allMenu";
 }
 
 export function MenuCard({
@@ -21,6 +23,8 @@ export function MenuCard({
   onClick,
   onShowExistingCustomization,
   onShowRemoveCustomization,
+  onShowDateValidation,
+  viewMode = "order",
 }: MenuCardProps) {
   const {
     cartItems,
@@ -136,6 +140,25 @@ export function MenuCard({
     if (isStoreClosed()) {
       alert(
         t("menu.storeIsClosed") || "Toko sedang tutup. Silakan coba lagi nanti."
+      );
+      return;
+    }
+
+    if (!selectedOrderDay) {
+      console.log(
+        "🟢 MenuCard: No date selected, showing date validation modal"
+      );
+      onShowDateValidation?.();
+      return;
+    }
+
+    if (
+      cartItems.length > 0 &&
+      selectedOrderDay &&
+      !availableDays.includes(selectedOrderDay)
+    ) {
+      alert(
+        `Produk ini tidak tersedia untuk hari ${selectedOrderDay}. Silakan pilih produk lain atau ubah hari pesanan.`
       );
       return;
     }
@@ -316,35 +339,115 @@ export function MenuCard({
             </div>
           </div>
 
-          <div className="hidden md:flex md:items-center md:gap-6 lg:gap-8">
-            <div className="flex flex-col items-end">
-              {shouldShowDiscount && (
-                <>
-                  <span className="text-sm lg:text-base text-gray-400 line-through">
-                    {originalPrice}
+          {/* Order buttons for order mode */}
+          {viewMode === "order" && (
+            <div className="hidden md:flex md:items-center md:gap-6 lg:gap-8">
+              <div className="flex flex-col items-end">
+                {shouldShowDiscount && (
+                  <>
+                    <span className="text-sm lg:text-base text-gray-400 line-through">
+                      {originalPrice}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl lg:text-2xl font-semibold text-gray-900">
+                        {formattedPrice}
+                      </span>
+                      <span className="bg-red-100 text-red-600 text-sm px-2 py-0.5 rounded">
+                        Promo
+                      </span>
+                    </div>
+                  </>
+                )}
+                {!shouldShowDiscount && (
+                  <span className="text-xl lg:text-2xl font-semibold text-gray-900">
+                    {formattedPrice}
                   </span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xl lg:text-2xl font-semibold text-gray-900">
-                      {formattedPrice}
-                    </span>
-                    <span className="bg-red-100 text-red-600 text-sm px-2 py-0.5 rounded">
-                      Promo
-                    </span>
-                  </div>
-                </>
-              )}
-              {!shouldShowDiscount && (
-                <span className="text-xl lg:text-2xl font-semibold text-gray-900">
-                  {formattedPrice}
-                </span>
-              )}
-            </div>
+                )}
+              </div>
 
-            <div className="flex flex-col items-center gap-2">
-              <div className="flex items-center">
+              <div className="flex flex-col items-center gap-2">
+                <div className="flex items-center">
+                  {totalQuantity === 0 ? (
+                    <button
+                      className={`px-6 py-2.5 lg:px-8 lg:py-3 text-base font-medium rounded-full text-white transition-all duration-200 ${
+                        isDisabled || isStoreClosed()
+                          ? "bg-gray-400 cursor-not-allowed"
+                          : "hover:opacity-90 hover:scale-105 active:scale-95"
+                      }`}
+                      style={{
+                        backgroundColor:
+                          isDisabled || isStoreClosed() ? undefined : "#8b6f47",
+                      }}
+                      onClick={handleAddItem}
+                      disabled={isDisabled || isStoreClosed()}
+                      title={
+                        !validation.canAdd
+                          ? validation.reason
+                          : isStoreClosed()
+                          ? "Toko sedang tutup"
+                          : undefined
+                      }
+                    >
+                      {isStoreClosed()
+                        ? t("menu.storeIsClosed")
+                        : stock <= 0
+                        ? t("menu.outOfStock")
+                        : "Tambah"}
+                    </button>
+                  ) : (
+                    <div className="flex items-center gap-4">
+                      <button
+                        className="w-10 h-10 lg:w-12 lg:h-12 rounded-full border-2 hover:opacity-90 transition-all duration-200 hover:scale-110 active:scale-95 flex items-center justify-center"
+                        style={{ borderColor: "#8b6f47", color: "#8b6f47" }}
+                        onClick={handleRemoveItem}
+                        disabled={isStoreClosed()}
+                      >
+                        <Minus size={20} className="lg:w-6 lg:h-6" />
+                      </button>
+                      <span
+                        className={`text-xl lg:text-2xl font-semibold text-gray-900 min-w-[2rem] text-center transition-all duration-300 ${
+                          animatingQuantity
+                            ? "animate-bounce text-green-600 scale-125"
+                            : ""
+                        }`}
+                      >
+                        {totalQuantity}
+                      </span>
+                      <button
+                        className={`w-10 h-10 lg:w-12 lg:h-12 rounded-full border-2 transition-all duration-200 flex items-center justify-center ${
+                          totalQuantity >= stock || isStoreClosed()
+                            ? "border-gray-400 text-gray-400 cursor-not-allowed"
+                            : "hover:opacity-90 hover:scale-110 active:scale-95"
+                        }`}
+                        style={{
+                          borderColor:
+                            totalQuantity >= stock || isStoreClosed()
+                              ? undefined
+                              : "#8b6f47",
+                          color:
+                            totalQuantity >= stock || isStoreClosed()
+                              ? undefined
+                              : "#8b6f47",
+                        }}
+                        onClick={handleAddItem}
+                        disabled={totalQuantity >= stock || isStoreClosed()}
+                      >
+                        <Plus size={20} className="lg:w-6 lg:h-6" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Mobile view - order buttons */}
+          {viewMode === "order" && (
+            <div className="flex flex-col items-end md:hidden gap-2">
+              <div className="flex items-center justify-end">
                 {totalQuantity === 0 ? (
                   <button
-                    className={`px-6 py-2.5 lg:px-8 lg:py-3 text-base font-medium rounded-full text-white transition-all duration-200 ${
+                    className={`px-4 py-2 text-sm font-medium rounded-full text-white transition-all duration-200 ${
                       isDisabled || isStoreClosed()
                         ? "bg-gray-400 cursor-not-allowed"
                         : "hover:opacity-90 hover:scale-105 active:scale-95"
@@ -370,17 +473,17 @@ export function MenuCard({
                       : "Tambah"}
                   </button>
                 ) : (
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-3">
                     <button
-                      className="w-10 h-10 lg:w-12 lg:h-12 rounded-full border-2 hover:opacity-90 transition-all duration-200 hover:scale-110 active:scale-95 flex items-center justify-center"
+                      className="w-8 h-8 rounded-full border-2 hover:opacity-90 transition-all duration-200 hover:scale-110 active:scale-95 flex items-center justify-center"
                       style={{ borderColor: "#8b6f47", color: "#8b6f47" }}
                       onClick={handleRemoveItem}
                       disabled={isStoreClosed()}
                     >
-                      <Minus size={20} className="lg:w-6 lg:h-6" />
+                      <Minus size={16} />
                     </button>
                     <span
-                      className={`text-xl lg:text-2xl font-semibold text-gray-900 min-w-[2rem] text-center transition-all duration-300 ${
+                      className={`text-lg font-semibold text-gray-900 min-w-[2rem] text-center transition-all duration-300 ${
                         animatingQuantity
                           ? "animate-bounce text-green-600 scale-125"
                           : ""
@@ -389,7 +492,7 @@ export function MenuCard({
                       {totalQuantity}
                     </span>
                     <button
-                      className={`w-10 h-10 lg:w-12 lg:h-12 rounded-full border-2 transition-all duration-200 flex items-center justify-center ${
+                      className={`w-8 h-8 rounded-full border-2 transition-all duration-200 flex items-center justify-center ${
                         totalQuantity >= stock || isStoreClosed()
                           ? "border-gray-400 text-gray-400 cursor-not-allowed"
                           : "hover:opacity-90 hover:scale-110 active:scale-95"
@@ -407,87 +510,41 @@ export function MenuCard({
                       onClick={handleAddItem}
                       disabled={totalQuantity >= stock || isStoreClosed()}
                     >
-                      <Plus size={20} className="lg:w-6 lg:h-6" />
+                      <Plus size={16} />
                     </button>
                   </div>
                 )}
               </div>
             </div>
-          </div>
+          )}
 
-          <div className="flex flex-col items-end md:hidden gap-2">
-            <div className="flex items-center justify-end">
-              {totalQuantity === 0 ? (
-                <button
-                  className={`px-4 py-2 text-sm font-medium rounded-full text-white transition-all duration-200 ${
-                    isDisabled || isStoreClosed()
-                      ? "bg-gray-400 cursor-not-allowed"
-                      : "hover:opacity-90 hover:scale-105 active:scale-95"
-                  }`}
-                  style={{
-                    backgroundColor:
-                      isDisabled || isStoreClosed() ? undefined : "#8b6f47",
-                  }}
-                  onClick={handleAddItem}
-                  disabled={isDisabled || isStoreClosed()}
-                  title={
-                    !validation.canAdd
-                      ? validation.reason
-                      : isStoreClosed()
-                      ? "Toko sedang tutup"
-                      : undefined
-                  }
-                >
-                  {isStoreClosed()
-                    ? t("menu.storeIsClosed")
-                    : stock <= 0
-                    ? t("menu.outOfStock")
-                    : "Tambah"}
-                </button>
-              ) : (
-                <div className="flex items-center gap-3">
-                  <button
-                    className="w-8 h-8 rounded-full border-2 hover:opacity-90 transition-all duration-200 hover:scale-110 active:scale-95 flex items-center justify-center"
-                    style={{ borderColor: "#8b6f47", color: "#8b6f47" }}
-                    onClick={handleRemoveItem}
-                    disabled={isStoreClosed()}
-                  >
-                    <Minus size={16} />
-                  </button>
-                  <span
-                    className={`text-lg font-semibold text-gray-900 min-w-[2rem] text-center transition-all duration-300 ${
-                      animatingQuantity
-                        ? "animate-bounce text-green-600 scale-125"
-                        : ""
-                    }`}
-                  >
-                    {totalQuantity}
+          {/* Show price only in allMenu mode without order buttons */}
+          {viewMode === "allMenu" && (
+            <div className="flex items-center gap-4 md:gap-6 lg:gap-8 flex-shrink-0">
+              <div className="flex flex-col items-end">
+                {shouldShowDiscount && (
+                  <>
+                    <span className="text-sm text-gray-400 line-through">
+                      {originalPrice}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl lg:text-2xl font-semibold text-gray-900">
+                        {formattedPrice}
+                      </span>
+                      <span className="bg-red-100 text-red-600 text-sm px-2 py-0.5 rounded">
+                        Promo
+                      </span>
+                    </div>
+                  </>
+                )}
+                {!shouldShowDiscount && (
+                  <span className="text-xl lg:text-2xl font-semibold text-gray-900">
+                    {formattedPrice}
                   </span>
-                  <button
-                    className={`w-8 h-8 rounded-full border-2 transition-all duration-200 flex items-center justify-center ${
-                      totalQuantity >= stock || isStoreClosed()
-                        ? "border-gray-400 text-gray-400 cursor-not-allowed"
-                        : "hover:opacity-90 hover:scale-110 active:scale-95"
-                    }`}
-                    style={{
-                      borderColor:
-                        totalQuantity >= stock || isStoreClosed()
-                          ? undefined
-                          : "#8b6f47",
-                      color:
-                        totalQuantity >= stock || isStoreClosed()
-                          ? undefined
-                          : "#8b6f47",
-                    }}
-                    onClick={handleAddItem}
-                    disabled={totalQuantity >= stock || isStoreClosed()}
-                  >
-                    <Plus size={16} />
-                  </button>
-                </div>
-              )}
+                )}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>
