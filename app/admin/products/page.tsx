@@ -29,7 +29,8 @@ import { useProducts, Product } from '@/app/contexts/ProductsContext';
 export default function ProductsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [sortField, setSortField] = useState<'nama' | 'harga' | 'stok' | 'sales'>('nama');
+  const [selectedDay, setSelectedDay] = useState('all');
+  const [sortField, setSortField] = useState<'nama' | 'category' | 'day' | 'harga' | 'stok' | 'sales'>('nama');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [priceRange, setPriceRange] = useState<{ min: number; max: number }>({ min: 0, max: 1000000 });
   const [stockRange, setStockRange] = useState<{ min: number; max: number }>({ min: 0, max: 1000 });
@@ -50,14 +51,42 @@ export default function ProductsPage() {
     const jenisSet = new Set<string>();
     products.forEach(product => {
       product.jenis?.forEach(j => {
-        if (j.nama_id) jenisSet.add(j.nama_id);
+        // Use nama_en for consistency (English names shown in table)
+        const jenisNama = j.nama_en || j.nama_id || j.nama;
+        if (jenisNama) jenisSet.add(jenisNama);
       });
     });
     return Array.from(jenisSet).sort();
   }, [products]);
 
+  // Extract unique days from backend products
+  const uniqueDays = React.useMemo(() => {
+    // Define day order (Monday to Sunday)
+    const dayOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    const daysSet = new Set<string>();
+    
+    products.forEach(product => {
+      product.hari?.forEach(h => {
+        // Use nama_en for consistency (English names shown in table)
+        const dayNama = h.nama_en || h.nama_id || h.nama;
+        if (dayNama) daysSet.add(dayNama);
+      });
+    });
+    
+    // Sort days according to week order instead of alphabetically
+    return Array.from(daysSet).sort((a, b) => {
+      const indexA = dayOrder.indexOf(a);
+      const indexB = dayOrder.indexOf(b);
+      // If day not found in dayOrder, put it at the end
+      if (indexA === -1) return 1;
+      if (indexB === -1) return -1;
+      return indexA - indexB;
+    });
+  }, [products]);
+
   // Combine 'all' with actual jenis from backend
   const categoryOptions = ['all', ...uniqueJenis];
+  const dayOptions = ['all', ...uniqueDays];
 
   // Sort and filter products
   const filteredProducts = products
@@ -68,9 +97,19 @@ export default function ProductsPage() {
       // Search filter
       const matchesSearch = product.nama.toLowerCase().includes(searchTerm.toLowerCase());
       
-      // Category filter - check all jenis for match
+      // Category filter - check all jenis for match using nama_en field
       const matchesCategory = selectedCategory === 'all' || 
-        product.jenis?.some(j => j.nama_id === selectedCategory) || false;
+        product.jenis?.some(j => {
+          const jenisNama = j.nama_en || j.nama_id || j.nama;
+          return jenisNama === selectedCategory;
+        }) || false;
+      
+      // Day filter - check all hari for match using nama_en field
+      const matchesDay = selectedDay === 'all' || 
+        product.hari?.some(h => {
+          const dayNama = h.nama_en || h.nama_id || h.nama;
+          return dayNama === selectedDay;
+        }) || false;
       
       // Price range filter
       const matchesPrice = product.harga >= priceRange.min && product.harga <= priceRange.max;
@@ -78,7 +117,7 @@ export default function ProductsPage() {
       // Stock range filter
       const matchesStock = (product.stok ?? 0) >= stockRange.min && (product.stok ?? 0) <= stockRange.max;
       
-      return matchesSearch && matchesCategory && matchesPrice && matchesStock;
+      return matchesSearch && matchesCategory && matchesDay && matchesPrice && matchesStock;
     })
     .sort((a, b) => {
       let comparison = 0;
@@ -86,6 +125,24 @@ export default function ProductsPage() {
       switch (sortField) {
         case 'nama':
           comparison = a.nama.localeCompare(b.nama);
+          break;
+        case 'category':
+          const categoryA = a.jenis?.[0]?.nama_en || a.jenis?.[0]?.nama_id || '';
+          const categoryB = b.jenis?.[0]?.nama_en || b.jenis?.[0]?.nama_id || '';
+          comparison = categoryA.localeCompare(categoryB);
+          break;
+        case 'day':
+          const dayA = a.hari?.[0]?.nama_en || a.hari?.[0]?.nama_id || '';
+          const dayB = b.hari?.[0]?.nama_en || b.hari?.[0]?.nama_id || '';
+          // Use day order for proper week sorting
+          const dayOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+          const indexA = dayOrder.indexOf(dayA);
+          const indexB = dayOrder.indexOf(dayB);
+          if (indexA !== -1 && indexB !== -1) {
+            comparison = indexA - indexB;
+          } else {
+            comparison = dayA.localeCompare(dayB);
+          }
           break;
         case 'harga':
           comparison = a.harga - b.harga;
@@ -104,7 +161,7 @@ export default function ProductsPage() {
     });
 
   // Toggle sort
-  const handleSort = (field: 'nama' | 'harga' | 'stok' | 'sales') => {
+  const handleSort = (field: 'nama' | 'category' | 'day' | 'harga' | 'stok' | 'sales') => {
     if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
@@ -114,7 +171,7 @@ export default function ProductsPage() {
   };
 
   // Get sort icon
-  const getSortIcon = (field: 'nama' | 'harga' | 'stok' | 'sales') => {
+  const getSortIcon = (field: 'nama' | 'category' | 'day' | 'harga' | 'stok' | 'sales') => {
     if (sortField !== field) {
       return <ArrowUpDown className="w-4 h-4 ml-1 opacity-50" />;
     }
@@ -375,6 +432,22 @@ export default function ProductsPage() {
                   ))}
                 </select>
               </div>
+
+              {/* Available Days Filter */}
+              <div className="flex items-center space-x-2">
+                <Filter className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                <select
+                  value={selectedDay}
+                  onChange={(e) => setSelectedDay(e.target.value)}
+                  className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500 text-sm w-full sm:w-auto"
+                >
+                  {dayOptions.map(day => (
+                    <option key={day} value={day}>
+                      {day === 'all' ? 'All Days' : day}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             <div className="text-sm text-gray-600 text-center lg:text-right">
@@ -435,6 +508,7 @@ export default function ProductsPage() {
               onClick={() => {
                 setSearchTerm('');
                 setSelectedCategory('all');
+                setSelectedDay('all');
                 setPriceRange({ min: 0, max: 1000000 });
                 setStockRange({ min: 0, max: 1000 });
                 setSortField('nama');
@@ -497,7 +571,7 @@ export default function ProductsPage() {
           <table className="min-w-full divide-y divide-gray-200 w-full">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-3 lg:px-6 py-3 text-left whitespace-nowrap">
+                <th className="px-3 lg:px-6 py-3 text-left whitespace-nowrap w-[280px]">
                   <button
                     onClick={() => handleSort('nama')}
                     className="flex items-center space-x-1 text-xs font-medium text-gray-500 uppercase tracking-wider hover:text-gray-700"
@@ -506,10 +580,25 @@ export default function ProductsPage() {
                     {getSortIcon('nama')}
                   </button>
                 </th>
-                <th className="px-3 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                  Category
+                <th className="px-3 lg:px-6 py-3 text-left whitespace-nowrap w-[140px]">
+                  <button
+                    onClick={() => handleSort('category')}
+                    className="flex items-center space-x-1 text-xs font-medium text-gray-500 uppercase tracking-wider hover:text-gray-700"
+                  >
+                    <span>Category</span>
+                    {getSortIcon('category')}
+                  </button>
                 </th>
-                <th className="px-3 lg:px-6 py-3 text-left whitespace-nowrap">
+                <th className="px-3 lg:px-6 py-3 text-left whitespace-nowrap w-[180px]">
+                  <button
+                    onClick={() => handleSort('day')}
+                    className="flex items-center space-x-1 text-xs font-medium text-gray-500 uppercase tracking-wider hover:text-gray-700"
+                  >
+                    <span>Available Days</span>
+                    {getSortIcon('day')}
+                  </button>
+                </th>
+                <th className="px-3 lg:px-6 py-3 text-left whitespace-nowrap w-[130px]">
                   <button
                     onClick={() => handleSort('harga')}
                     className="flex items-center space-x-1 text-xs font-medium text-gray-500 uppercase tracking-wider hover:text-gray-700"
@@ -518,16 +607,16 @@ export default function ProductsPage() {
                     {getSortIcon('harga')}
                   </button>
                 </th>
-                <th className="px-3 lg:px-6 py-3 text-left whitespace-nowrap">
+                <th className="px-3 lg:px-6 py-3 text-left whitespace-nowrap w-[180px]">
                   <button
                     onClick={() => handleSort('stok')}
                     className="flex items-center space-x-1 text-xs font-medium text-gray-500 uppercase tracking-wider hover:text-gray-700"
                   >
-                    <span>Stock</span>
+                    <span>Order Limit</span>
                     {getSortIcon('stok')}
                   </button>
                 </th>
-                <th className="px-3 lg:px-6 py-3 text-left whitespace-nowrap">
+                <th className="px-3 lg:px-6 py-3 text-left whitespace-nowrap w-[100px]">
                   <button
                     onClick={() => handleSort('sales')}
                     className="flex items-center space-x-1 text-xs font-medium text-gray-500 uppercase tracking-wider hover:text-gray-700"
@@ -536,7 +625,7 @@ export default function ProductsPage() {
                     {getSortIcon('sales')}
                   </button>
                 </th>
-                <th className="px-3 lg:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                <th className="px-3 lg:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap w-[140px]">
                   Actions
                 </th>
               </tr>
@@ -544,8 +633,8 @@ export default function ProductsPage() {
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredProducts.map((product) => (
                 <tr key={product.id} className="hover:bg-gray-50">
-                  <td className="px-3 lg:px-6 py-4">
-                    <div className="flex items-center min-w-[200px]">
+                  <td className="px-3 lg:px-6 py-4 w-[280px]">
+                    <div className="flex items-center">
                       <div className="w-10 h-10 rounded-lg mr-3 lg:mr-4 flex-shrink-0 relative">
                         {product.gambars && product.gambars.length > 0 ? (
                           <>
@@ -586,15 +675,31 @@ export default function ProductsPage() {
                       </div>
                     </div>
                   </td>
-                  <td className="px-3 lg:px-6 py-4 whitespace-nowrap">
+                  <td className="px-3 lg:px-6 py-4 whitespace-nowrap w-[140px]">
                     <span className="inline-flex items-center px-2 lg:px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                      {product.jenis?.[0]?.nama || 'Unknown'}
+                      {product.jenis?.[0]?.nama_en || product.jenis?.[0]?.nama_id || 'Unknown'}
                     </span>
                   </td>
-                  <td className="px-3 lg:px-6 py-4 whitespace-nowrap text-xs lg:text-sm font-medium text-gray-900">
+                  <td className="px-3 lg:px-6 py-4 w-[180px]">
+                    <div className="flex flex-wrap gap-1">
+                      {product.hari && product.hari.length > 0 ? (
+                        product.hari.map((day) => (
+                          <span
+                            key={day.id}
+                            className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800"
+                          >
+                            {day.nama_id || day.nama}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-xs text-gray-400 italic">No days set</span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-3 lg:px-6 py-4 whitespace-nowrap text-xs lg:text-sm font-medium text-gray-900 w-[130px]">
                     {product.harga ? formatPrice(product.harga) : 'Rp 0'}
                   </td>
-                  <td className="px-3 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <td className="px-3 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-900 w-[180px]">
                     {editingStockId === product.id ? (
                       <div className="flex items-center gap-2">
                         <input
@@ -697,10 +802,10 @@ export default function ProductsPage() {
                       </div>
                     )}
                   </td>
-                  <td className="px-3 lg:px-6 py-4 whitespace-nowrap text-xs lg:text-sm text-gray-900">
+                  <td className="px-3 lg:px-6 py-4 whitespace-nowrap text-xs lg:text-sm text-gray-900 w-[100px]">
                     {product.sales ?? 0}
                   </td>
-                  <td className="px-3 lg:px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  <td className="px-3 lg:px-6 py-4 whitespace-nowrap text-right text-sm font-medium w-[140px]">
                     <div className="flex items-center justify-end gap-2">
                       <button 
                         onClick={() => handleViewProduct(product.id)}
