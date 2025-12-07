@@ -1,0 +1,41 @@
+name: Deploy Next.js to VPS
+
+on:
+  push:
+    branches:
+      - main # Pastikan branch utamamu 'main' atau 'master'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: 22
+          script: |
+            # 1. Masuk ke folder project di VPS
+            # Pastikan path ini sesuai dengan tempat kamu nge-clone kemarin
+            cd /home/hibahmbkm1537/Hibah-MBKM-Bakesmart-Frontend
+
+            # 2. Tarik kodingan terbaru dari GitHub
+            git pull origin main
+
+            # 3. Install library baru (jika ada update package.json)
+            npm install
+
+            # 4. Build ulang Next.js (PENTING untuk Next.js)
+            # Proses ini akan bikin folder .next baru
+            npm run build
+
+            # 5. Restart PM2 agar perubahan diterapkan
+            # GANTI 'nama-app-kamu' dengan nama yang muncul di 'pm2 list'
+            pm2 restart frontend-web 
+
+            echo "🚀 Deployment Berhasil!"
