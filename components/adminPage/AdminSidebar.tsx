@@ -149,14 +149,25 @@ export function AdminSidebar() {
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <button
-              onClick={toggleSidebar}
-              className={`${state.sidebarCollapsed ? 'w-12 h-12' : 'w-8 h-8'} rounded-lg flex items-center justify-center transition-all duration-300 hover:bg-white/10`}
-              style={{ backgroundColor: "#8b6f47" }}
-              title={state.sidebarCollapsed ? "Expand Sidebar" : ""}
-            >
-              <Store className={`${state.sidebarCollapsed ? 'w-8 h-8' : 'w-5 h-5'} text-white transition-all duration-300`} />
-            </button>
+            {state.sidebarCollapsed ? (
+              /* Expand button when collapsed - shows '>' */
+              <button
+                onClick={toggleSidebar}
+                className="w-12 h-12 rounded-lg flex items-center justify-center transition-all duration-300 hover:bg-white/10"
+                style={{ backgroundColor: "#8b6f47" }}
+                title="Expand Sidebar"
+              >
+                <ChevronRight className="w-6 h-6 text-white" />
+              </button>
+            ) : (
+              /* Store icon when expanded */
+              <div
+                className="w-8 h-8 rounded-lg flex items-center justify-center"
+                style={{ backgroundColor: "#8b6f47" }}
+              >
+                <Store className="w-5 h-5 text-white" />
+              </div>
+            )}
             {!state.sidebarCollapsed && (
               <div>
                 <h1 className="text-lg font-bold text-white font-admin-heading">
@@ -191,29 +202,45 @@ export function AdminSidebar() {
         style={{ borderColor: "#7b5235" }}
       >
         {/* User Info */}
-        {!state.sidebarCollapsed && state.user && (
+        {state.user && (
           <div className="p-4">
-            <div
-              className="flex items-center space-x-3 p-3 rounded-lg"
-              style={{ backgroundColor: "#7b5235" }}
-            >
+            {state.sidebarCollapsed ? (
+              /* Collapsed: Show only avatar */
+              <div className="flex justify-center">
+                <div
+                  className="w-10 h-10 rounded-full flex items-center justify-center"
+                  style={{ backgroundColor: "#7b5235" }}
+                  title={state.user.name}
+                >
+                  <span className="text-white text-sm font-medium">
+                    {state.user.name.charAt(0)}
+                  </span>
+                </div>
+              </div>
+            ) : (
+              /* Expanded: Show full user info */
               <div
-                className="w-8 h-8 rounded-full flex items-center justify-center"
-                style={{ backgroundColor: "#8b6f47" }}
+                className="flex items-center space-x-3 p-3 rounded-lg"
+                style={{ backgroundColor: "#7b5235" }}
               >
-                <span className="text-white text-sm font-medium">
-                  {state.user.name.charAt(0)}
-                </span>
+                <div
+                  className="w-8 h-8 rounded-full flex items-center justify-center"
+                  style={{ backgroundColor: "#8b6f47" }}
+                >
+                  <span className="text-white text-sm font-medium">
+                    {state.user.name.charAt(0)}
+                  </span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-white truncate font-admin-heading">
+                    {state.user.name}
+                  </p>
+                  <p className="text-xs text-gray-200 truncate font-admin-body">
+                    {state.user.email}
+                  </p>
+                </div>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-white truncate font-admin-heading">
-                  {state.user.name}
-                </p>
-                <p className="text-xs text-gray-200 truncate font-admin-body">
-                  {state.user.email}
-                </p>
-              </div>
-            </div>
+            )}
           </div>
         )}
 

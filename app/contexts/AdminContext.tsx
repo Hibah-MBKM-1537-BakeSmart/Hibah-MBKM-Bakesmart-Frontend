@@ -15,6 +15,7 @@ interface AdminState {
   user: User | null;
   isAuthenticated: boolean;
   sidebarCollapsed: boolean;
+  sidebarAutoCollapsed: boolean; // Auto collapsed due to screen size
   notifications: Notification[];
 }
 
@@ -44,8 +45,29 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     user: null,
     isAuthenticated: false,
     sidebarCollapsed: false,
+    sidebarAutoCollapsed: false,
     notifications: []
   });
+
+  // Handle responsive sidebar - auto collapse/expand based on screen size
+  useEffect(() => {
+    const handleResize = () => {
+      const isMobile = window.innerWidth < 1024; // lg breakpoint
+      setState(prev => ({
+        ...prev,
+        sidebarAutoCollapsed: isMobile,
+        // Auto collapse on small screens, auto expand on large screens
+        sidebarCollapsed: isMobile
+      }));
+    };
+
+    // Initial check
+    handleResize();
+
+    // Listen for resize
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Demo user for development
   useEffect(() => {

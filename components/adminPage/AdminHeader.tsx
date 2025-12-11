@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useAdmin } from "@/app/contexts/AdminContext";
 import { useAuth } from "@/app/contexts/AuthContext";
 import { AdminLanguageSwitcher } from "./AdminLanguageSwitcher";
-import { Bell, Menu, User, Settings, LogOut, Shield } from "lucide-react";
+import { Bell, User, Settings, LogOut, Shield } from "lucide-react";
 
 export function AdminHeader() {
   const { state, toggleSidebar, markNotificationAsRead } = useAdmin();
@@ -26,12 +26,7 @@ export function AdminHeader() {
       <div className="flex items-center justify-between">
         {/* Left Section */}
         <div className="flex items-center space-x-4">
-          <button
-            onClick={toggleSidebar}
-            className="lg:hidden p-2 rounded-lg hover:bg-white/50 transition-colors"
-          >
-            <Menu className="w-5 h-5" style={{ color: "#8b6f47" }} />
-          </button>
+          {/* Hamburger menu removed - sidebar has its own expand button */}
         </div>
 
         {/* Right Section */}
