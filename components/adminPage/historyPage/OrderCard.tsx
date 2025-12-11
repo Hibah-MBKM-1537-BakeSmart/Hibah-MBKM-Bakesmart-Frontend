@@ -204,9 +204,9 @@ export function OrderCard({ order }: OrderCardProps) {
           <p className="text-lg font-bold font-admin-heading" style={{ color: '#5d4037' }}>
             Rp {(order.total_harga || 0).toLocaleString('id-ID')}
           </p>
-          {order.shipping_cost && order.shipping_cost > 0 && (
+          {order.shipping_cost && Number(order.shipping_cost) > 0 && (
             <p className="text-xs font-admin-body mt-1" style={{ color: '#8b6f47' }}>
-              (+ Ongkir: Rp {order.shipping_cost.toLocaleString('id-ID')})
+              (+ Ongkir: Rp {Number(order.shipping_cost).toLocaleString('id-ID')})
             </p>
           )}
         </div>

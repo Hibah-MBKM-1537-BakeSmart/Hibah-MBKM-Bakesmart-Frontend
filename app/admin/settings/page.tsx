@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Button, Input, Select, Textarea } from "@/components/adminPage";
+import { Button, Input, Select, Textarea, TimePicker } from "@/components/adminPage";
 import {
   Save,
   Upload,
@@ -13,6 +13,9 @@ import {
   Smartphone,
   Clock,
   AlertCircle,
+  MapPin,
+  ShoppingCart,
+  Loader2,
 } from "lucide-react";
 import { useStoreClosure } from "@/app/contexts/StoreClosureContext";
 
@@ -91,7 +94,9 @@ export default function SettingsPage() {
   const [settings, setSettings] = useState<Settings>(initialSettings);
   const [activeTab, setActiveTab] = useState("general");
   const [saving, setSaving] = useState(false);
-  const { closure, updateClosure } = useStoreClosure();
+  const [savingStoreConfig, setSavingStoreConfig] = useState(false);
+  const [storeConfigMessage, setStoreConfigMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const { closure, updateClosure, config, updateConfig, saveConfig, isLoading: configLoading, error: configError } = useStoreClosure();
 
   const tabs = [
     { id: "general", label: "General", icon: Globe },
@@ -622,94 +627,271 @@ export default function SettingsPage() {
 
             {activeTab === "store-closure" && (
               <div className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">
-                    Store Closure Settings
-                  </h3>
-                  <p className="text-sm text-gray-600 mb-6">
-                    Set a period when your store will be closed (e.g., for
-                    vacation or holidays)
-                  </p>
+                {/* Loading State */}
+                {configLoading && (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
+                    <span className="ml-2 text-gray-600">Loading configuration...</span>
+                  </div>
+                )}
 
-                  <div className="space-y-6">
-                    {/* Active Toggle */}
-                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
-                      <div>
-                        <h4 className="text-sm font-medium text-gray-900">
-                          Enable Store Closure
-                        </h4>
-                        <p className="text-sm text-gray-500">
-                          Activate closure period
-                        </p>
-                      </div>
-                      <input
-                        type="checkbox"
-                        checked={closure.isActive}
-                        onChange={(e) =>
-                          updateClosure({
-                            ...closure,
-                            isActive: e.target.checked,
-                          })
-                        }
-                        className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
-                      />
-                    </div>
+                {/* Error State */}
+                {configError && (
+                  <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-sm text-red-600">{configError}</p>
+                  </div>
+                )}
 
-                    {/* Closure Details */}
-                    {closure.isActive && (
-                      <div className="space-y-4 p-4 bg-red-50 rounded-lg border border-red-200">
-                        <Input
-                          label="Start Date"
-                          type="date"
-                          value={closure.startDate}
-                          onChange={(e) =>
-                            updateClosure({
-                              ...closure,
-                              startDate: e.target.value,
-                            })
-                          }
-                        />
-                        <Input
-                          label="End Date"
-                          type="date"
-                          value={closure.endDate}
-                          onChange={(e) =>
-                            updateClosure({
-                              ...closure,
-                              endDate: e.target.value,
-                            })
-                          }
-                        />
-                        <Textarea
-                          label="Closure Reason (optional)"
-                          value={closure.reason}
-                          onChange={(e) =>
-                            updateClosure({
-                              ...closure,
-                              reason: e.target.value,
-                            })
-                          }
-                          placeholder="e.g., Annual vacation, Renovation, etc."
-                          rows={3}
-                        />
-                        {closure.startDate && closure.endDate && (
-                          <div className="p-3 bg-white rounded border border-red-200">
-                            <p className="text-sm text-gray-600">
-                              <strong>Store will be closed from:</strong>{" "}
-                              {new Date(closure.startDate).toLocaleDateString(
-                                "id-ID"
-                              )}{" "}
-                              to{" "}
-                              {new Date(closure.endDate).toLocaleDateString(
-                                "id-ID"
-                              )}
+                {/* Success/Error Message */}
+                {storeConfigMessage && (
+                  <div className={`p-4 rounded-lg border ${
+                    storeConfigMessage.type === 'success' 
+                      ? 'bg-green-50 border-green-200' 
+                      : 'bg-red-50 border-red-200'
+                  }`}>
+                    <p className={`text-sm ${
+                      storeConfigMessage.type === 'success' ? 'text-green-600' : 'text-red-600'
+                    }`}>
+                      {storeConfigMessage.text}
+                    </p>
+                  </div>
+                )}
+
+                {!configLoading && (
+                  <>
+                    {/* Store Closure Section */}
+                    <div>
+                      <h3 className="text-lg font-medium text-gray-900 mb-4">
+                        Store Closure Settings
+                      </h3>
+                      <p className="text-sm text-gray-600 mb-6">
+                        Configure when your store will be closed and set a message for customers
+                      </p>
+
+                      <div className="space-y-6">
+                        {/* Store Closure Toggle */}
+                        <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+                          <div>
+                            <h4 className="text-sm font-medium text-gray-900">
+                              Enable Store Closure
+                            </h4>
+                            <p className="text-sm text-gray-500">
+                              Temporarily close the store for orders
                             </p>
+                          </div>
+                          <input
+                            type="checkbox"
+                            checked={config.is_tutup}
+                            onChange={(e) =>
+                              updateConfig({ is_tutup: e.target.checked })
+                            }
+                            className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                          />
+                        </div>
+
+                        {/* Closure Details - Show when store is closed */}
+                        {config.is_tutup && (
+                          <div className="space-y-4 p-4 bg-red-50 rounded-lg border border-red-200">
+                            <Textarea
+                              label="Closure Message"
+                              value={config.pesan}
+                              onChange={(e) =>
+                                updateConfig({ pesan: e.target.value })
+                              }
+                              placeholder="e.g., We are closed for renovation. See you soon!"
+                              rows={3}
+                            />
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <Input
+                                label="Reopening Date"
+                                type="date"
+                                value={(() => {
+                                  if (!config.tgl_buka) return "";
+                                  const date = new Date(config.tgl_buka);
+                                  const year = date.getFullYear();
+                                  const month = String(date.getMonth() + 1).padStart(2, '0');
+                                  const day = String(date.getDate()).padStart(2, '0');
+                                  return `${year}-${month}-${day}`;
+                                })()}
+                                onChange={(e) => {
+                                  if (!e.target.value) {
+                                    updateConfig({ tgl_buka: "" });
+                                    return;
+                                  }
+                                  const existingDate = config.tgl_buka ? new Date(config.tgl_buka) : new Date();
+                                  const [year, month, day] = e.target.value.split('-').map(Number);
+                                  existingDate.setFullYear(year);
+                                  existingDate.setMonth(month - 1);
+                                  existingDate.setDate(day);
+                                  updateConfig({ tgl_buka: existingDate.toISOString() });
+                                }}
+                              />
+                              <TimePicker
+                                label="Reopening Time"
+                                value={(() => {
+                                  if (!config.tgl_buka) return "00:00";
+                                  const date = new Date(config.tgl_buka);
+                                  const hours = String(date.getHours()).padStart(2, '0');
+                                  const minutes = String(date.getMinutes()).padStart(2, '0');
+                                  return `${hours}:${minutes}`;
+                                })()}
+                                onChange={(value) => {
+                                  if (!value) return;
+                                  const existingDate = config.tgl_buka ? new Date(config.tgl_buka) : new Date();
+                                  const [hours, minutes] = value.split(':').map(Number);
+                                  existingDate.setHours(hours);
+                                  existingDate.setMinutes(minutes);
+                                  existingDate.setSeconds(0);
+                                  existingDate.setMilliseconds(0);
+                                  updateConfig({ tgl_buka: existingDate.toISOString() });
+                                }}
+                                icon={Clock}
+                              />
+                            </div>
+                            {config.tgl_buka && (
+                              <div className="p-3 bg-white rounded border border-red-200">
+                                <p className="text-sm text-gray-600">
+                                  <strong>Store will reopen on:</strong>{" "}
+                                  {new Date(config.tgl_buka).toLocaleString("id-ID", {
+                                    weekday: "long",
+                                    year: "numeric",
+                                    month: "long",
+                                    day: "numeric",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })}
+                                </p>
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
-                    )}
-                  </div>
-                </div>
+                    </div>
+
+                    {/* Order Limits Section */}
+                    <div className="border-t pt-6">
+                      <h3 className="text-lg font-medium text-gray-900 mb-4">
+                        Order Limits
+                      </h3>
+                      <p className="text-sm text-gray-600 mb-6">
+                        Set daily order limits and order cutoff time
+                      </p>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <Input
+                          label="Daily Order Limit"
+                          type="number"
+                          value={config.limit_pesanan_harian || ""}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            updateConfig({ 
+                              limit_pesanan_harian: val === "" ? 0 : parseInt(val, 10)
+                            });
+                          }}
+                          min="0"
+                          icon={ShoppingCart}
+                        />
+                        <TimePicker
+                          label="Order Cutoff Time"
+                          value={config.limit_jam_order ? config.limit_jam_order.slice(0, 5) : "00:00"}
+                          onChange={(value) =>
+                            updateConfig({ 
+                              limit_jam_order: value ? `${value}:00` : "" 
+                            })
+                          }
+                          icon={Clock}
+                        />
+                      </div>
+                      <p className="text-xs text-gray-500 mt-2">
+                        Orders will not be accepted after the cutoff time each day.
+                      </p>
+                    </div>
+
+                    {/* Store Location Section */}
+                    <div className="border-t pt-6">
+                      <h3 className="text-lg font-medium text-gray-900 mb-4">
+                        Store Location
+                      </h3>
+                      <p className="text-sm text-gray-600 mb-6">
+                        Set your store&apos;s GPS coordinates for delivery calculations
+                      </p>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <Input
+                          label="Latitude"
+                          type="text"
+                          value={config.latitude}
+                          onChange={(e) =>
+                            updateConfig({ latitude: e.target.value })
+                          }
+                          placeholder="-6.3031123"
+                          icon={MapPin}
+                        />
+                        <Input
+                          label="Longitude"
+                          type="text"
+                          value={config.longitude}
+                          onChange={(e) =>
+                            updateConfig({ longitude: e.target.value })
+                          }
+                          placeholder="106.7794934999"
+                          icon={MapPin}
+                        />
+                      </div>
+                      {config.latitude && config.longitude && (
+                        <div className="mt-4">
+                          <a
+                            href={`https://www.google.com/maps?q=${config.latitude},${config.longitude}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm text-orange-600 hover:text-orange-700 underline"
+                          >
+                            View location on Google Maps →
+                          </a>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Save Button for Store Config */}
+                    <div className="border-t pt-6">
+                      <Button
+                        onClick={async () => {
+                          setSavingStoreConfig(true);
+                          setStoreConfigMessage(null);
+                          const success = await saveConfig();
+                          setSavingStoreConfig(false);
+                          if (success) {
+                            setStoreConfigMessage({ 
+                              type: 'success', 
+                              text: 'Store configuration saved successfully!' 
+                            });
+                          } else {
+                            setStoreConfigMessage({ 
+                              type: 'error', 
+                              text: 'Failed to save configuration. Please try again.' 
+                            });
+                          }
+                          // Clear message after 3 seconds
+                          setTimeout(() => setStoreConfigMessage(null), 3000);
+                        }}
+                        disabled={savingStoreConfig}
+                        className="w-full sm:w-auto"
+                      >
+                        {savingStoreConfig ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Saving...
+                          </>
+                        ) : (
+                          <>
+                            <Save className="h-4 w-4 mr-2" />
+                            Save Store Configuration
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </>
+                )}
               </div>
             )}
           </div>

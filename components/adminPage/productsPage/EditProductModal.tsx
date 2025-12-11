@@ -61,6 +61,8 @@ export function EditProductModal({ isOpen, onClose, onEditProduct, product }: Ed
           
           setAvailableJenis(Array.from(jenisMap.values()).sort((a, b) => a.id - b.id));
           setAvailableHari(Array.from(hariMap.values()).sort((a, b) => a.id - b.id));
+          
+          console.log('📅 Available Hari loaded:', Array.from(hariMap.values()).sort((a, b) => a.id - b.id));
         }
       } catch (error) {
         console.error('Error fetching jenis and hari:', error);
@@ -75,6 +77,15 @@ export function EditProductModal({ isOpen, onClose, onEditProduct, product }: Ed
   // Reset form when product changes
   useEffect(() => {
     if (product) {
+      // Map attributes to ProductAddon format
+      const mappedAddons: ProductAddon[] = (product.attributes || []).map(attr => ({
+        id: attr.id,
+        nama_id: attr.nama_id || attr.nama || '',
+        nama_en: attr.nama_en || attr.nama || '',
+        nama: attr.nama,
+        harga: attr.harga || 0,
+      }));
+
       setFormData({
         nama_id: product.nama_id || product.nama || '',
         nama_en: product.nama_en || product.nama || '',
@@ -84,7 +95,7 @@ export function EditProductModal({ isOpen, onClose, onEditProduct, product }: Ed
         stok: product.stok,
         jenis_id: product.jenis?.[0]?.id || null,
         hari_ids: product.hari?.map(h => h.id) || [],
-        addons: product.attributes || [], // Load attributes from backend
+        addons: mappedAddons,
         images: [],
       });
       setExistingImages(product.gambars || []);
@@ -119,15 +130,21 @@ export function EditProductModal({ isOpen, onClose, onEditProduct, product }: Ed
         }))
       ];
       
+      // Exclude addons from spread since we send attribute_ids instead
+      const { addons, ...restFormData } = formData;
+      
       const productData = {
-        ...formData,
+        ...restFormData,
         nama: formData.nama_id, // Keep nama for backward compatibility
         deskripsi: formData.deskripsi_id, // Keep deskripsi for backward compatibility
         jenis_id: formData.jenis_id,
         hari_ids: formData.hari_ids,
-        attribute_ids: formData.addons.map(a => a.id), // Send attribute IDs to backend
+        attribute_ids: addons.map(a => a.id), // Send attribute IDs to backend
         gambars: allImages,
       };
+
+      console.log('🚀 Sending product data to backend:', productData);
+      console.log('🚀 Selected hari_ids:', productData.hari_ids);
 
       await onEditProduct(productData);
       handleClose();
@@ -195,12 +212,21 @@ export function EditProductModal({ isOpen, onClose, onEditProduct, product }: Ed
   };
 
   const toggleHari = (hariId: number) => {
-    setFormData(prev => ({
-      ...prev,
-      hari_ids: prev.hari_ids.includes(hariId)
+    console.log('🔵 toggleHari called with ID:', hariId);
+    console.log('🔵 Current hari_ids:', formData.hari_ids);
+    
+    setFormData(prev => {
+      const newHariIds = prev.hari_ids.includes(hariId)
         ? prev.hari_ids.filter(id => id !== hariId)
-        : [...prev.hari_ids, hariId]
-    }));
+        : [...prev.hari_ids, hariId];
+      
+      console.log('🔵 New hari_ids:', newHariIds);
+      
+      return {
+        ...prev,
+        hari_ids: newHariIds
+      };
+    });
   };
 
   const selectJenis = (jenisId: number) => {
