@@ -4,22 +4,25 @@ const host = process.env.API_HOST || 'localhost';
 const port = process.env.API_PORT || '5000';
 const BACKEND_URL = `http://${host}:${port}`;
 
-// Role mapping based on backend data (admin roles only)
-const ROLE_MAPPING: Record<number, string> = {
-  1: 'owner',
-  2: 'baker', 
-  3: 'cashier',
-  4: 'packager'
-};
+// Backend role structure
+interface BackendRole {
+  id: number;
+  name: string;
+}
 
 // Transform backend admin data to frontend format
+// Backend now returns roles array instead of single role_id
 function transformAdminData(backendAdmin: any) {
+  const roles: BackendRole[] = backendAdmin.roles || [];
+
   return {
     id: backendAdmin.id,
     nama: backendAdmin.nama,
     no_hp: backendAdmin.no_hp,
-    role: ROLE_MAPPING[backendAdmin.role_id] || 'unknown',
-    role_id: backendAdmin.role_id,
+    roles: roles, // Keep full roles array
+    // For backward compatibility, provide first role as primary
+    role: roles.length > 0 ? roles[0].name : 'unknown',
+    role_id: roles.length > 0 ? roles[0].id : null,
     created_at: backendAdmin.created_at,
     updated_at: backendAdmin.updated_at,
     // Don't expose password to frontend
@@ -39,7 +42,7 @@ export async function GET(
   try {
     const { id } = await params;
     console.log('[Admin API] GET request for ID:', id);
-    
+
     const response = await fetch(`${BACKEND_URL}/admins/${id}`, {
       method: 'GET',
       headers: {
@@ -55,7 +58,7 @@ export async function GET(
 
     const data = await response.json();
     console.log('[Admin API] Backend response:', data);
-    
+
     return NextResponse.json({
       success: true,
       message: data.message || 'Admin retrieved',
@@ -64,8 +67,8 @@ export async function GET(
   } catch (error) {
     console.error('[Admin API] GET error:', error);
     return NextResponse.json(
-      { 
-        success: false, 
+      {
+        success: false,
         message: error instanceof Error ? error.message : 'Failed to fetch admin'
       },
       { status: 500 }
@@ -81,7 +84,7 @@ export async function PUT(
     const { id } = await params;
     const body = await request.json();
     console.log('[Admin API] PUT request for ID:', id, 'Body:', body);
-    
+
     const response = await fetch(`${BACKEND_URL}/admins/${id}`, {
       method: 'PUT',
       headers: {
@@ -97,7 +100,7 @@ export async function PUT(
 
     const data = await response.json();
     console.log('[Admin API] PUT success:', data);
-    
+
     return NextResponse.json({
       success: true,
       message: data.message || 'Admin updated successfully',
@@ -106,8 +109,8 @@ export async function PUT(
   } catch (error) {
     console.error('[Admin API] PUT error:', error);
     return NextResponse.json(
-      { 
-        success: false, 
+      {
+        success: false,
         message: error instanceof Error ? error.message : 'Failed to update admin'
       },
       { status: 500 }
@@ -122,7 +125,7 @@ export async function DELETE(
   try {
     const { id } = await params;
     console.log('[Admin API] DELETE request for ID:', id);
-    
+
     const response = await fetch(`${BACKEND_URL}/admins/${id}`, {
       method: 'DELETE',
       headers: {
@@ -137,7 +140,7 @@ export async function DELETE(
 
     const data = await response.json();
     console.log('[Admin API] DELETE success:', data);
-    
+
     return NextResponse.json({
       success: true,
       message: data.message || 'Admin deleted successfully',
@@ -146,8 +149,8 @@ export async function DELETE(
   } catch (error) {
     console.error('[Admin API] DELETE error:', error);
     return NextResponse.json(
-      { 
-        success: false, 
+      {
+        success: false,
         message: error instanceof Error ? error.message : 'Failed to delete admin'
       },
       { status: 500 }

@@ -280,7 +280,7 @@ export function OrderDetailModal() {
       <div 
         className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
         style={{ 
-          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
           backdropFilter: 'blur(3px)',
           position: 'fixed',
           top: 0,

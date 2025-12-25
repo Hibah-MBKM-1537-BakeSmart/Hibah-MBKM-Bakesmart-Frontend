@@ -18,25 +18,22 @@ import {
   Loader2,
   RefreshCw
 } from 'lucide-react';
-import { useAdmin, AdminData } from '@/app/contexts/UsersContext';
+import { useAdmin, AdminData, RoleData } from '@/app/contexts/UsersContext';
 import { AddUserModal } from '@/components/adminPage/users/AddUserModal';
 import { ViewUserModal } from '@/components/adminPage/users/ViewUserModal';
-import { EditUserModal } from '@/components/adminPage/users/EditUserModal';
+import { EditAdminModal } from '@/components/adminPage/users/EditAdminModal';
 import { ToastNotification, useToast } from '@/components/adminPage/users/Toast';
 import { ConfirmDialog } from '@/components/adminPage/users/ConfirmDialog';
 
-// Backend role structure
-interface Role {
-  id: number;
-  name: string;
-}
+// Use RoleData from context
+type Role = RoleData;
 
 // Dynamic role colors generator
 const getRoleColor = (roleName: string | undefined): string => {
   if (!roleName) {
     return 'bg-gray-100 text-gray-800';
   }
-  
+
   const colors: Record<string, string> = {
     owner: 'bg-purple-100 text-purple-800',
     baker: 'bg-orange-100 text-orange-800',
@@ -53,7 +50,7 @@ const getRoleColor = (roleName: string | undefined): string => {
 export default function UsersPage() {
   const { state, fetchAdmins, createAdmin, updateAdmin, deleteAdmin } = useAdmin();
   const { admins, loading, error } = state;
-  
+
   const [roles, setRoles] = useState<Role[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRole, setSelectedRole] = useState('all');
@@ -61,7 +58,7 @@ export default function UsersPage() {
   const [showViewModal, setShowViewModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedAdmin, setSelectedAdmin] = useState<AdminData | null>(null);
-  
+
   // Toast and confirm dialog state
   const { toasts, showSuccess, showError, showWarning, removeToast } = useToast();
   const [errorShown, setErrorShown] = useState(false);
@@ -76,7 +73,7 @@ export default function UsersPage() {
     isOpen: false,
     title: '',
     message: '',
-    onConfirm: () => {},
+    onConfirm: () => { },
   });
 
   // Fetch data on mount
@@ -105,7 +102,7 @@ export default function UsersPage() {
       }
 
       const result = await response.json();
-      
+
       if (result.success && result.data && result.data.length > 0) {
         // Filter out customer role - only keep admin roles
         const adminRoles = result.data.filter((role: Role) => role.name !== 'customer');
@@ -148,13 +145,20 @@ export default function UsersPage() {
 
   const filteredAdmins = admins.filter(admin => {
     // Exclude customer role admins from display
-    if (admin.role === 'customer') return false;
-    
-    const matchesSearch = 
+    const hasCustomerRole = admin.roles?.some(r => r.name === 'customer');
+    if (hasCustomerRole) return false;
+
+    // Search in name, phone, and all role names
+    const roleNames = admin.roles?.map(r => r.name).join(' ') || '';
+    const matchesSearch =
       admin.nama.toLowerCase().includes(searchTerm.toLowerCase()) ||
       admin.no_hp.includes(searchTerm) ||
-      (admin.role && admin.role.toLowerCase().includes(searchTerm.toLowerCase()));
-    const matchesRole = selectedRole === 'all' || admin.role === selectedRole;
+      roleNames.toLowerCase().includes(searchTerm.toLowerCase());
+
+    // Filter by role - check if any of the admin's roles match
+    const matchesRole = selectedRole === 'all' ||
+      admin.roles?.some(r => r.name === selectedRole);
+
     return matchesSearch && matchesRole;
   });
 
@@ -166,9 +170,9 @@ export default function UsersPage() {
     });
   };
 
-  const handleUpdateRole = async (adminId: number, newRoleId: number) => {
+  const handleUpdateRole = async (adminId: number, newRoleIds: number[]) => {
     try {
-      await updateAdmin(adminId, { role_id: newRoleId });
+      await updateAdmin(adminId, { role_ids: newRoleIds });
       showSuccess('Role berhasil diperbarui!', 'Perubahan role telah disimpan.');
     } catch (error) {
       console.error('Error updating role:', error);
@@ -181,21 +185,27 @@ export default function UsersPage() {
     name: string;
     email: string;
     phone: string;
-    role: string;
+    role: string; // Can be comma-separated for multiple roles
     password: string;
   }) => {
     try {
-      // Find role_id from role name
-      const role = roles.find(r => r.name.toLowerCase() === userData.role.toLowerCase());
-      if (!role) {
-        showError('Role tidak valid', `Role "${userData.role}" tidak ditemukan`);
-        return;
+      // Support multiple roles (comma-separated)
+      const roleNames = userData.role.split(',').map(r => r.trim().toLowerCase());
+      const roleIds: number[] = [];
+
+      for (const roleName of roleNames) {
+        const role = roles.find(r => r.name.toLowerCase() === roleName);
+        if (!role) {
+          showError('Role tidak valid', `Role "${roleName}" tidak ditemukan`);
+          return;
+        }
+        roleIds.push(role.id);
       }
 
       await createAdmin({
         nama: userData.name,
         no_hp: userData.phone,
-        role_id: role.id,
+        role_ids: roleIds,
         password: userData.password,
       });
 
@@ -219,22 +229,38 @@ export default function UsersPage() {
 
   const handleUpdateUser = async (userId: number, userData: any) => {
     try {
-      // Find role_id from role name if role is being updated
-      let updateData = { ...userData };
+      // Find role_ids from role names if roles are being updated
+      let updateData: any = {};
+
+      // Handle role update - support multiple roles (comma-separated)
       if (userData.role && typeof userData.role === 'string') {
-        const role = roles.find(r => r.name.toLowerCase() === userData.role.toLowerCase());
-        if (role) {
-          updateData.role_id = role.id;
-          delete updateData.role; // Remove role name, keep role_id
+        const roleNames = userData.role.split(',').map((r: string) => r.trim().toLowerCase());
+        const roleIds: number[] = [];
+
+        for (const roleName of roleNames) {
+          const role = roles.find(r => r.name.toLowerCase() === roleName);
+          if (role) {
+            roleIds.push(role.id);
+          }
+        }
+
+        if (roleIds.length > 0) {
+          updateData.role_ids = roleIds;
         }
       }
 
-      await updateAdmin(userId, {
-        nama: updateData.name || updateData.nama,
-        no_hp: updateData.phone || updateData.no_hp,
-        role_id: updateData.role_id,
-        ...(updateData.password && { password: updateData.password })
-      });
+      // Add other fields
+      if (userData.name || userData.nama) {
+        updateData.nama = userData.name || userData.nama;
+      }
+      if (userData.phone || userData.no_hp) {
+        updateData.no_hp = userData.phone || userData.no_hp;
+      }
+      if (userData.password) {
+        updateData.password = userData.password;
+      }
+
+      await updateAdmin(userId, updateData);
 
       showSuccess('Admin berhasil diperbarui!', 'Perubahan telah disimpan');
       setShowEditModal(false);
@@ -285,7 +311,7 @@ export default function UsersPage() {
           <p className="text-gray-600">Kelola akun admin dan staff yang bekerja</p>
         </div>
         <div className="flex gap-2">
-          <button 
+          <button
             onClick={fetchAdmins}
             className="flex items-center space-x-2 bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors"
             title="Refresh Data"
@@ -293,7 +319,7 @@ export default function UsersPage() {
             <RefreshCw className="w-4 h-4" />
             <span>Refresh</span>
           </button>
-          <button 
+          <button
             onClick={() => setShowAddModal(true)}
             className="flex items-center space-x-2 bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition-colors"
           >
@@ -339,7 +365,7 @@ export default function UsersPage() {
           </div>
 
           <div className="text-sm text-gray-600">
-            {filteredAdmins.length} dari {admins.filter(a => a.role !== 'customer').length} admin
+            {filteredAdmins.length} dari {admins.filter(a => !a.roles?.some(r => r.name === 'customer')).length} admin
           </div>
         </div>
       </div>
@@ -391,33 +417,47 @@ export default function UsersPage() {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRoleColor(admin.role)}`}>
-                      <Shield className="w-3 h-3 mr-1" />
-                      {admin.role ? admin.role.toUpperCase() : 'NO ROLE'}
-                    </span>
+                    <div className="flex flex-wrap gap-1">
+                      {admin.roles && admin.roles.length > 0 ? (
+                        admin.roles.map((role) => (
+                          <span
+                            key={role.id}
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRoleColor(role.name)}`}
+                          >
+                            <Shield className="w-3 h-3 mr-1" />
+                            {role.name.toUpperCase()}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                          <Shield className="w-3 h-3 mr-1" />
+                          NO ROLE
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <div className="flex items-center justify-end space-x-2">
-                      <button 
+                    <div className="flex items-center justify-end gap-2">
+                      <button
                         onClick={() => handleViewUser(admin)}
-                        className="text-gray-400 hover:text-gray-600 p-1"
+                        className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700 transition-colors"
                         title="Lihat Detail"
                       >
-                        <Eye className="w-4 h-4" />
+                        <Eye className="w-4 h-4 lg:w-5 lg:h-5" />
                       </button>
-                      <button 
+                      <button
                         onClick={() => handleEditUser(admin)}
-                        className="text-gray-400 hover:text-orange-600 p-1"
+                        className="p-2 rounded-lg bg-orange-50 text-orange-600 hover:bg-orange-100 hover:text-orange-700 transition-colors"
                         title="Edit Admin"
                       >
-                        <Edit className="w-4 h-4" />
+                        <Edit className="w-4 h-4 lg:w-5 lg:h-5" />
                       </button>
-                      <button 
+                      <button
                         onClick={() => handleDeleteUser(admin.id, admin.nama)}
-                        className="text-gray-400 hover:text-red-600 p-1"
+                        className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 transition-colors"
                         title="Hapus Admin"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-4 h-4 lg:w-5 lg:h-5" />
                       </button>
                     </div>
                   </td>
@@ -442,7 +482,9 @@ export default function UsersPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Total Admin</p>
-              <p className="text-2xl font-bold text-gray-900">{admins.filter(a => a.role !== 'customer').length}</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {admins.filter(a => !a.roles?.some(r => r.name === 'customer')).length}
+              </p>
             </div>
             <div className="bg-blue-100 p-3 rounded-lg">
               <Shield className="w-6 h-6 text-blue-600" />
@@ -452,11 +494,14 @@ export default function UsersPage() {
 
         {/* Dynamic role counts from backend roles */}
         {roles.map(role => {
-          const roleCount = admins.filter(a => a.role === role.name).length;
+          // Count admins that have this role (supports multiple roles per admin)
+          const roleCount = admins.filter(a =>
+            a.roles?.some(r => r.name === role.name)
+          ).length;
           const colorClass = getRoleColor(role.name);
           const bgColor = colorClass.split(' ')[0].replace('bg-', '');
           const textColor = colorClass.split(' ')[1].replace('text-', '');
-          
+
           return (
             <div key={role.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <div className="flex items-center justify-between">
@@ -484,14 +529,14 @@ export default function UsersPage() {
       {selectedAdmin && showViewModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           {/* Backdrop */}
-          <div 
-            className="absolute inset-0 bg-black/40" 
+          <div
+            className="absolute inset-0 bg-black/40"
             onClick={() => {
               setShowViewModal(false);
               setSelectedAdmin(null);
-            }} 
+            }}
           />
-          
+
           {/* Modal */}
           <div className="relative z-10 bg-white rounded-lg p-6 max-w-md w-full shadow-xl border border-gray-200">
             <h2 className="text-xl font-bold mb-4 text-gray-900">Detail Admin</h2>
@@ -506,7 +551,21 @@ export default function UsersPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-600 mb-1">Role</label>
-                <p className="text-gray-900 bg-gray-50 px-3 py-2 rounded-lg capitalize">{selectedAdmin.role || 'No Role'}</p>
+                <div className="bg-gray-50 px-3 py-2 rounded-lg flex flex-wrap gap-1">
+                  {selectedAdmin.roles && selectedAdmin.roles.length > 0 ? (
+                    selectedAdmin.roles.map((role) => (
+                      <span
+                        key={role.id}
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRoleColor(role.name)}`}
+                      >
+                        <Shield className="w-3 h-3 mr-1" />
+                        {role.name.toUpperCase()}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-gray-500">No Role</span>
+                  )}
+                </div>
               </div>
             </div>
             <button
@@ -522,16 +581,17 @@ export default function UsersPage() {
         </div>
       )}
 
-      {/* Edit User Modal - TODO: Update for backend */}
-      {/* <EditUserModal
+      {/* Edit Admin Modal */}
+      <EditAdminModal
         isOpen={showEditModal}
         onClose={() => {
           setShowEditModal(false);
           setSelectedAdmin(null);
         }}
-        user={selectedAdmin}
-        onUpdateUser={handleUpdateUser}
-      /> */}
+        admin={selectedAdmin}
+        roles={roles}
+        onUpdateAdmin={handleUpdateUser}
+      />
 
       {/* Toast Notifications */}
       <ToastNotification toasts={toasts} onClose={removeToast} />

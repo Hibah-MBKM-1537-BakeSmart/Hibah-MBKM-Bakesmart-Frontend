@@ -2,30 +2,37 @@
 
 import React, { createContext, useContext, useReducer, useCallback } from 'react';
 
-// Updated interface to match backend response + frontend additions
+// Role interface matching backend response
+export interface RoleData {
+  id: number;
+  name: string;
+}
+
+// Updated interface to match backend response with multiple roles
 export interface AdminData {
   id: number;
   nama: string;
   no_hp: string;
-  role: string; // Role name (owner, baker, cashier, etc.)
-  role_id: number; // Backend role ID
+  roles: RoleData[]; // Array of roles (new backend format)
+  role: string; // Primary role name for backward compatibility
+  role_id: number | null; // Primary role ID for backward compatibility
   created_at?: string;
   updated_at?: string;
 }
 
-// Create admin input interface
+// Create admin input interface - supports multiple role IDs
 export interface CreateAdminData {
   nama: string;
   no_hp: string;
-  role_id: number;
+  role_ids: number[]; // Changed to array for multiple roles
   password: string;
 }
 
-// Update admin input interface
+// Update admin input interface - supports multiple role IDs
 export interface UpdateAdminData {
   nama?: string;
   no_hp?: string;
-  role_id?: number;
+  role_ids?: number[]; // Changed to array for multiple roles
   password?: string;
 }
 
@@ -94,7 +101,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     dispatch({ type: 'SET_LOADING', payload: true });
     try {
       console.log('[AdminContext] Fetching admins...');
-      
+
       const response = await fetch('/api/admins', {
         method: 'GET',
         cache: 'no-store',
