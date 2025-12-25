@@ -68,9 +68,14 @@ export function Footer() {
               width={80}
               height={75}
             />
-            <span className="text-2xl font-semibold tracking-widest font-[Poppins,sans-serif]">
-              {footerData.brand.name}
-            </span>
+
+            <Image
+              src="/img/halal_logo.png"
+              alt="Halal Logo"
+              width={60}
+              height={60}
+              className="ml-4 mix-blend-multiply rounded-md"
+            />
           </div>
 
           {/* Social Media */}
