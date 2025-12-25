@@ -54,7 +54,7 @@ export function StoreClosedModal() {
         }
       } else if (day >= 1 && day <= 5) {
         // Senin-Jumat: 07:00-21:00
-        if (currentTime >= 7 * 60 && currentTime < 21 * 60) {
+        if (currentTime >= 3 * 60 && currentTime < 21 * 60) {
           storeIsOpen = true;
         } else if (currentTime < 7 * 60) {
           nextOpen = "Hari ini pukul 07:00";

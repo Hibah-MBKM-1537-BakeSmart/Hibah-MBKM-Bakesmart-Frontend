@@ -2,7 +2,7 @@
 
 import type React from "react";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -18,17 +18,24 @@ import { useTranslation } from "@/app/contexts/TranslationContext";
 interface VoucherSectionProps {
   onVoucherApplied?: (voucherCode: string, discount: number) => void;
   onVoucherRemoved?: () => void;
+  totalAmount: number;
+  userId?: number;
 }
 
 export function VoucherSection({
   onVoucherApplied,
   onVoucherRemoved,
+  totalAmount,
+  userId,
 }: VoucherSectionProps) {
   const { t } = useTranslation();
   const [voucherCode, setVoucherCode] = useState("");
   const [appliedVoucher, setAppliedVoucher] = useState<{
     code: string;
     discount: number;
+    minPurchase?: number;
+    persen?: number;
+    nominal?: number;
   } | null>(null);
   const [isValidating, setIsValidating] = useState(false);
   const [error, setError] = useState("");
@@ -61,7 +68,11 @@ export function VoucherSection({
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ voucherCode: voucherCode.trim() }),
+        body: JSON.stringify({
+          voucherCode: voucherCode.trim(),
+          amount: totalAmount,
+          userId: userId || 12, // Default ke 12 jika tidak ada, sesuai request
+        }),
       });
 
       const result = await response.json();
@@ -75,6 +86,9 @@ export function VoucherSection({
       setAppliedVoucher({
         code: result.code,
         discount: result.discount,
+        minPurchase: result.details?.minimal__pembelian || 0,
+        persen: result.details?.persen,
+        nominal: result.details?.nominal,
       });
       // Kirim data ke komponen parent
       onVoucherApplied?.(result.code, result.discount);
@@ -93,6 +107,37 @@ export function VoucherSection({
       setIsValidating(false);
     }
   };
+
+  useEffect(() => {
+    if (appliedVoucher) {
+      // 1. Cek Minimal Pembelian
+      if (
+        appliedVoucher.minPurchase &&
+        totalAmount < appliedVoucher.minPurchase
+      ) {
+        setAppliedVoucher(null);
+        onVoucherRemoved?.();
+        setError(
+          `Voucher dihapus: Total belanja kurang dari Rp ${appliedVoucher.minPurchase.toLocaleString(
+            "id-ID"
+          )}`
+        );
+        return;
+      }
+
+      // 2. Recalculate Discount jika Persentase
+      if (appliedVoucher.persen) {
+        const newDiscount = (totalAmount * appliedVoucher.persen) / 100;
+        // Hanya update jika ada perubahan signifikan (untuk menghindari loop)
+        if (Math.abs(newDiscount - appliedVoucher.discount) > 0.01) {
+          setAppliedVoucher((prev) =>
+            prev ? { ...prev, discount: newDiscount } : null
+          );
+          onVoucherApplied?.(appliedVoucher.code, newDiscount);
+        }
+      }
+    }
+  }, [totalAmount, appliedVoucher, onVoucherRemoved, onVoucherApplied]);
 
   // ======================================================
   // === MODIFIKASI BERAKHIR DISINI ===

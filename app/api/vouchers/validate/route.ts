@@ -1,84 +1,103 @@
 import { NextResponse } from "next/server";
 
 /**
- * INI ADALAH DATABASE VOUCHER MOCK (SEMENTARA)
- * Logika ini kita pindahkan dari VoucherSection.tsx
- *
- * Nanti, Anda tinggal ganti isi fungsi ini untuk 'fetch'
- * ke backend Hapi.js Anda.
- */
-const validateVoucherInMockDB = async (
-  code: string
-): Promise<{
-  valid: boolean;
-  discount?: number;
-  code?: string;
-  message?: string;
-}> => {
-  // Simulasi penundaan jaringan
-  await new Promise((resolve) => setTimeout(resolve, 750));
-
-  const mockVouchers: { [key: string]: number } = {
-    DISKON10: 10000,
-    DISKON20: 20000,
-    HEMAT50: 50000,
-    GRATIS15: 15000,
-  };
-
-  const uppercaseCode = code.toUpperCase();
-
-  if (mockVouchers[uppercaseCode]) {
-    // Jika valid
-    return {
-      valid: true,
-      discount: mockVouchers[uppercaseCode],
-      code: uppercaseCode,
-    };
-  }
-
-  // Jika tidak valid
-  return { valid: false, message: "Kode voucher tidak valid" };
-};
-
-/**
  * Ini adalah API Handler untuk POST /api/vouchers/validate
+ * Proxy ke backend: POST http://localhost:5000/voucher/check
  */
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { voucherCode } = body;
+    const { voucherCode, amount, userId } = body;
 
-    if (!voucherCode || typeof voucherCode !== "string") {
-      return new NextResponse(
-        JSON.stringify({ message: "Kode voucher diperlukan" }),
-        { status: 400, headers: { "Content-Type": "application/json" } }
+    if (!voucherCode) {
+      return NextResponse.json(
+        { message: "Kode voucher harus diisi" },
+        { status: 400 }
       );
     }
 
-    // Panggil fungsi validasi mock kita
-    const result = await validateVoucherInMockDB(voucherCode);
+    // Panggil backend API
+    const backendUrl = "http://localhost:5000/voucher/check";
 
-    if (!result.valid) {
-      // Kirim error 404 (Not Found) jika voucher tidak valid
-      return new NextResponse(
-        JSON.stringify({
-          message: result.message || "Kode voucher tidak valid",
-        }),
-        { status: 404, headers: { "Content-Type": "application/json" } }
+    const response = await fetch(backendUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        code: voucherCode,
+        amount: amount || 0, // Default 0 jika tidak ada
+        userId: userId || 12, // Default 12 sesuai request user jika tidak ada
+      }),
+    });
+
+    const result = await response.json();
+    console.log(
+      "[API Validate Voucher] Backend response:",
+      JSON.stringify(result, null, 2)
+    );
+
+    if (!response.ok) {
+      // Jika backend mengembalikan error (4xx, 5xx)
+      return NextResponse.json(
+        { message: result.message || "Gagal memvalidasi voucher" },
+        { status: response.status }
       );
     }
 
-    // Kirim respons sukses 200 (OK) jika valid
+    // Cek status dari response body backend
+    if (result.status === "fail") {
+      return NextResponse.json({ message: result.message }, { status: 400 });
+    }
+
+    // Jika sukses
+    // Backend response structure might vary.
+    // Expected: { status: "success", data: { data: { ...voucher } } }
+    // Or maybe: { status: "success", data: { ...voucher } }
+
+    let voucherData = result.data?.data;
+
+    // Fallback: jika result.data langsung berisi object voucher (bukan nested di .data)
+    if (!voucherData && result.data) {
+      voucherData = result.data;
+    }
+
+    if (!voucherData) {
+      console.error(
+        "[API Validate Voucher] Voucher data not found in response:",
+        result
+      );
+      return NextResponse.json(
+        { message: "Terjadi kesalahan: Data voucher tidak ditemukan" },
+        { status: 500 }
+      );
+    }
+
+    // Hitung diskon jika backend tidak mengembalikan nominal diskon langsung
+    // Tapi frontend butuh 'discount' (nominal)
+    // Asumsi: backend mengembalikan 'persen' atau nominal fix?
+    // Di contoh response ada "persen": 10.
+
+    let discountAmount = 0;
+    if (voucherData.persen) {
+      discountAmount = (amount * voucherData.persen) / 100;
+    } else if (voucherData.nominal) {
+      discountAmount = voucherData.nominal;
+    }
+
+    // Kita kembalikan format yang diharapkan frontend
     return NextResponse.json({
-      message: "Voucher berhasil diterapkan",
-      code: result.code,
-      discount: result.discount,
+      valid: true,
+      code: voucherData.kode || voucherData.code,
+      discount: discountAmount,
+      message: result.message,
+      details: voucherData, // Kirim data lengkap jika perlu
     });
   } catch (error) {
-    console.error("[API Route /vouchers] Terjadi kesalahan:", error);
-    return new NextResponse(
-      JSON.stringify({ message: "Internal Server Error" }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
+    console.error("Error validating voucher:", error);
+    return NextResponse.json(
+      { message: "Terjadi kesalahan internal server" },
+      { status: 500 }
     );
   }
 }

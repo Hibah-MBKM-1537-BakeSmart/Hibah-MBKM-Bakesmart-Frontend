@@ -1,6 +1,12 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  type ReactNode,
+} from "react";
 
 // Use Next.js API route instead of direct backend call to avoid CORS
 const BACKEND_API_URL = "/api/vouchers";
@@ -19,6 +25,7 @@ export interface Voucher {
   usageCount: number;
   maxUsage: number | null;
   batas_penggunaan: number; // Field asli dari backend
+  minimal__pembelian: number; // Field baru untuk minimal pembelian
   status: "active" | "inactive" | "expired";
   qr_code?: string; // Field dari backend
   createdAt: string;
@@ -52,20 +59,22 @@ export function VouchersProvider({ children }: { children: ReactNode }) {
   const mapBackendToFrontend = (backendVoucher: any): Voucher => {
     const today = new Date();
     today.setHours(0, 0, 0, 0); // Set to start of day for accurate comparison
-    
+
     // Use tanggal_selesai from backend, fallback to expiryDate
-    const expiryDateStr = backendVoucher.tanggal_selesai || backendVoucher.expiryDate;
+    const expiryDateStr =
+      backendVoucher.tanggal_selesai || backendVoucher.expiryDate;
     const expiryDate = expiryDateStr ? new Date(expiryDateStr) : null;
     if (expiryDate) {
       expiryDate.setHours(0, 0, 0, 0); // Set to start of day
     }
-    
+
     const usageCount = backendVoucher.usageCount || 0;
-    const maxUsage = backendVoucher.batas_penggunaan || backendVoucher.maxUsage || null;
-    
+    const maxUsage =
+      backendVoucher.batas_penggunaan || backendVoucher.maxUsage || null;
+
     // Determine status based on expiry date and usage limit
     let status: "active" | "inactive" | "expired";
-    
+
     // Check if voucher is expired by date
     if (expiryDate && expiryDate < today) {
       status = "expired";
@@ -93,9 +102,13 @@ export function VouchersProvider({ children }: { children: ReactNode }) {
       usageCount: usageCount,
       maxUsage: maxUsage,
       batas_penggunaan: backendVoucher.batas_penggunaan || 0,
+      minimal__pembelian: backendVoucher.minimal__pembelian || 0,
       status: status,
       qr_code: backendVoucher.qr_code,
-      createdAt: backendVoucher.created_at || backendVoucher.createdAt || new Date().toISOString().split("T")[0],
+      createdAt:
+        backendVoucher.created_at ||
+        backendVoucher.createdAt ||
+        new Date().toISOString().split("T")[0],
       created_at: backendVoucher.created_at,
       updated_at: backendVoucher.updated_at,
     };
@@ -117,13 +130,13 @@ export function VouchersProvider({ children }: { children: ReactNode }) {
       }
 
       const result = await response.json();
-      
+
       // Debug: Log response untuk troubleshooting
       console.log("[VouchersContext] Backend response:", result);
 
       // Handle different response formats
       let vouchersData: any[] = [];
-      
+
       // Format 1: { message: "...", data: [...] } - Backend actual format
       if (result.data && Array.isArray(result.data)) {
         vouchersData = result.data;
@@ -139,27 +152,34 @@ export function VouchersProvider({ children }: { children: ReactNode }) {
       // Format 4: Direct array [...]
       else if (Array.isArray(result)) {
         vouchersData = result;
-      }
-      else {
+      } else {
         console.error("[VouchersContext] Unexpected response format:", result);
-        throw new Error(`Format response tidak sesuai. Expected array of vouchers, got: ${JSON.stringify(result).substring(0, 100)}`);
+        throw new Error(
+          `Format response tidak sesuai. Expected array of vouchers, got: ${JSON.stringify(
+            result
+          ).substring(0, 100)}`
+        );
       }
 
       const mappedVouchers = vouchersData.map(mapBackendToFrontend);
-      console.log("[VouchersContext] Mapped vouchers:", mappedVouchers.length, "items");
+      console.log(
+        "[VouchersContext] Mapped vouchers:",
+        mappedVouchers.length,
+        "items"
+      );
       setVouchers(mappedVouchers);
-      
     } catch (err) {
       console.error("Error fetching vouchers:", err);
-      
+
       let errorMessage = "Failed to fetch vouchers";
-      
+
       if (err instanceof TypeError && err.message.includes("fetch")) {
-        errorMessage = "Backend server tidak dapat diakses. Pastikan server backend running";
+        errorMessage =
+          "Backend server tidak dapat diakses. Pastikan server backend running";
       } else if (err instanceof Error) {
         errorMessage = err.message;
       }
-      
+
       setError(errorMessage);
       setVouchers([]); // Set empty array on error
     } finally {
@@ -182,11 +202,16 @@ export function VouchersProvider({ children }: { children: ReactNode }) {
         persen: newVoucher.discount || newVoucher.persen,
         kode: (newVoucher.code || newVoucher.kode).toUpperCase(),
       };
-      
+
       // Add optional fields if present
-      if (newVoucher.tanggal_mulai !== undefined) payload.tanggal_mulai = newVoucher.tanggal_mulai;
-      if (newVoucher.tanggal_selesai !== undefined) payload.tanggal_selesai = newVoucher.tanggal_selesai;
-      if (newVoucher.batas_penggunaan !== undefined) payload.batas_penggunaan = newVoucher.batas_penggunaan;
+      if (newVoucher.tanggal_mulai !== undefined)
+        payload.tanggal_mulai = newVoucher.tanggal_mulai;
+      if (newVoucher.tanggal_selesai !== undefined)
+        payload.tanggal_selesai = newVoucher.tanggal_selesai;
+      if (newVoucher.batas_penggunaan !== undefined)
+        payload.batas_penggunaan = newVoucher.batas_penggunaan;
+      if (newVoucher.minimal__pembelian !== undefined)
+        payload.minimal__pembelian = newVoucher.minimal__pembelian;
 
       console.log("[VouchersContext] Creating voucher with payload:", payload);
 
@@ -201,14 +226,21 @@ export function VouchersProvider({ children }: { children: ReactNode }) {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        throw new Error(
+          errorData.message || `HTTP error! status: ${response.status}`
+        );
       }
 
       const result = await response.json();
       console.log("[VouchersContext] Create response:", result);
 
       // Success if response is OK (even without status field)
-      if (response.status === 200 || response.status === 201 || result.status === "success" || result.message?.includes("created")) {
+      if (
+        response.status === 200 ||
+        response.status === 201 ||
+        result.status === "success" ||
+        result.message?.includes("created")
+      ) {
         // Refresh vouchers list
         await refreshVouchers();
       } else {
@@ -216,11 +248,11 @@ export function VouchersProvider({ children }: { children: ReactNode }) {
       }
     } catch (err) {
       console.error("Error adding voucher:", err);
-      
+
       if (err instanceof TypeError && err.message.includes("fetch")) {
         throw new Error("Backend server tidak dapat diakses");
       }
-      
+
       throw err;
     }
   };
@@ -229,17 +261,29 @@ export function VouchersProvider({ children }: { children: ReactNode }) {
     try {
       // Backend expects: { nama?, persen?, kode?, tanggal_mulai?, tanggal_selesai?, batas_penggunaan? }
       const payload: any = {};
-      
-      if (updates.nama) payload.nama = updates.nama;
-      if (updates.code || updates.kode) payload.kode = updates.code || updates.kode;
-      if (updates.discount !== undefined || updates.persen !== undefined) {
-        payload.persen = updates.discount !== undefined ? updates.discount : updates.persen;
-      }
-      if (updates.tanggal_mulai !== undefined) payload.tanggal_mulai = updates.tanggal_mulai;
-      if (updates.tanggal_selesai !== undefined) payload.tanggal_selesai = updates.tanggal_selesai;
-      if (updates.batas_penggunaan !== undefined) payload.batas_penggunaan = updates.batas_penggunaan;
 
-      console.log("[VouchersContext] Updating voucher:", id, "with payload:", payload);
+      if (updates.nama) payload.nama = updates.nama;
+      if (updates.code || updates.kode)
+        payload.kode = updates.code || updates.kode;
+      if (updates.discount !== undefined || updates.persen !== undefined) {
+        payload.persen =
+          updates.discount !== undefined ? updates.discount : updates.persen;
+      }
+      if (updates.tanggal_mulai !== undefined)
+        payload.tanggal_mulai = updates.tanggal_mulai;
+      if (updates.tanggal_selesai !== undefined)
+        payload.tanggal_selesai = updates.tanggal_selesai;
+      if (updates.batas_penggunaan !== undefined)
+        payload.batas_penggunaan = updates.batas_penggunaan;
+      if (updates.minimal__pembelian !== undefined)
+        payload.minimal__pembelian = updates.minimal__pembelian;
+
+      console.log(
+        "[VouchersContext] Updating voucher:",
+        id,
+        "with payload:",
+        payload
+      );
 
       const response = await fetch(`${BACKEND_API_URL}/${id}`, {
         method: "PUT",
@@ -252,14 +296,20 @@ export function VouchersProvider({ children }: { children: ReactNode }) {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        throw new Error(
+          errorData.message || `HTTP error! status: ${response.status}`
+        );
       }
 
       const result = await response.json();
       console.log("[VouchersContext] Update response:", result);
 
       // Success if response is OK
-      if (response.status === 200 || result.status === "success" || result.message?.includes("updated")) {
+      if (
+        response.status === 200 ||
+        result.status === "success" ||
+        result.message?.includes("updated")
+      ) {
         // Refresh vouchers list
         await refreshVouchers();
       } else {
@@ -267,11 +317,11 @@ export function VouchersProvider({ children }: { children: ReactNode }) {
       }
     } catch (err) {
       console.error("Error updating voucher:", err);
-      
+
       if (err instanceof TypeError && err.message.includes("fetch")) {
         throw new Error("Backend server tidak dapat diakses");
       }
-      
+
       throw err;
     }
   };
@@ -287,14 +337,20 @@ export function VouchersProvider({ children }: { children: ReactNode }) {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        throw new Error(
+          errorData.message || `HTTP error! status: ${response.status}`
+        );
       }
 
       const result = await response.json();
       console.log("[VouchersContext] Delete response:", result);
 
       // Success if response is OK
-      if (response.status === 200 || result.status === "success" || result.message?.includes("deleted")) {
+      if (
+        response.status === 200 ||
+        result.status === "success" ||
+        result.message?.includes("deleted")
+      ) {
         // Refresh vouchers list
         await refreshVouchers();
       } else {
@@ -302,11 +358,11 @@ export function VouchersProvider({ children }: { children: ReactNode }) {
       }
     } catch (err) {
       console.error("Error deleting voucher:", err);
-      
+
       if (err instanceof TypeError && err.message.includes("fetch")) {
         throw new Error("Backend server tidak dapat diakses");
       }
-      
+
       throw err;
     }
   };
@@ -318,17 +374,17 @@ export function VouchersProvider({ children }: { children: ReactNode }) {
       vouchers.map((v) => {
         if (v.id === id) {
           const newUsageCount = v.usageCount + 1;
-          
+
           // Recalculate status after incrementing usage
           let newStatus: "active" | "inactive" | "expired" = v.status;
-          
+
           const today = new Date();
           today.setHours(0, 0, 0, 0);
           const expiryDate = v.expiryDate ? new Date(v.expiryDate) : null;
           if (expiryDate) {
             expiryDate.setHours(0, 0, 0, 0);
           }
-          
+
           // Check if expired by date
           if (expiryDate && expiryDate < today) {
             newStatus = "expired";
@@ -341,11 +397,11 @@ export function VouchersProvider({ children }: { children: ReactNode }) {
           else {
             newStatus = "active";
           }
-          
-          return { 
-            ...v, 
+
+          return {
+            ...v,
             usageCount: newUsageCount,
-            status: newStatus
+            status: newStatus,
           };
         }
         return v;

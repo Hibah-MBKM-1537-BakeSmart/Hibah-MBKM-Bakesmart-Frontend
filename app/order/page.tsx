@@ -123,6 +123,8 @@ export default function OrderPage() {
               <VoucherSection
                 onVoucherApplied={handleVoucherApplied}
                 onVoucherRemoved={handleVoucherRemoved}
+                totalAmount={subtotal}
+                userId={12} // Hardcoded user ID as per requirement
               />
 
               {/* 3. KIRIM HASIL HITUNGAN KE PAYMENTMETHODS */}

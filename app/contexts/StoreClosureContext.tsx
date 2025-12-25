@@ -1,7 +1,13 @@
 "use client";
 
 import type React from "react";
-import { createContext, useContext, useState, useEffect, useCallback } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+} from "react";
 
 // Backend API structure
 export interface StoreConfig {
@@ -75,14 +81,14 @@ export function StoreClosureProvider({
       setIsLoading(true);
       setError(null);
       const response = await fetch("/api/config");
-      
+
       if (!response.ok) {
         throw new Error("Failed to fetch config");
       }
-      
+
       const data = await response.json();
       setConfig(data);
-      
+
       // Sync legacy closure state with backend config
       setClosure({
         isActive: data.is_tutup || false,
@@ -109,7 +115,9 @@ export function StoreClosureProvider({
   }, [refreshConfig]);
 
   // Update local config state
-  const updateConfig = async (newConfig: Partial<StoreConfig>): Promise<boolean> => {
+  const updateConfig = async (
+    newConfig: Partial<StoreConfig>
+  ): Promise<boolean> => {
     setConfig((prev) => ({ ...prev, ...newConfig }));
     return true;
   };
@@ -119,7 +127,7 @@ export function StoreClosureProvider({
     try {
       setIsLoading(true);
       setError(null);
-      
+
       const response = await fetch("/api/config", {
         method: "PUT",
         headers: {
@@ -134,7 +142,7 @@ export function StoreClosureProvider({
 
       const data = await response.json();
       setConfig(data);
-      
+
       // Sync legacy closure state
       setClosure({
         isActive: data.is_tutup || false,
@@ -142,7 +150,7 @@ export function StoreClosureProvider({
         endDate: data.tgl_buka ? data.tgl_buka.split("T")[0] : "",
         reason: data.pesan || "",
       });
-      
+
       return true;
     } catch (err) {
       console.error("Error saving config:", err);
@@ -157,13 +165,15 @@ export function StoreClosureProvider({
   const updateClosure = (newClosure: StoreClosure) => {
     setClosure(newClosure);
     localStorage.setItem("storeClosure", JSON.stringify(newClosure));
-    
+
     // Sync with backend config
     setConfig((prev) => ({
       ...prev,
       is_tutup: newClosure.isActive,
       pesan: newClosure.reason,
-      tgl_buka: newClosure.endDate ? new Date(newClosure.endDate).toISOString() : "",
+      tgl_buka: newClosure.endDate
+        ? new Date(newClosure.endDate).toISOString()
+        : "",
     }));
   };
 
@@ -202,12 +212,14 @@ export function StoreClosureProvider({
 
     // Check order time limit
     if (config.limit_jam_order) {
-      const [limitHours, limitMinutes] = config.limit_jam_order.split(":").map(Number);
+      const [limitHours, limitMinutes] = config.limit_jam_order
+        .split(":")
+        .map(Number);
       const hours = now.getHours();
       const minutes = now.getMinutes();
       const currentTime = hours * 60 + minutes;
       const limitTime = limitHours * 60 + limitMinutes;
-      
+
       if (currentTime >= limitTime) {
         return true; // Past order cutoff time for today
       }
@@ -225,7 +237,7 @@ export function StoreClosureProvider({
     } else if (day === 6) {
       return !(currentTime >= 8 * 60 && currentTime < 22 * 60);
     } else if (day >= 1 && day <= 5) {
-      return !(currentTime >= 7 * 60 && currentTime < 24 * 60);
+      return !(currentTime >= 3 * 60 && currentTime < 24 * 60);
     }
 
     return true;

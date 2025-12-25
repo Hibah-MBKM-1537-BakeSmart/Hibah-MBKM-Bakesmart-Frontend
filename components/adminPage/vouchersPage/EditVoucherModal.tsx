@@ -25,6 +25,7 @@ export function EditVoucherModal({
     discount: "",
     expiryDate: "",
     maxUsage: "",
+    minPurchase: "",
   });
 
   useEffect(() => {
@@ -34,7 +35,12 @@ export function EditVoucherModal({
         code: voucher.kode || "",
         discount: voucher.persen ? voucher.persen.toString() : "0",
         expiryDate: voucher.tanggal_selesai || "",
-        maxUsage: voucher.batas_penggunaan ? voucher.batas_penggunaan.toString() : "1",
+        maxUsage: voucher.batas_penggunaan
+          ? voucher.batas_penggunaan.toString()
+          : "1",
+        minPurchase: voucher.minimal__pembelian
+          ? voucher.minimal__pembelian.toString()
+          : "0",
       });
     }
   }, [voucher, isOpen]);
@@ -59,6 +65,9 @@ export function EditVoucherModal({
         tanggal_mulai: null,
         tanggal_selesai: formData.expiryDate || null,
         batas_penggunaan: Number.parseInt(formData.maxUsage),
+        minimal__pembelian: formData.minPurchase
+          ? Number.parseInt(formData.minPurchase)
+          : 0,
       } as any);
 
       addToast({
@@ -80,11 +89,11 @@ export function EditVoucherModal({
   if (!isOpen || !voucher) return null;
 
   return (
-    <div 
+    <div
       className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50 p-4"
       onClick={onClose}
     >
-      <div 
+      <div
         className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
@@ -155,6 +164,22 @@ export function EditVoucherModal({
               onChange={(e) =>
                 setFormData({ ...formData, expiryDate: e.target.value })
               }
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Minimal Pembelian (Rp)
+            </label>
+            <input
+              type="number"
+              value={formData.minPurchase}
+              onChange={(e) =>
+                setFormData({ ...formData, minPurchase: e.target.value })
+              }
+              placeholder="0 jika tidak ada minimal"
+              min="0"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500"
             />
           </div>

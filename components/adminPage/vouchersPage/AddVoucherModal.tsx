@@ -20,6 +20,7 @@ export function AddVoucherModal({ isOpen, onClose }: AddVoucherModalProps) {
     discount: "",
     expiryDate: "",
     maxUsage: "",
+    minPurchase: "",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -42,6 +43,9 @@ export function AddVoucherModal({ isOpen, onClose }: AddVoucherModalProps) {
         tanggal_mulai: null,
         tanggal_selesai: formData.expiryDate || null,
         batas_penggunaan: Number.parseInt(formData.maxUsage),
+        minimal__pembelian: formData.minPurchase
+          ? Number.parseInt(formData.minPurchase)
+          : 0,
       } as any);
 
       addToast({
@@ -56,6 +60,7 @@ export function AddVoucherModal({ isOpen, onClose }: AddVoucherModalProps) {
         discount: "",
         expiryDate: "",
         maxUsage: "",
+        minPurchase: "",
       });
       onClose();
     } catch (error) {
@@ -70,11 +75,11 @@ export function AddVoucherModal({ isOpen, onClose }: AddVoucherModalProps) {
   if (!isOpen) return null;
 
   return (
-    <div 
+    <div
       className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50 p-4"
       onClick={onClose}
     >
-      <div 
+      <div
         className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
@@ -156,6 +161,23 @@ export function AddVoucherModal({ isOpen, onClose }: AddVoucherModalProps) {
               onChange={(e) =>
                 setFormData({ ...formData, expiryDate: e.target.value })
               }
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500"
+            />
+          </div>
+
+          {/* Min Purchase */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Minimal Pembelian (Rp)
+            </label>
+            <input
+              type="number"
+              value={formData.minPurchase}
+              onChange={(e) =>
+                setFormData({ ...formData, minPurchase: e.target.value })
+              }
+              placeholder="0 jika tidak ada minimal"
+              min="0"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500"
             />
           </div>

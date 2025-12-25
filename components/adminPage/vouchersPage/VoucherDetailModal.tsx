@@ -31,11 +31,11 @@ export function VoucherDetailModal({
       : `Rp ${voucher.discount.toLocaleString("id-ID")}`;
 
   return (
-    <div 
+    <div
       className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50 p-4"
       onClick={onClose}
     >
-      <div 
+      <div
         className="bg-white rounded-lg max-w-md w-full shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
@@ -86,6 +86,16 @@ export function VoucherDetailModal({
           <div>
             <p className="text-sm text-gray-600 mb-1">Jumlah Diskon</p>
             <p className="text-lg font-bold text-gray-900">{discountText}</p>
+          </div>
+
+          {/* Min Purchase */}
+          <div>
+            <p className="text-sm text-gray-600 mb-1">Minimal Pembelian</p>
+            <p className="text-lg font-bold text-gray-900">
+              {voucher.minimal__pembelian
+                ? `Rp ${voucher.minimal__pembelian.toLocaleString("id-ID")}`
+                : "Tidak ada minimal pembelian"}
+            </p>
           </div>
 
           {/* Expiry Date */}

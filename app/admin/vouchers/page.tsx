@@ -27,7 +27,8 @@ type SortField = "code" | "discount" | "expiryDate" | "usage" | "status";
 type SortDirection = "asc" | "desc" | null;
 
 export default function VouchersPage() {
-  const { vouchers, loading, error, refreshVouchers, deleteVoucher } = useVouchers();
+  const { vouchers, loading, error, refreshVouchers, deleteVoucher } =
+    useVouchers();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [sortField, setSortField] = useState<SortField | null>(null);
@@ -39,7 +40,10 @@ export default function VouchersPage() {
   const [showQRModal, setShowQRModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedVoucher, setSelectedVoucher] = useState<any>(null);
-  const [voucherToDelete, setVoucherToDelete] = useState<{id: string, code: string} | null>(null);
+  const [voucherToDelete, setVoucherToDelete] = useState<{
+    id: string;
+    code: string;
+  } | null>(null);
   const { addToast } = useToast();
 
   const handleSort = (field: SortField) => {
@@ -95,14 +99,20 @@ export default function VouchersPage() {
             compareValue = dateA - dateB;
             break;
           case "usage":
-            const usagePercentA = a.maxUsage ? (a.usageCount / a.maxUsage) * 100 : a.usageCount;
-            const usagePercentB = b.maxUsage ? (b.usageCount / b.maxUsage) * 100 : b.usageCount;
+            const usagePercentA = a.maxUsage
+              ? (a.usageCount / a.maxUsage) * 100
+              : a.usageCount;
+            const usagePercentB = b.maxUsage
+              ? (b.usageCount / b.maxUsage) * 100
+              : b.usageCount;
             compareValue = usagePercentA - usagePercentB;
             break;
           case "status":
             const statusOrder = { active: 1, inactive: 2, expired: 3 };
-            const statusA = statusOrder[a.status as keyof typeof statusOrder] || 4;
-            const statusB = statusOrder[b.status as keyof typeof statusOrder] || 4;
+            const statusA =
+              statusOrder[a.status as keyof typeof statusOrder] || 4;
+            const statusB =
+              statusOrder[b.status as keyof typeof statusOrder] || 4;
             compareValue = statusA - statusB;
             break;
         }
@@ -213,9 +223,10 @@ export default function VouchersPage() {
 
     // Check expiry date
     const isExpiredByDate = expiryDate && expiryDate < today;
-    
+
     // Check max usage
-    const isExpiredByUsage = voucher.maxUsage !== null && voucher.usageCount >= voucher.maxUsage;
+    const isExpiredByUsage =
+      voucher.maxUsage !== null && voucher.usageCount >= voucher.maxUsage;
 
     let status = "Aktif";
     let color = "bg-green-100 text-green-800";
@@ -224,12 +235,17 @@ export default function VouchersPage() {
     if (isExpiredByDate) {
       status = "Kadaluarsa";
       color = "bg-red-100 text-red-800";
-      tooltip = `Voucher kadaluarsa pada ${new Date(voucher.expiryDate).toLocaleDateString("id-ID")}`;
+      tooltip = `Voucher kadaluarsa pada ${new Date(
+        voucher.expiryDate
+      ).toLocaleDateString("id-ID")}`;
     } else if (isExpiredByUsage) {
       status = "Batas Tercapai";
       color = "bg-gray-100 text-gray-800";
       tooltip = `Penggunaan maksimal tercapai (${voucher.usageCount}/${voucher.maxUsage})`;
-    } else if (voucher.maxUsage && voucher.usageCount >= voucher.maxUsage * 0.8) {
+    } else if (
+      voucher.maxUsage &&
+      voucher.usageCount >= voucher.maxUsage * 0.8
+    ) {
       // Warning if 80% usage reached
       status = "Aktif (Hampir Penuh)";
       color = "bg-yellow-100 text-yellow-800";
@@ -340,6 +356,9 @@ export default function VouchersPage() {
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <span>Nama Voucher</span>
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       <button
                         onClick={() => handleSort("code")}
                         className="flex items-center space-x-1 hover:text-gray-700 transition-colors"
@@ -356,6 +375,9 @@ export default function VouchersPage() {
                         <span>Diskon</span>
                         {getSortIcon("discount")}
                       </button>
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <span>Min. Pembelian</span>
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       <button
@@ -375,126 +397,137 @@ export default function VouchersPage() {
                         {getSortIcon("usage")}
                       </button>
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      <button
-                        onClick={() => handleSort("status")}
-                        className="flex items-center space-x-1 hover:text-gray-700 transition-colors"
-                      >
-                        <span>Status</span>
-                        {getSortIcon("status")}
-                      </button>
-                    </th>
                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Aksi
                     </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {Object.entries(groupedVouchers).map(([group, vouchersInGroup]) => (
-                    <React.Fragment key={group}>
-                      {groupByAlphabet && (
-                        <tr className="bg-gray-100">
-                          <td colSpan={6} className="px-6 py-3 text-sm font-semibold text-gray-700">
-                            {group} ({vouchersInGroup.length} voucher{vouchersInGroup.length > 1 ? 's' : ''})
-                          </td>
-                        </tr>
-                      )}
-                      {vouchersInGroup.map((voucher) => {
-                        const statusInfo = getVoucherStatusInfo(voucher);
-                        return (
-                    <tr key={voucher.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center shrink-0">
-                            <Ticket className="w-5 h-5 text-orange-600" />
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-gray-900">
-                              {voucher.code}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              {voucher.nama && voucher.nama !== voucher.code ? voucher.nama : `ID: ${voucher.id}`}
-                            </p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                          {voucher.discountType === "percentage"
-                            ? `${voucher.discount}%`
-                            : `Rp ${voucher.discount.toLocaleString("id-ID")}`}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {voucher.expiryDate ? new Date(voucher.expiryDate).toLocaleDateString("id-ID") : "-"}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center space-x-2">
-                          <div className="w-20 bg-gray-200 rounded-full h-2">
-                            <div
-                              className="bg-orange-500 h-2 rounded-full"
-                              style={{
-                                width: `${
-                                  voucher.maxUsage
-                                    ? (voucher.usageCount / voucher.maxUsage) * 100
-                                    : 0
-                                }%`,
-                              }}
-                            />
-                          </div>
-                          <span className="text-xs text-gray-600">
-                            {voucher.usageCount}
-                            {voucher.maxUsage ? `/${voucher.maxUsage}` : ""}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusInfo.color}`}
-                          title={statusInfo.tooltip}
-                        >
-                          {statusInfo.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <div className="flex items-center justify-end space-x-2">
-                          <button
-                            onClick={() => handleViewDetail(voucher)}
-                            className="inline-flex items-center justify-center p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700 transition-all duration-200 hover:shadow-md hover:scale-105"
-                            title="Lihat Detail"
-                          >
-                            <Eye className="w-5 h-5" />
-                          </button>
-                          <button
-                            onClick={() => handleViewQR(voucher)}
-                            className="inline-flex items-center justify-center p-2 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 hover:text-purple-700 transition-all duration-200 hover:shadow-md hover:scale-105"
-                            title="Lihat QR Code"
-                          >
-                            <QrCode className="w-5 h-5" />
-                          </button>
-                          <button
-                            onClick={() => handleEditVoucher(voucher)}
-                            className="inline-flex items-center justify-center p-2 rounded-lg bg-orange-50 text-orange-600 hover:bg-orange-100 hover:text-orange-700 transition-all duration-200 hover:shadow-md hover:scale-105"
-                            title="Edit Voucher"
-                          >
-                            <Edit className="w-5 h-5" />
-                          </button>
-                          <button
-                            onClick={() =>
-                              handleDeleteClick(voucher.id, voucher.code)
-                            }
-                            className="inline-flex items-center justify-center p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 transition-all duration-200 hover:shadow-md hover:scale-105"
-                            title="Hapus Voucher"
-                          >
-                            <Trash2 className="w-5 h-5" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                        );
-                      })}
-                    </React.Fragment>
-                  ))}
+                  {Object.entries(groupedVouchers).map(
+                    ([group, vouchersInGroup]) => (
+                      <React.Fragment key={group}>
+                        {groupByAlphabet && (
+                          <tr className="bg-gray-100">
+                            <td
+                              colSpan={7}
+                              className="px-6 py-3 text-sm font-semibold text-gray-700"
+                            >
+                              {group} ({vouchersInGroup.length} voucher
+                              {vouchersInGroup.length > 1 ? "s" : ""})
+                            </td>
+                          </tr>
+                        )}
+                        {vouchersInGroup.map((voucher) => {
+                          const statusInfo = getVoucherStatusInfo(voucher);
+                          return (
+                            <tr key={voucher.id} className="hover:bg-gray-50">
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="flex items-center space-x-3">
+                                  <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center shrink-0">
+                                    <Ticket className="w-5 h-5 text-orange-600" />
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-medium text-gray-900">
+                                      {voucher.nama || "-"}
+                                    </p>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span className="font-mono text-sm font-medium text-gray-700 bg-gray-100 px-2 py-1 rounded">
+                                  {voucher.code}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                  {voucher.discountType === "percentage"
+                                    ? `${voucher.discount}%`
+                                    : `Rp ${voucher.discount.toLocaleString(
+                                        "id-ID"
+                                      )}`}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {voucher.minimal__pembelian
+                                  ? `Rp ${voucher.minimal__pembelian.toLocaleString(
+                                      "id-ID"
+                                    )}`
+                                  : "-"}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {voucher.expiryDate
+                                  ? new Date(
+                                      voucher.expiryDate
+                                    ).toLocaleDateString("id-ID")
+                                  : "-"}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="flex items-center space-x-2">
+                                  <div className="w-20 bg-gray-200 rounded-full h-2">
+                                    <div
+                                      className="bg-orange-500 h-2 rounded-full"
+                                      style={{
+                                        width: `${
+                                          voucher.maxUsage
+                                            ? (voucher.usageCount /
+                                                voucher.maxUsage) *
+                                              100
+                                            : 0
+                                        }%`,
+                                      }}
+                                    />
+                                  </div>
+                                  <span className="text-xs text-gray-600">
+                                    {voucher.usageCount}
+                                    {voucher.maxUsage
+                                      ? `/${voucher.maxUsage}`
+                                      : ""}
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                <div className="flex items-center justify-end space-x-2">
+                                  <button
+                                    onClick={() => handleViewDetail(voucher)}
+                                    className="inline-flex items-center justify-center p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700 transition-all duration-200 hover:shadow-md hover:scale-105"
+                                    title="Lihat Detail"
+                                  >
+                                    <Eye className="w-5 h-5" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleViewQR(voucher)}
+                                    className="inline-flex items-center justify-center p-2 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 hover:text-purple-700 transition-all duration-200 hover:shadow-md hover:scale-105"
+                                    title="Lihat QR Code"
+                                  >
+                                    <QrCode className="w-5 h-5" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleEditVoucher(voucher)}
+                                    className="inline-flex items-center justify-center p-2 rounded-lg bg-orange-50 text-orange-600 hover:bg-orange-100 hover:text-orange-700 transition-all duration-200 hover:shadow-md hover:scale-105"
+                                    title="Edit Voucher"
+                                  >
+                                    <Edit className="w-5 h-5" />
+                                  </button>
+                                  <button
+                                    onClick={() =>
+                                      handleDeleteClick(
+                                        voucher.id,
+                                        voucher.code
+                                      )
+                                    }
+                                    className="inline-flex items-center justify-center p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 transition-all duration-200 hover:shadow-md hover:scale-105"
+                                    title="Hapus Voucher"
+                                  >
+                                    <Trash2 className="w-5 h-5" />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </React.Fragment>
+                    )
+                  )}
                 </tbody>
               </table>
             </div>
