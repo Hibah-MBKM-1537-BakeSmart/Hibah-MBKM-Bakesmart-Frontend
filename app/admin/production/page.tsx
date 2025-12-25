@@ -609,87 +609,148 @@ export default function ProductionPage() {
     const printWindow = window.open("", "_blank");
     if (!printWindow) return;
 
-    // Flatten products into rows untuk single order
-    const rows = order.order_products.flatMap((item) => {
-      if (item.addons && item.addons.length > 0) {
-        return item.addons.map((addon) => ({
-          product: item.product.nama,
-          quantity: item.jumlah,
-          addon: addon.nama,
-          addonQty: addon.quantity || 0,
-        }));
-      } else {
-        return [
-          {
-            product: item.product.nama,
-            quantity: item.jumlah,
-            addon: "",
-            addonQty: 0,
-          },
-        ];
-      }
-    });
+    const totalItems = order.order_products.reduce(
+      (sum, p) => sum + p.jumlah,
+      0
+    );
 
     const html = `
       <!DOCTYPE html>
       <html>
       <head>
         <meta charset="UTF-8">
-        <title>Pesanan ${order.id}</title>
+        <title>Receipt #${order.id}</title>
         <style>
-          * { margin: 0; padding: 0; box-sizing: border-box; }
-          body { font-family: Arial, sans-serif; padding: 10px; color: #000; background: #fff; }
-          table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
-          th { 
-            background: #333; 
-            color: #fff; 
-            padding: 8px; 
-            text-align: left; 
-            font-weight: bold;
-            font-size: 12px;
-            border: 1px solid #000;
+          @page { margin: 0; size: 80mm auto; }
+          body { 
+            font-family: 'Courier New', monospace; 
+            width: 78mm; 
+            margin: 0 auto; 
+            padding: 10px 5px; 
+            font-size: 12px; 
+            line-height: 1.4;
+            color: #000;
           }
-          td { 
-            padding: 8px; 
-            border: 1px solid #000;
-            font-size: 12px;
-            vertical-align: middle;
-          }
-          .product-col { font-weight: bold; }
-          .qty-col { text-align: center; width: 80px; }
-          .addon-col { }
-          .addon-qty-col { text-align: center; width: 60px; }
-          @media print { 
-            body { margin: 0; padding: 5px; }
-            table { page-break-inside: avoid; }
-          }
+          .header { text-align: center; margin-bottom: 10px; border-bottom: 1px dashed #000; padding-bottom: 10px; }
+          .title { font-size: 16px; font-weight: bold; margin-bottom: 5px; }
+          .subtitle { font-size: 12px; }
+          .info { margin-bottom: 10px; font-size: 11px; }
+          .divider { border-top: 1px dashed #000; margin: 5px 0; }
+          .item { margin-bottom: 8px; }
+          .item-name { font-weight: bold; margin-bottom: 2px; }
+          .item-details { display: flex; justify-content: space-between; font-size: 11px; }
+          .addon { margin-left: 10px; font-size: 10px; font-style: italic; color: #444; }
+          .total-section { margin-top: 10px; border-top: 1px dashed #000; padding-top: 5px; }
+          .row { display: flex; justify-content: space-between; font-weight: bold; }
+          .footer { text-align: center; margin-top: 20px; font-size: 11px; }
+          .feedback-link { margin-top: 10px; font-weight: bold; }
         </style>
       </head>
       <body>
-        <table>
-          <thead>
-            <tr>
-              <th class="product-col">PRODUK</th>
-              <th class="qty-col">QTY</th>
-              <th class="addon-col">ADDON</th>
-              <th class="addon-qty-col">QTY</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${rows
-              .map(
-                (row) => `
-              <tr>
-                <td class="product-col">${row.product}</td>
-                <td class="qty-col">${row.quantity}</td>
-                <td class="addon-col">${row.addon}</td>
-                <td class="addon-qty-col">${row.addonQty || ""}</td>
-              </tr>
-            `
-              )
-              .join("")}
-          </tbody>
-        </table>
+        <div class="header">
+          <div class="title">BAKESMART</div>
+          <div class="subtitle">Jl. Raya Bakesmart No. 123</div>
+          <div class="subtitle">0812-3456-7890</div>
+        </div>
+        
+        <div class="info">
+          <div style="display: flex; justify-content: space-between;">
+            <span>${new Date(order.created_at).toLocaleDateString(
+              "id-ID"
+            )}</span>
+            <span>Admin</span>
+          </div>
+          <div style="display: flex; justify-content: space-between;">
+            <span>${new Date(order.created_at).toLocaleTimeString(
+              "id-ID"
+            )}</span>
+            <span>${order.user.nama.substring(0, 15)}</span>
+          </div>
+          <div>No. #${order.id}</div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="items">
+          ${order.order_products
+            .map((item) => {
+              const itemTotal = item.jumlah * item.harga_beli;
+              const addonsTotal =
+                item.addons?.reduce(
+                  (sum, addon) => sum + (addon.quantity || 0) * addon.harga,
+                  0
+                ) || 0;
+              const total = itemTotal + addonsTotal;
+
+              return `
+            <div class="item">
+              <div class="item-name">${item.product.nama}</div>
+              <div class="item-details">
+                <span>${item.jumlah} x ${item.harga_beli.toLocaleString(
+                "id-ID"
+              )}</span>
+                <span>Rp ${itemTotal.toLocaleString("id-ID")}</span>
+              </div>
+              ${
+                item.addons && item.addons.length > 0
+                  ? item.addons
+                      .map(
+                        (addon) => `
+                  <div class="item-details addon">
+                    <span>+ ${addon.nama} (${addon.quantity || 0}x)</span>
+                    <span>Rp ${(
+                      (addon.quantity || 0) * addon.harga
+                    ).toLocaleString("id-ID")}</span>
+                  </div>
+                `
+                      )
+                      .join("")
+                  : ""
+              }
+            </div>
+          `;
+            })
+            .join("")}
+        </div>
+
+        <div class="total-section">
+          <div class="row">
+            <span>Total</span>
+            <span>Rp ${order.order_products
+              .reduce((sum, item) => {
+                const itemTotal = item.jumlah * item.harga_beli;
+                const addonsTotal =
+                  item.addons?.reduce(
+                    (s, a) => s + (a.quantity || 0) * a.harga,
+                    0
+                  ) || 0;
+                return sum + itemTotal + addonsTotal;
+              }, 0)
+              .toLocaleString("id-ID")}</span>
+          </div>
+          <div class="row">
+            <span>Bayar (Cash)</span>
+            <span>Rp ${order.order_products
+              .reduce((sum, item) => {
+                const itemTotal = item.jumlah * item.harga_beli;
+                const addonsTotal =
+                  item.addons?.reduce(
+                    (s, a) => s + (a.quantity || 0) * a.harga,
+                    0
+                  ) || 0;
+                return sum + itemTotal + addonsTotal;
+              }, 0)
+              .toLocaleString("id-ID")}</span>
+          </div>
+          <div class="row">
+            <span>Kembali</span>
+            <span>Rp 0</span>
+          </div>
+        </div>
+
+        <div class="footer">
+
+        </div>
       </body>
       </html>
     `;

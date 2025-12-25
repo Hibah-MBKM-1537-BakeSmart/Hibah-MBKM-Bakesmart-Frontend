@@ -1,11 +1,11 @@
 "use client";
 
-import React, { memo, useMemo } from 'react';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { useAdmin } from '@/app/contexts/AdminContext';
-import { useAuth } from '@/app/contexts/AuthContext';
-import { usePageTransition } from '@/hooks/usePageTransition';
+import React, { memo, useMemo } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useAdmin } from "@/app/contexts/AdminContext";
+import { useAuth } from "@/app/contexts/AuthContext";
+import { usePageTransition } from "@/hooks/usePageTransition";
 import {
   LayoutDashboard,
   Package,
@@ -95,7 +95,7 @@ const menuItems: MenuItem[] = [
 
 export function AdminSidebar() {
   const { state, toggleSidebar } = useAdmin();
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
   const { startTransition } = usePageTransition();
   const pathname = usePathname();
 
@@ -111,17 +111,27 @@ export function AdminSidebar() {
           href={item.href}
           prefetch={true}
           onClick={startTransition}
-          className={`flex items-center ${state.sidebarCollapsed ? 'justify-center' : 'space-x-3'} px-3 ${state.sidebarCollapsed ? 'py-3' : 'py-2'} rounded-lg transition-all duration-200 group ${
+          className={`flex items-center ${
+            state.sidebarCollapsed ? "justify-center" : "space-x-3"
+          } px-3 ${
+            state.sidebarCollapsed ? "py-3" : "py-2"
+          } rounded-lg transition-all duration-200 group ${
             isActive
-              ? 'text-white font-medium shadow-md'
-              : 'text-gray-200 hover:bg-white/10 hover:text-white hover:shadow-sm'
+              ? "text-white font-medium shadow-md"
+              : "text-gray-200 hover:bg-white/10 hover:text-white hover:shadow-sm"
           }`}
           style={isActive ? { backgroundColor: "#8b6f47" } : {}}
           title={state.sidebarCollapsed ? item.label : ""}
         >
-          <Icon className={`${state.sidebarCollapsed ? 'w-8 h-8' : 'w-5 h-5'} transition-transform duration-200 ${
-            isActive ? 'text-white scale-110' : 'text-gray-200 group-hover:scale-105'
-          }`} />
+          <Icon
+            className={`${
+              state.sidebarCollapsed ? "w-8 h-8" : "w-5 h-5"
+            } transition-transform duration-200 ${
+              isActive
+                ? "text-white scale-110"
+                : "text-gray-200 group-hover:scale-105"
+            }`}
+          />
           {!state.sidebarCollapsed && (
             <span className="font-medium font-admin-body transition-all duration-200">
               {item.label}
@@ -192,9 +202,7 @@ export function AdminSidebar() {
       </div>
 
       {/* Navigation Menu */}
-      <nav className="p-4 space-y-2 flex-1 overflow-y-auto">
-        {menuElements}
-      </nav>
+      <nav className="p-4 space-y-2 flex-1 overflow-y-auto">{menuElements}</nav>
 
       {/* Bottom Section - User Info and Logout */}
       <div
@@ -202,7 +210,7 @@ export function AdminSidebar() {
         style={{ borderColor: "#7b5235" }}
       >
         {/* User Info */}
-        {state.user && (
+        {user && (
           <div className="p-4">
             {state.sidebarCollapsed ? (
               /* Collapsed: Show only avatar */
@@ -210,10 +218,10 @@ export function AdminSidebar() {
                 <div
                   className="w-10 h-10 rounded-full flex items-center justify-center"
                   style={{ backgroundColor: "#7b5235" }}
-                  title={state.user.name}
+                  title={user.username}
                 >
                   <span className="text-white text-sm font-medium">
-                    {state.user.name.charAt(0)}
+                    {user.username.charAt(0).toUpperCase()}
                   </span>
                 </div>
               </div>
@@ -228,15 +236,15 @@ export function AdminSidebar() {
                   style={{ backgroundColor: "#8b6f47" }}
                 >
                   <span className="text-white text-sm font-medium">
-                    {state.user.name.charAt(0)}
+                    {user.username.charAt(0).toUpperCase()}
                   </span>
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-white truncate font-admin-heading">
-                    {state.user.name}
+                    {user.username}
                   </p>
                   <p className="text-xs text-gray-200 truncate font-admin-body">
-                    {state.user.email}
+                    {user.role === "super_admin" ? "Super Admin" : "Admin"}
                   </p>
                 </div>
               </div>
@@ -248,12 +256,18 @@ export function AdminSidebar() {
         <div className="p-4">
           <button
             onClick={logout}
-            className={`flex items-center space-x-3 px-3 ${state.sidebarCollapsed ? 'py-3' : 'py-2'} rounded-lg transition-colors text-red-300 hover:bg-red-500/20 hover:text-red-200 w-full font-admin-body ${
+            className={`flex items-center space-x-3 px-3 ${
+              state.sidebarCollapsed ? "py-3" : "py-2"
+            } rounded-lg transition-colors text-red-300 hover:bg-red-500/20 hover:text-red-200 w-full font-admin-body ${
               state.sidebarCollapsed ? "justify-center" : ""
             }`}
             title={state.sidebarCollapsed ? "Logout" : ""}
           >
-            <LogOut className={`${state.sidebarCollapsed ? 'w-8 h-8' : 'w-5 h-5'} transition-all duration-200`} />
+            <LogOut
+              className={`${
+                state.sidebarCollapsed ? "w-8 h-8" : "w-5 h-5"
+              } transition-all duration-200`}
+            />
             {!state.sidebarCollapsed && (
               <span className="font-medium">Logout</span>
             )}

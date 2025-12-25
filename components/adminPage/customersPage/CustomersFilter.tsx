@@ -1,26 +1,40 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import { Search, Filter, Download, RefreshCw, SortAsc } from 'lucide-react';
-import { useCustomers } from '../../../app/contexts/CustomersContext';
+import React, { useState } from "react";
+import {
+  Search,
+  Filter,
+  Download,
+  RefreshCw,
+  SortAsc,
+  Upload,
+} from "lucide-react";
+import { useCustomers } from "../../../app/contexts/CustomersContext";
 
 export default function CustomersFilter() {
-  const { state, updateFilters, exportToCSV, exportToExcel, refreshCustomers } = useCustomers();
+  const {
+    state,
+    updateFilters,
+    exportToCSV,
+    exportToExcel,
+    refreshCustomers,
+    importCustomers,
+  } = useCustomers();
   const [showSortMenu, setShowSortMenu] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
 
   const sortOptions = [
-    { value: 'newest', label: 'Newest First' },
-    { value: 'oldest', label: 'Oldest First' },
-    { value: 'most_active', label: 'Most Active' },
-    { value: 'name_asc', label: 'Name (A-Z)' },
-    { value: 'name_desc', label: 'Name (Z-A)' }
+    { value: "newest", label: "Newest First" },
+    { value: "oldest", label: "Oldest First" },
+    { value: "most_active", label: "Most Active" },
+    { value: "name_asc", label: "Name (A-Z)" },
+    { value: "name_desc", label: "Name (Z-A)" },
   ];
 
   const roleOptions = [
-    { value: 'all', label: 'All Roles' },
-    { value: 'user', label: 'Users' },
-    { value: 'admin', label: 'Admins' }
+    { value: "all", label: "All Roles" },
+    { value: "user", label: "Users" },
+    { value: "admin", label: "Admins" },
   ];
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -36,8 +50,8 @@ export default function CustomersFilter() {
     setShowSortMenu(false);
   };
 
-  const handleExport = (type: 'csv' | 'excel') => {
-    if (type === 'csv') {
+  const handleExport = (type: "csv" | "excel") => {
+    if (type === "csv") {
       exportToCSV();
     } else {
       exportToExcel();
@@ -69,7 +83,7 @@ export default function CustomersFilter() {
               onChange={handleRoleChange}
               className="appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2 pr-8 font-inter text-sm focus:ring-2 focus:ring-[#9B6D49] focus:border-[#9B6D49]"
             >
-              {roleOptions.map(option => (
+              {roleOptions.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
                 </option>
@@ -89,12 +103,14 @@ export default function CustomersFilter() {
             </button>
             {showSortMenu && (
               <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
-                {sortOptions.map(option => (
+                {sortOptions.map((option) => (
                   <button
                     key={option.value}
                     onClick={() => handleSortChange(option.value)}
                     className={`w-full text-left px-4 py-2 text-sm font-inter hover:bg-gray-50 first:rounded-t-lg last:rounded-b-lg ${
-                      state.filters.sortBy === option.value ? 'bg-[#f5f1eb] text-[#9B6D49]' : ''
+                      state.filters.sortBy === option.value
+                        ? "bg-[#f5f1eb] text-[#9B6D49]"
+                        : ""
                     }`}
                   >
                     {option.label}
@@ -103,6 +119,15 @@ export default function CustomersFilter() {
               </div>
             )}
           </div>
+
+          {/* Import Button */}
+          <button
+            onClick={importCustomers}
+            className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 font-inter text-sm"
+          >
+            <Upload className="h-4 w-4" />
+            Import
+          </button>
 
           {/* Export Menu */}
           <div className="relative">
@@ -116,13 +141,13 @@ export default function CustomersFilter() {
             {showExportMenu && (
               <div className="absolute right-0 top-full mt-1 w-32 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
                 <button
-                  onClick={() => handleExport('csv')}
+                  onClick={() => handleExport("csv")}
                   className="w-full text-left px-4 py-2 text-sm font-inter hover:bg-gray-50 rounded-t-lg"
                 >
                   Export CSV
                 </button>
                 <button
-                  onClick={() => handleExport('excel')}
+                  onClick={() => handleExport("excel")}
                   className="w-full text-left px-4 py-2 text-sm font-inter hover:bg-gray-50 rounded-b-lg"
                 >
                   Export Excel
@@ -137,7 +162,9 @@ export default function CustomersFilter() {
             disabled={state.isLoading}
             className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 font-inter text-sm disabled:opacity-50"
           >
-            <RefreshCw className={`h-4 w-4 ${state.isLoading ? 'animate-spin' : ''}`} />
+            <RefreshCw
+              className={`h-4 w-4 ${state.isLoading ? "animate-spin" : ""}`}
+            />
             Refresh
           </button>
         </div>
@@ -149,18 +176,18 @@ export default function CustomersFilter() {
           <span className="inline-flex items-center gap-1 px-3 py-1 bg-[#f5f1eb] text-[#9B6D49] rounded-full text-sm font-inter">
             Search: "{state.filters.searchQuery}"
             <button
-              onClick={() => updateFilters({ searchQuery: '' })}
+              onClick={() => updateFilters({ searchQuery: "" })}
               className="ml-1 hover:text-[#8b6f47]"
             >
               ×
             </button>
           </span>
         )}
-        {state.filters.role !== 'all' && (
+        {state.filters.role !== "all" && (
           <span className="inline-flex items-center gap-1 px-3 py-1 bg-[#f5f1eb] text-[#9B6D49] rounded-full text-sm font-inter">
             Role: {state.filters.role}
             <button
-              onClick={() => updateFilters({ role: 'all' })}
+              onClick={() => updateFilters({ role: "all" })}
               className="ml-1 hover:text-[#8b6f47]"
             >
               ×
@@ -171,7 +198,8 @@ export default function CustomersFilter() {
 
       {/* Results Count */}
       <div className="mt-4 text-sm text-gray-600 font-inter">
-        Showing {state.filteredCustomers.length} of {state.customers.length} customers
+        Showing {state.filteredCustomers.length} of {state.customers.length}{" "}
+        customers
       </div>
     </div>
   );

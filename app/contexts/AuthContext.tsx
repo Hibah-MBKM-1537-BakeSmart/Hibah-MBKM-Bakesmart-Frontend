@@ -1,18 +1,23 @@
-'use client';
+"use client";
 
-import { createContext, useContext, useEffect, useState } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import { createContext, useContext, useEffect, useState } from "react";
+import { useRouter, usePathname } from "next/navigation";
 
 interface AuthUser {
   username: string;
-  role: 'admin' | 'super_admin';
+  role: "admin" | "super_admin";
   loginTime: string;
+  token?: string;
 }
 
 interface AuthContextType {
   user: AuthUser | null;
   isLoading: boolean;
-  login: (username: string, role: 'admin' | 'super_admin') => void;
+  login: (
+    username: string,
+    role: "admin" | "super_admin",
+    token?: string
+  ) => void;
   logout: () => void;
   isAuthenticated: boolean;
 }
@@ -31,42 +36,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const checkAuth = () => {
     try {
-      const authData = localStorage.getItem('bakesmart_admin_auth');
+      const authData = localStorage.getItem("bakesmart_admin_auth");
       if (authData) {
         const parsed = JSON.parse(authData);
         if (parsed.username && parsed.role) {
           setUser(parsed);
         } else {
-          localStorage.removeItem('bakesmart_admin_auth');
+          localStorage.removeItem("bakesmart_admin_auth");
         }
       }
     } catch (error) {
-      console.error('Auth check error:', error);
-      localStorage.removeItem('bakesmart_admin_auth');
+      console.error("Auth check error:", error);
+      localStorage.removeItem("bakesmart_admin_auth");
     }
     setIsLoading(false);
   };
 
-  const login = (username: string, role: 'admin' | 'super_admin') => {
-    const userData = {
+  const login = (
+    username: string,
+    role: "admin" | "super_admin",
+    token?: string
+  ) => {
+    const userData: AuthUser = {
       username,
       role,
-      loginTime: new Date().toISOString()
+      loginTime: new Date().toISOString(),
+      token,
     };
-    localStorage.setItem('bakesmart_admin_auth', JSON.stringify(userData));
+    localStorage.setItem("bakesmart_admin_auth", JSON.stringify(userData));
     setUser(userData);
   };
 
   const logout = () => {
-    localStorage.removeItem('bakesmart_admin_auth');
+    localStorage.removeItem("bakesmart_admin_auth");
     setUser(null);
-    router.push('/admin/login');
+    router.push("/admin/login");
   };
 
   // Redirect to login if not authenticated and not on login page
   useEffect(() => {
-    if (!isLoading && !user && pathname !== '/admin/login') {
-      router.push('/admin/login');
+    if (!isLoading && !user && pathname !== "/admin/login") {
+      router.push("/admin/login");
     }
   }, [user, isLoading, pathname, router]);
 
@@ -75,20 +85,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isLoading,
     login,
     logout,
-    isAuthenticated: !!user
+    isAuthenticated: !!user,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 }
