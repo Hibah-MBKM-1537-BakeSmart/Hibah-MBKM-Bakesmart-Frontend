@@ -75,7 +75,7 @@ interface CustomersContextType {
 
 const CustomersContext = createContext<CustomersContextType | undefined>(undefined);
 
-export const CustomersProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export function CustomersProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<CustomersState>({
     customers: [],
     filteredCustomers: [],
@@ -93,46 +93,262 @@ export const CustomersProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     totalPages: 1
   });
 
-  // Load customers from backend via our API proxy
+  // Mock data matching backend structure
   useEffect(() => {
-    const load = async () => {
-      setState(prev => ({ ...prev, isLoading: true }));
-
-      try {
-        const res = await fetch('/api/users/customers/order/last');
-        const json = await res.json().catch(() => ({}));
-
-        // backend may wrap result in { data: [...] } or return array directly
-        const raw = json?.data || json || [];
-
-        const customersRaw = Array.isArray(raw) ? raw : (raw?.data || []);
-
-        const mapped: Customer[] = customersRaw.map((c: any) => ({
-          id: c.id,
-          nama: c.nama || c.name || '',
-          no_hp: c.no_hp || c.phone || '',
-          role: c.role || 'user',
-          created_at: c.created_at || c.createdAt || new Date().toISOString(),
-          updated_at: c.updated_at || c.updatedAt || new Date().toISOString(),
-          totalPurchases: c.totalPurchases ?? (c.purchases ? c.purchases.length : 0) ?? 0,
-          totalSpent: c.totalSpent ?? 0,
-          lastPurchase: c.lastOrder || c.lastPurchase || null,
-          purchases: c.purchases || []
-        }));
-
-        setState(prev => ({
-          ...prev,
-          customers: mapped,
-          filteredCustomers: mapped,
-          isLoading: false
-        }));
-      } catch (err) {
-        console.error('[CustomersContext] Failed to load customers:', err);
-        setState(prev => ({ ...prev, isLoading: false }));
+    const mockCustomers: Customer[] = [
+      {
+        id: 2,
+        nama: 'Budi Santoso',
+        no_hp: '081234567890',
+        role: 'user',
+        created_at: '2023-01-15T00:00:00.000Z',
+        updated_at: '2024-12-15T11:00:00.000Z',
+        totalPurchases: 15,
+        totalSpent: 2500000,
+        lastPurchase: {
+          id: 1,
+          jumlah: 1,
+          harga_beli: 125000,
+          order_id: 1,
+          product_id: 1,
+          created_at: '2024-12-15T08:00:00.000Z',
+          order: {
+            id: 1,
+            status: 'completed',
+            created_at: '2024-12-15T08:00:00.000Z'
+          },
+          product: {
+            id: 1,
+            nama: 'Chocolate Cake',
+            harga: 125000
+          }
+        },
+        purchases: [
+          {
+            id: 1,
+            jumlah: 1,
+            harga_beli: 125000,
+            order_id: 1,
+            product_id: 1,
+            created_at: '2024-12-15T08:00:00.000Z',
+            product: {
+              id: 1,
+              nama: 'Chocolate Cake',
+              harga: 125000
+            }
+          }
+        ]
+      },
+      {
+        id: 3,
+        nama: 'Siti Nurhasanah',
+        no_hp: '082345678901',
+        role: 'user',
+        created_at: '2023-03-20T00:00:00.000Z',
+        updated_at: '2024-12-15T15:30:00.000Z',
+        totalPurchases: 3,
+        totalSpent: 450000,
+        lastPurchase: {
+          id: 3,
+          jumlah: 1,
+          harga_beli: 200000,
+          note: 'Custom message: Happy Birthday Sarah!',
+          order_id: 2,
+          product_id: 4,
+          created_at: '2024-12-15T12:00:00.000Z',
+          product: {
+            id: 4,
+            nama: 'Birthday Cake',
+            harga: 200000
+          }
+        },
+        purchases: [
+          {
+            id: 3,
+            jumlah: 1,
+            harga_beli: 200000,
+            order_id: 2,
+            product_id: 4,
+            created_at: '2024-12-15T12:00:00.000Z',
+            product: {
+              id: 4,
+              nama: 'Birthday Cake',
+              harga: 200000
+            }
+          }
+        ]
+      },
+      {
+        id: 4,
+        nama: 'Ahmad Wijaya',
+        no_hp: '083456789012',
+        role: 'user',
+        created_at: '2022-11-08T00:00:00.000Z',
+        updated_at: '2024-12-14T17:30:00.000Z',
+        totalPurchases: 8,
+        totalSpent: 1200000,
+        lastPurchase: {
+          id: 4,
+          jumlah: 2,
+          harga_beli: 120000,
+          order_id: 3,
+          product_id: 5,
+          created_at: '2024-12-14T14:00:00.000Z',
+          product: {
+            id: 5,
+            nama: 'Donuts Box (12 pcs)',
+            harga: 60000
+          }
+        },
+        purchases: [
+          {
+            id: 4,
+            jumlah: 2,
+            harga_beli: 120000,
+            order_id: 3,
+            product_id: 5,
+            created_at: '2024-12-14T14:00:00.000Z',
+            product: {
+              id: 5,
+              nama: 'Donuts Box (12 pcs)',
+              harga: 60000
+            }
+          }
+        ]
+      },
+      {
+        id: 5,
+        nama: 'Rina Marlina',
+        no_hp: '084567890123',
+        role: 'user',
+        created_at: '2023-07-12T00:00:00.000Z',
+        updated_at: '2024-12-14T08:30:00.000Z',
+        totalPurchases: 22,
+        totalSpent: 3750000,
+        lastPurchase: {
+          id: 6,
+          jumlah: 1,
+          harga_beli: 750000,
+          note: 'Wedding on Dec 20, need consultation',
+          order_id: 4,
+          product_id: 4,
+          created_at: '2024-12-14T08:00:00.000Z',
+          product: {
+            id: 4,
+            nama: 'Wedding Cake',
+            harga: 750000
+          }
+        },
+        purchases: [
+          {
+            id: 6,
+            jumlah: 1,
+            harga_beli: 750000,
+            order_id: 4,
+            product_id: 4,
+            created_at: '2024-12-14T08:00:00.000Z',
+            product: {
+              id: 4,
+              nama: 'Wedding Cake',
+              harga: 750000
+            }
+          }
+        ]
+      },
+      {
+        id: 6,
+        nama: 'Made Sutrisno',
+        no_hp: '085678901234',
+        role: 'user',
+        created_at: '2023-04-05T00:00:00.000Z',
+        updated_at: '2024-12-15T16:00:00.000Z',
+        totalPurchases: 18,
+        totalSpent: 2890000,
+        lastPurchase: {
+          id: 7,
+          jumlah: 5,
+          harga_beli: 125000,
+          order_id: 5,
+          product_id: 6,
+          created_at: '2024-12-15T16:00:00.000Z',
+          product: {
+            id: 6,
+            nama: 'Cheese Tart',
+            harga: 25000
+          }
+        },
+        purchases: [
+          {
+            id: 7,
+            jumlah: 5,
+            harga_beli: 125000,
+            order_id: 5,
+            product_id: 6,
+            created_at: '2024-12-15T16:00:00.000Z',
+            product: {
+              id: 6,
+              nama: 'Cheese Tart',
+              harga: 25000
+            }
+          }
+        ]
+      },
+      {
+        id: 7,
+        nama: 'Dewi Sartika',
+        no_hp: '086789012345',
+        role: 'user',
+        created_at: '2023-09-18T00:00:00.000Z',
+        updated_at: '2024-01-20T00:00:00.000Z',
+        totalPurchases: 5,
+        totalSpent: 675000,
+        purchases: []
+      },
+      {
+        id: 8,
+        nama: 'Agus Setiawan',
+        no_hp: '087890123456',
+        role: 'user',
+        created_at: '2022-12-03T00:00:00.000Z',
+        updated_at: '2024-12-12T00:00:00.000Z',
+        totalPurchases: 31,
+        totalSpent: 4250000,
+        lastPurchase: {
+          id: 8,
+          jumlah: 2,
+          harga_beli: 250000,
+          order_id: 8,
+          product_id: 1,
+          created_at: '2024-12-12T00:00:00.000Z',
+          product: {
+            id: 1,
+            nama: 'Chocolate Cake',
+            harga: 125000
+          }
+        },
+        purchases: [
+          {
+            id: 8,
+            jumlah: 2,
+            harga_beli: 250000,
+            order_id: 8,
+            product_id: 1,
+            created_at: '2024-12-12T00:00:00.000Z',
+            product: {
+              id: 1,
+              nama: 'Chocolate Cake',
+              harga: 125000
+            }
+          }
+        ]
       }
-    };
+    ];
 
-    load();
+    setState(prev => ({
+      ...prev,
+      customers: mockCustomers,
+      filteredCustomers: mockCustomers
+    }));
   }, []);
 
   // Filter and sort customers
@@ -251,44 +467,17 @@ export const CustomersProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     link.click();
   };
 
-  const exportToExcel = async () => {
-    // Our backend provides an Excel export endpoint - just navigate to it to download
-    try {
-      // open in new tab so browser handles the file
-      window.open('/api/users/export', '_blank');
-    } catch (err) {
-      console.error('Failed to download Excel:', err);
-      // fallback to CSV
-      exportToCSV();
-    }
+  const exportToExcel = () => {
+    // For now, we'll use CSV format. In a real app, you'd use a library like xlsx
+    exportToCSV();
   };
 
-  const refreshCustomers = async () => {
+  const refreshCustomers = () => {
     setState(prev => ({ ...prev, isLoading: true }));
-    try {
-      const res = await fetch('/api/users/customers/order/last');
-      const json = await res.json().catch(() => ({}));
-      const raw = json?.data || json || [];
-      const customersRaw = Array.isArray(raw) ? raw : (raw?.data || []);
-
-      const mapped: Customer[] = customersRaw.map((c: any) => ({
-        id: c.id,
-        nama: c.nama || c.name || '',
-        no_hp: c.no_hp || c.phone || '',
-        role: c.role || 'user',
-        created_at: c.created_at || c.createdAt || new Date().toISOString(),
-        updated_at: c.updated_at || c.updatedAt || new Date().toISOString(),
-        totalPurchases: c.totalPurchases ?? (c.purchases ? c.purchases.length : 0) ?? 0,
-        totalSpent: c.totalSpent ?? 0,
-        lastPurchase: c.lastOrder || c.lastPurchase || null,
-        purchases: c.purchases || []
-      }));
-
-      setState(prev => ({ ...prev, customers: mapped, filteredCustomers: mapped, isLoading: false }));
-    } catch (err) {
-      console.error('[CustomersContext] refresh failed', err);
+    // Simulate API call
+    setTimeout(() => {
       setState(prev => ({ ...prev, isLoading: false }));
-    }
+    }, 1000);
   };
 
   const setCurrentPage = (page: number) => {

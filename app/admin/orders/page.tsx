@@ -1,524 +1,434 @@
 'use client';
 
-import React, { useState } from 'react';
-import {
-  Search,
-  Filter,
-  Eye,
-  Edit,
-  Truck,
-  CheckCircle,
-  Clock,
-  AlertCircle,
-  MoreHorizontal,
-  Calendar,
-  User,
-  Package
-} from 'lucide-react';
-import { FrontendOrder, OrderAttribute, FrontendOrderItem, CustomerInfo } from '../../../lib/types/admin';
+import { useState, useEffect } from 'react';
+import { ChevronDown, ChevronUp, Check, X } from 'lucide-react';
 
-const mockOrders: FrontendOrder[] = [
+interface User {
+  id: number;
+  nama: string;
+  no_hp: string;
+}
+
+interface OrderProduct {
+  id: number;
+  product: {
+    id: number;
+    nama: string;
+    gambar: string;
+  };
+  jumlah: number;
+  harga_beli: number;
+  note?: string;
+  addons?: Array<{
+    addon_id: number;
+    nama: string;
+    harga: number;
+    quantity: number;
+  }>;
+}
+
+interface Order {
+  id: number;
+  user: User;
+  order_products: OrderProduct[];
+  status: 'verifying' | 'pending' | 'paid' | 'completed';
+  created_at: string;
+  scheduled_date: string;
+  notes?: string;
+  production_status?: 'pending' | 'in_production' | 'completed';
+}
+
+// Demo data
+const DEMO_ORDERS = (): Order[] => [
   {
-    orderId: 'ORDER_1757923049385_y7wm4j233',
-    timestamp: '2025-01-15T10:30:00.000Z',
-    paymentMethod: 'transfer',
-    paymentMethodLabel: 'Transfer Bank',
-    totalItems: 2,
-    subtotal: 125000,
-    tax: 12500,
-    deliveryFee: 5000,
-    totalAmount: 142500,
-    currency: 'IDR',
-    status: 'delivered',
-    paymentStatus: 'paid',
-    deliveryDate: new Date('2025-01-15T14:00:00'),
-    customer: {
-      recipientName: 'John Doe',
-      phoneNumber: '+62 812-3456-7890',
-      deliveryMode: 'delivery',
-      orderDay: 'senin',
-      address: 'Jl. Sudirman No. 123, Jakarta Pusat',
-      postalCode: '10220',
-      notes: 'Tolong diantar sore hari',
-      coordinates: {
-        latitude: '-6.2088',
-        longitude: '106.8456'
-      }
-    },
-    items: [
+    id: 2001,
+    user: { id: 201, nama: 'Ahmad Rizki', no_hp: '08111222333' },
+    order_products: [
       {
-        productId: 1,
-        productName: 'Foccacia Plain',
-        category: 'foccacia',
-        quantity: 1,
-        basePrice: 20000,
-        originalPrice: 25000,
-        isDiscounted: true,
-        selectedAttributes: [
-          {
-            id: 1,
-            name: 'Extra Herbs',
-            additionalPrice: 3000
-          }
-        ],
-        attributesPrice: 3000,
-        totalItemPrice: 23000,
-        orderDay: 'senin',
-        availableDays: ['senin', 'rabu', 'jumat'],
-        cartId: 'cart_1757923019880_6u590jg4g',
-        image: '/img/Roti.png'
-      },
-      {
-        productId: 8,
-        productName: 'Roti Kopi Mocha',
-        category: 'roti-kopi',
-        quantity: 1,
-        basePrice: 20000,
-        originalPrice: 26000,
-        isDiscounted: false,
-        selectedAttributes: [
-          {
-            id: 2,
-            name: 'Tambah Coklat',
-            additionalPrice: 5000
-          }
-        ],
-        attributesPrice: 5000,
-        totalItemPrice: 25000,
-        orderDay: 'senin',
-        availableDays: ['senin', 'selasa', 'rabu', 'kamis', 'jumat', 'sabtu', 'minggu'],
-        cartId: 'cart_1757922308460_4gbzaglvp',
-        image: '/blueberry-muffin-with-fresh-blueberries.jpg'
+        id: 601,
+        product: { id: 1, nama: 'Roti Tawar', gambar: '/img/roti-tawar.jpg' },
+        jumlah: 3,
+        harga_beli: 15000,
+        note: 'Dipanggang golden',
+        addons: [{ addon_id: 1, nama: 'Topping Coklat', harga: 2000, quantity: 2 }]
       }
-    ]
+    ],
+    status: 'verifying',
+    created_at: '2025-12-25T08:00:00Z',
+    scheduled_date: '2025-12-25',
+    notes: 'Pesanan baru - menunggu verifikasi'
   },
   {
-    orderId: 'ORDER_1757923050000_abc123def',
-    timestamp: '2025-01-15T11:45:00.000Z',
-    paymentMethod: 'cash',
-    paymentMethodLabel: 'Cash on Delivery',
-    totalItems: 1,
-    subtotal: 85000,
-    tax: 8500,
-    deliveryFee: 0,
-    totalAmount: 93500,
-    currency: 'IDR',
-    status: 'processing',
-    paymentStatus: 'pending',
-    customer: {
-      recipientName: 'Jane Smith',
-      phoneNumber: '+62 813-4567-8901',
-      deliveryMode: 'pickup',
-      orderDay: 'rabu',
-      notes: 'Please add extra frosting'
-    },
-    items: [
+    id: 2002,
+    user: { id: 202, nama: 'Siti Nur', no_hp: '08222333444' },
+    order_products: [
       {
-        productId: 3,
-        productName: 'Country Bread Klasik',
-        category: 'country-bread',
-        quantity: 12,
-        basePrice: 18000,
-        originalPrice: 23000,
-        isDiscounted: true,
-        selectedAttributes: [],
-        attributesPrice: 0,
-        totalItemPrice: 85000,
-        orderDay: 'rabu',
-        availableDays: ['senin', 'selasa', 'rabu', 'kamis', 'jumat'],
-        cartId: 'cart_1757923027521_7udozcvjd',
-        image: '/blueberry-muffin-with-fresh-blueberries.jpg'
+        id: 602,
+        product: { id: 2, nama: 'Cupcakes', gambar: '/img/cupcakes.jpg' },
+        jumlah: 12,
+        harga_beli: 8000,
+        note: 'Warna merah muda',
+        addons: [{ addon_id: 4, nama: 'Frosting Strawberry', harga: 2000, quantity: 10 }]
       }
-    ]
-  },
-  {
-    orderId: 'ORDER_1757923051111_xyz789ghi',
-    timestamp: '2025-01-15T09:15:00.000Z',
-    paymentMethod: 'card',
-    paymentMethodLabel: 'Credit Card',
-    totalItems: 1,
-    subtotal: 200000,
-    tax: 20000,
-    deliveryFee: 10000,
-    totalAmount: 230000,
-    currency: 'IDR',
+    ],
     status: 'pending',
-    paymentStatus: 'paid',
-    customer: {
-      recipientName: 'Mike Johnson',
-      phoneNumber: '+62 814-5678-9012',
-      deliveryMode: 'delivery',
-      orderDay: 'jumat',
-      address: 'Perum Pleret Asri, Sumber, Surakarta',
-      postalCode: '57172',
-      notes: 'Happy Birthday Sarah - Pink decorations',
-      coordinates: {
-        latitude: '-7.5431936',
-        longitude: '110.8017152'
-      }
-    },
-    items: [
+    created_at: '2025-12-24T14:30:00Z',
+    scheduled_date: '2025-12-25',
+    notes: 'Menunggu bukti pembayaran'
+  },
+  {
+    id: 2003,
+    user: { id: 203, nama: 'Bima Sakti', no_hp: '08333444555' },
+    order_products: [
       {
-        productId: 6,
-        productName: 'Gandum 4 Grain',
-        category: 'gandum',
-        quantity: 1,
-        basePrice: 28000,
-        originalPrice: null,
-        isDiscounted: false,
-        selectedAttributes: [],
-        attributesPrice: 0,
-        totalItemPrice: 28000,
-        orderDay: 'jumat',
-        availableDays: ['senin', 'rabu', 'jumat', 'minggu'],
-        cartId: 'cart_1757922305078_o7jmomfl3',
-        image: '/red-velvet-cake-slice-with-cream-cheese-frosting.jpg'
+        id: 603,
+        product: { id: 3, nama: 'Donuts', gambar: '/img/donuts.jpg' },
+        jumlah: 20,
+        harga_beli: 5000,
+        addons: [{ addon_id: 3, nama: 'Sprinkles', harga: 1000, quantity: 20 }]
       }
-    ]
+    ],
+    status: 'paid',
+    created_at: '2025-12-24T10:00:00Z',
+    scheduled_date: '2025-12-25',
+    notes: '',
+    production_status: 'pending'
+  },
+  {
+    id: 2004,
+    user: { id: 204, nama: 'Dewi Lestari', no_hp: '08444555666' },
+    order_products: [
+      {
+        id: 604,
+        product: { id: 4, nama: 'Croissant', gambar: '/img/croissant.jpg' },
+        jumlah: 8,
+        harga_beli: 10000,
+        addons: []
+      }
+    ],
+    status: 'completed',
+    created_at: '2025-12-23T09:00:00Z',
+    scheduled_date: '2025-12-23',
+    notes: 'Sudah dikirim',
+    production_status: 'completed'
   }
 ];
 
-const statusColors = {
-  pending: 'bg-yellow-100 text-yellow-800',
-  processing: 'bg-blue-100 text-blue-800',
-  ready: 'bg-green-100 text-green-800',
-  delivered: 'bg-gray-100 text-gray-800',
-  cancelled: 'bg-red-100 text-red-800'
-};
+function OrderCard({
+  order,
+  onApprove,
+  onReject,
+  onVerifyPayment,
+  onDone
+}: {
+  order: Order;
+  onApprove?: (orderId: number) => void;
+  onReject?: (orderId: number) => void;
+  onVerifyPayment?: (orderId: number) => void;
+  onDone?: (orderId: number) => void;
+}) {
+  const [isExpanded, setIsExpanded] = useState(false);
 
-const statusIcons = {
-  pending: Clock,
-  processing: AlertCircle,
-  ready: CheckCircle,
-  delivered: Truck,
-  cancelled: AlertCircle
-};
-
-const paymentStatusColors = {
-  pending: 'bg-yellow-100 text-yellow-800',
-  paid: 'bg-green-100 text-green-800',
-  refunded: 'bg-red-100 text-red-800'
-};
-
-export default function OrdersPage() {
-  const [orders, setOrders] = useState<FrontendOrder[]>(mockOrders);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('all');
-  const [selectedPaymentStatus, setSelectedPaymentStatus] = useState('all');
-
-  const statusOptions = ['all', 'pending', 'processing', 'ready', 'delivered', 'cancelled'];
-  const paymentStatusOptions = ['all', 'pending', 'paid', 'refunded'];
-
-  const filteredOrders = orders.filter(order => {
-    const matchesSearch = 
-      order.orderId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.customer.recipientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.customer.phoneNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.items.some((item: FrontendOrderItem) => item.productName.toLowerCase().includes(searchTerm.toLowerCase()));
-    const matchesStatus = selectedStatus === 'all' || order.status === selectedStatus;
-    const matchesPaymentStatus = selectedPaymentStatus === 'all' || order.paymentStatus === selectedPaymentStatus;
-    return matchesSearch && matchesStatus && matchesPaymentStatus;
-  });
-
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0
-    }).format(price);
+  const statusColor: Record<string, { bg: string; border: string; text: string; badge: string }> = {
+    verifying: { bg: 'bg-orange-50', border: 'border-orange-300', text: 'text-orange-800', badge: 'bg-orange-100 text-orange-800' },
+    pending: { bg: 'bg-yellow-50', border: 'border-yellow-300', text: 'text-yellow-800', badge: 'bg-yellow-100 text-yellow-800' },
+    paid: { bg: 'bg-blue-50', border: 'border-blue-300', text: 'text-blue-800', badge: 'bg-blue-100 text-blue-800' },
+    completed: { bg: 'bg-green-50', border: 'border-green-300', text: 'text-green-800', badge: 'bg-green-100 text-green-800' }
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('id-ID', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  const updateOrderStatus = (orderId: string, newStatus: FrontendOrder['status']) => {
-    setOrders(orders.map(order => 
-      order.orderId === orderId ? { ...order, status: newStatus } : order
-    ));
-  };
+  const colors = statusColor[order.status];
+  const totalItems = order.order_products.reduce((sum, p) => sum + p.jumlah, 0);
+  const totalPrice = order.order_products.reduce((sum, p) => sum + p.jumlah * p.harga_beli, 0);
 
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Orders</h1>
-          <p className="text-gray-600">Manage customer orders and delivery status</p>
+    <div className={`border-2 ${colors.border} ${colors.bg} rounded-lg p-4 mb-3`}>
+      <div
+        className="flex items-center justify-between cursor-pointer"
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        <div className="flex-1">
+          <div className="flex items-center gap-3">
+            <h3 className={`font-bold text-lg ${colors.text}`}>
+              #{order.id} - {order.user.nama}
+            </h3>
+            <span className={`px-3 py-1 rounded-full text-xs font-bold ${colors.badge}`}>
+              {order.status.toUpperCase()}
+            </span>
+          </div>
+          <p className="text-sm text-gray-600 mt-1">
+            📞 {order.user.no_hp} | 📦 {totalItems} item | 💰 Rp{totalPrice.toLocaleString('id-ID')}
+          </p>
         </div>
-        <div className="flex items-center space-x-2 text-sm text-gray-600">
-          <Calendar className="w-4 h-4" />
-          <span>{new Date().toLocaleDateString('id-ID')}</span>
-        </div>
+        {isExpanded ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
       </div>
 
-      {/* Filters */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-          <div className="flex flex-col sm:flex-row gap-4">
-            {/* Search */}
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search className="h-5 w-5 text-gray-400" />
-              </div>
-              <input
-                type="text"
-                placeholder="Search orders, customers..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-orange-500 focus:border-orange-500 sm:text-sm"
-              />
-            </div>
-
-            {/* Status Filter */}
-            <div className="flex items-center space-x-2">
-              <Filter className="w-4 h-4 text-gray-400" />
-              <select
-                value={selectedStatus}
-                onChange={(e) => setSelectedStatus(e.target.value)}
-                className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500"
-              >
-                {statusOptions.map(status => (
-                  <option key={status} value={status}>
-                    {status === 'all' ? 'All Status' : status.charAt(0).toUpperCase() + status.slice(1)}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Payment Status Filter */}
-            <select
-              value={selectedPaymentStatus}
-              onChange={(e) => setSelectedPaymentStatus(e.target.value)}
-              className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500"
-            >
-              {paymentStatusOptions.map(status => (
-                <option key={status} value={status}>
-                  {status === 'all' ? 'All Payments' : status.charAt(0).toUpperCase() + status.slice(1)}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="text-sm text-gray-600">
-            {filteredOrders.length} of {orders.length} orders
-          </div>
-        </div>
-      </div>
-
-      {/* Orders Table */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Order ID
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Customer
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Items
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Total
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Payment
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Date
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredOrders.map((order: FrontendOrder) => {
-                const StatusIcon = statusIcons[order.status as keyof typeof statusIcons];
-                return (
-                  <tr key={order.orderId} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{order.orderId}</div>
-                      {order.customer.notes && (
-                        <div className="text-xs text-gray-500 mt-1 max-w-xs truncate">
-                          {order.customer.notes}
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center mr-3">
-                          <User className="w-4 h-4 text-gray-600" />
-                        </div>
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">
-                            {order.customer.recipientName}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {order.customer.phoneNumber}
-                          </div>
-                          <div className="text-xs text-gray-500 flex items-center mt-1">
-                            {order.customer.deliveryMode === 'delivery' ? (
-                              <>
-                                <Truck className="w-3 h-3 mr-1" />
-                                Delivery
-                              </>
-                            ) : (
-                              <>
-                                <Package className="w-3 h-3 mr-1" />
-                                Pickup
-                              </>
-                            )}
-                          </div>
-                          {order.customer.address && (
-                            <div className="text-xs text-gray-400 mt-1 max-w-xs truncate">
-                              📍 {order.customer.address}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm text-gray-900">
-                        {order.items.map((item: FrontendOrderItem, index: number) => (
-                          <div key={index} className="mb-2 p-2 bg-gray-50 rounded">
-                            <div className="flex items-center mb-1">
-                              <Package className="w-3 h-3 text-gray-400 mr-1" />
-                              <span className="font-medium">{item.quantity}x {item.productName}</span>
-                              <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                                {item.category}
-                              </span>
-                            </div>
-                            {item.selectedAttributes.length > 0 && (
-                              <div className="ml-4 text-xs text-gray-600">
-                                <div className="font-medium text-blue-600 mb-1">Customizations:</div>
-                                {item.selectedAttributes.map((attr: OrderAttribute, attrIndex: number) => (
-                                  <div key={attrIndex} className="flex justify-between">
-                                    <span>• {attr.name}</span>
-                                    <span>+{formatPrice(attr.additionalPrice)}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                            <div className="ml-4 text-xs text-gray-500 mt-1">
-                              Base: {formatPrice(item.basePrice)} | Total: {formatPrice(item.totalItemPrice)}
-                              {item.isDiscounted && item.originalPrice && (
-                                <span className="ml-1 line-through text-red-500">
-                                  ({formatPrice(item.originalPrice)})
-                                </span>
-                              )}
-                            </div>
-                          </div>
+      {isExpanded && (
+        <div className="mt-4 pt-4 border-t-2 border-gray-300">
+          {/* Produk */}
+          <div className="mb-4">
+            <h4 className="font-semibold text-gray-900 mb-3">📋 Produk Pesanan:</h4>
+            <div className="space-y-3">
+              {order.order_products.map(item => (
+                <div key={item.id} className="bg-white p-3 rounded border border-gray-200">
+                  <p className="font-bold text-gray-900">
+                    {item.product.nama} <span className="text-blue-600">x{item.jumlah}</span>
+                  </p>
+                  {item.note && <p className="text-sm text-gray-600 mt-1">📝 {item.note}</p>}
+                  {item.addons && item.addons.length > 0 && (
+                    <div className="mt-2 text-sm text-gray-700">
+                      <p className="font-medium">Addon:</p>
+                      <ul className="ml-4 list-disc">
+                        {item.addons.map(addon => (
+                          <li key={addon.addon_id}>
+                            {addon.nama} x{addon.quantity}
+                          </li>
                         ))}
-                        <div className="text-xs text-gray-500 mt-2 flex items-center">
-                          <Calendar className="w-3 h-3 mr-1" />
-                          Order day: <span className="font-medium ml-1">{order.customer.orderDay}</span>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
-                        {formatPrice(order.totalAmount)}
-                      </div>
-                      <div className="text-xs text-gray-500 space-y-1">
-                        <div>Subtotal: {formatPrice(order.subtotal)}</div>
-                        {order.tax > 0 && <div>Tax: {formatPrice(order.tax)}</div>}
-                        {order.deliveryFee > 0 && <div>Delivery: {formatPrice(order.deliveryFee)}</div>}
-                        <div className="font-medium text-blue-600">{order.totalItems} items</div>
-                      </div>
-                      <div className="text-xs text-gray-500 mt-1">
-                        {order.paymentMethodLabel}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors[order.status as keyof typeof statusColors]}`}>
-                        <StatusIcon className="w-3 h-3 mr-1" />
-                        {order.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${paymentStatusColors[order.paymentStatus as keyof typeof paymentStatusColors]}`}>
-                        {order.paymentStatus}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      <div>{formatDate(order.timestamp)}</div>
-                      {order.deliveryDate && (
-                        <div className="text-xs text-gray-500">
-                          Delivered: {formatDate(order.deliveryDate.toISOString())}
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex items-center justify-end space-x-2">
-                        <button className="text-gray-400 hover:text-gray-600 p-1">
-                          <Eye className="w-4 h-4" />
-                        </button>
-                        <button className="text-gray-400 hover:text-orange-600 p-1">
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        {order.status === 'pending' && (
-                          <button 
-                            onClick={() => updateOrderStatus(order.orderId, 'processing')}
-                            className="text-gray-400 hover:text-blue-600 p-1"
-                          >
-                            <CheckCircle className="w-4 h-4" />
-                          </button>
-                        )}
-                        <button className="text-gray-400 hover:text-gray-600 p-1">
-                          <MoreHorizontal className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
 
-        {filteredOrders.length === 0 && (
-          <div className="text-center py-12">
-            <Package className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No orders found</h3>
-            <p className="text-gray-600">Try adjusting your search or filter criteria</p>
+          {/* Notes */}
+          {order.notes && (
+            <div className="mb-4 bg-purple-50 p-3 rounded border border-purple-300">
+              <p className="text-sm font-semibold text-purple-900">📌 Catatan:</p>
+              <p className="text-sm text-gray-700 mt-1">{order.notes}</p>
+            </div>
+          )}
+
+          {/* Timeline */}
+          <div className="mb-4 text-xs text-gray-600">
+            <p>Dibuat: {new Date(order.created_at).toLocaleString('id-ID')}</p>
+            <p>Jadwal: {new Date(order.scheduled_date).toLocaleDateString('id-ID')}</p>
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-2">
+            {order.status === 'verifying' && (
+              <>
+                <button
+                  onClick={() => onApprove?.(order.id)}
+                  className="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded flex items-center justify-center gap-2"
+                >
+                  <Check size={18} /> Terima
+                </button>
+                <button
+                  onClick={() => onReject?.(order.id)}
+                  className="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded flex items-center justify-center gap-2"
+                >
+                  <X size={18} /> Tolak
+                </button>
+              </>
+            )}
+            {order.status === 'pending' && (
+              <button
+                onClick={() => onVerifyPayment?.(order.id)}
+                className="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded"
+              >
+                ✓ Verifikasi Pembayaran
+              </button>
+            )}
+            {order.status === 'paid' && (
+              <button
+                onClick={() => onDone?.(order.id)}
+                className="flex-1 bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-4 rounded"
+              >
+                ✓ Pesanan Selesai Dikirim
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function OrdersPage() {
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchOrders();
+  }, []);
+
+  const fetchOrders = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      // Try API first, fallback to demo
+      try {
+        const response = await fetch('/api/admin/orders?all=true', {
+          credentials: 'include'
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setOrders(data.data || []);
+        } else {
+          setOrders(DEMO_ORDERS());
+        }
+      } catch {
+        setOrders(DEMO_ORDERS());
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Gagal memuat pesanan');
+      setOrders(DEMO_ORDERS());
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleApprove = async (orderId: number) => {
+    try {
+      const response = await fetch(`/api/admin/orders/${orderId}/approve`, {
+        method: 'POST',
+        credentials: 'include'
+      });
+      if (response.ok) {
+        setOrders(orders.map(o => (o.id === orderId ? { ...o, status: 'pending' as const } : o)));
+      }
+    } catch (err) {
+      console.error('Error approving order:', err);
+      // Local update as fallback
+      setOrders(orders.map(o => (o.id === orderId ? { ...o, status: 'pending' as const } : o)));
+    }
+  };
+
+  const handleReject = async (orderId: number) => {
+    try {
+      const response = await fetch(`/api/admin/orders/${orderId}/reject`, {
+        method: 'POST',
+        credentials: 'include'
+      });
+      if (response.ok) {
+        setOrders(orders.filter(o => o.id !== orderId));
+      }
+    } catch (err) {
+      console.error('Error rejecting order:', err);
+      // Local update as fallback
+      setOrders(orders.filter(o => o.id !== orderId));
+    }
+  };
+
+  const handleVerifyPayment = async (orderId: number) => {
+    try {
+      const response = await fetch(`/api/admin/orders/${orderId}/verify-payment`, {
+        method: 'POST',
+        credentials: 'include'
+      });
+      if (response.ok) {
+        setOrders(orders.map(o => (o.id === orderId ? { ...o, status: 'paid' as const } : o)));
+      }
+    } catch (err) {
+      console.error('Error verifying payment:', err);
+      // Local update as fallback
+      setOrders(orders.map(o => (o.id === orderId ? { ...o, status: 'paid' as const } : o)));
+    }
+  };
+
+  const handleDone = async (orderId: number) => {
+    try {
+      const response = await fetch(`/api/admin/orders/${orderId}/complete`, {
+        method: 'POST',
+        credentials: 'include'
+      });
+      if (response.ok) {
+        setOrders(orders.map(o => (o.id === orderId ? { ...o, status: 'completed' as const } : o)));
+      }
+    } catch (err) {
+      console.error('Error completing order:', err);
+      // Local update as fallback
+      setOrders(orders.map(o => (o.id === orderId ? { ...o, status: 'completed' as const } : o)));
+    }
+  };
+
+  const groupedOrders = {
+    verifying: orders.filter(o => o.status === 'verifying'),
+    pending: orders.filter(o => o.status === 'pending'),
+    paid: orders.filter(o => o.status === 'paid'),
+    completed: orders.filter(o => o.status === 'completed')
+  };
+
+  if (loading) return <div className="p-4 text-center">Loading...</div>;
+
+  return (
+    <div className="p-6 max-w-5xl mx-auto">
+      <h1 className="text-3xl font-bold text-gray-900 mb-2">📦 Manajemen Pesanan</h1>
+      <p className="text-gray-600 mb-6">Kelola semua tahapan pesanan dari verifikasi hingga selesai dikirim</p>
+
+      {error && <div className="bg-red-100 border border-red-400 text-red-800 p-3 rounded mb-6">{error}</div>}
+
+      {/* VERIFYING */}
+      <section className="mb-8">
+        <h2 className="text-2xl font-bold text-orange-800 mb-4">
+          🔍 Verifikasi Pesanan ({groupedOrders.verifying.length})
+        </h2>
+        {groupedOrders.verifying.length === 0 ? (
+          <p className="text-gray-500 italic">Tidak ada pesanan yang perlu diverifikasi</p>
+        ) : (
+          <div>
+            {groupedOrders.verifying.map(order => (
+              <OrderCard
+                key={order.id}
+                order={order}
+                onApprove={handleApprove}
+                onReject={handleReject}
+              />
+            ))}
           </div>
         )}
-      </div>
+      </section>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        {statusOptions.slice(1).map(status => {
-          const count = orders.filter(order => order.status === status).length;
-          const StatusIcon = statusIcons[status as keyof typeof statusIcons];
-          return (
-            <div key={status} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium text-gray-600 uppercase">
-                    {status}
-                  </p>
-                  <p className="text-xl font-bold text-gray-900">{count}</p>
-                </div>
-                <StatusIcon className="w-5 h-5 text-gray-400" />
-              </div>
-            </div>
-          );
-        })}
-      </div>
+      {/* PENDING */}
+      <section className="mb-8">
+        <h2 className="text-2xl font-bold text-yellow-800 mb-4">
+          ⏳ Menunggu Pembayaran ({groupedOrders.pending.length})
+        </h2>
+        {groupedOrders.pending.length === 0 ? (
+          <p className="text-gray-500 italic">Tidak ada pesanan yang menunggu pembayaran</p>
+        ) : (
+          <div>
+            {groupedOrders.pending.map(order => (
+              <OrderCard key={order.id} order={order} onVerifyPayment={handleVerifyPayment} />
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* PAID */}
+      <section className="mb-8">
+        <h2 className="text-2xl font-bold text-blue-800 mb-4">
+          💳 Sudah Dibayar (Siap Produksi) ({groupedOrders.paid.length})
+        </h2>
+        {groupedOrders.paid.length === 0 ? (
+          <p className="text-gray-500 italic">Tidak ada pesanan yang sudah dibayar</p>
+        ) : (
+          <div>
+            {groupedOrders.paid.map(order => (
+              <OrderCard key={order.id} order={order} onDone={handleDone} />
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* COMPLETED */}
+      <section className="mb-8">
+        <h2 className="text-2xl font-bold text-green-800 mb-4">
+          ✅ Pesanan Selesai ({groupedOrders.completed.length})
+        </h2>
+        {groupedOrders.completed.length === 0 ? (
+          <p className="text-gray-500 italic">Tidak ada pesanan yang selesai</p>
+        ) : (
+          <div>
+            {groupedOrders.completed.map(order => (
+              <OrderCard key={order.id} order={order} />
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   );
 }

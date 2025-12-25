@@ -7,7 +7,7 @@ const BASE = `http://${host}:${port}`;
 export async function GET(request: Request, { params }: { params: Promise<{ user_id: string; product_voucher_id: string }> }) {
   try {
     const { user_id, product_voucher_id } = await params;
-    const url = `${BASE}/history/${user_id}/voucher/${product_voucher_id}`;
+    const url = `${BASE}/users/${user_id}/voucher/${product_voucher_id}`;
 
     const response = await fetch(url, { method: 'GET', headers: { 'Content-Type': 'application/json' }, cache: 'no-store' });
     const data = await response.json().catch(() => ({}));
@@ -30,7 +30,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ use
     // prefer forwarding either request body or use path params to construct payload
     const body = await request.json().catch(() => null) || { user_id, product_voucher_id };
 
-    const url = `${BASE}/history/${user_id}/voucher/${product_voucher_id}`;
+    const url = `${BASE}/users/${user_id}/voucher/${product_voucher_id}`;
     const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     const data = await response.json().catch(() => ({}));
 
@@ -49,7 +49,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ use
 export async function DELETE(request: Request, { params }: { params: Promise<{ user_id: string; product_voucher_id: string }> }) {
   try {
     const { user_id, product_voucher_id } = await params;
-    const url = `${BASE}/history/${user_id}/voucher/${product_voucher_id}`;
+    const url = `${BASE}/users/${user_id}/voucher/${product_voucher_id}`;
 
     const response = await fetch(url, { method: 'DELETE', headers: { 'Content-Type': 'application/json' } });
     const data = await response.json().catch(() => ({}));

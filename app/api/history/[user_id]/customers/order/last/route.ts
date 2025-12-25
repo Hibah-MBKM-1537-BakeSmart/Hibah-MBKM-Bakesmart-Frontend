@@ -7,7 +7,7 @@ const BASE_URL = `http://${host}:${port}`;
 export async function GET(request: Request, { params }: { params: Promise<{ user_id: string }> }) {
   try {
     const { user_id } = await params;
-    const url = `${BASE_URL}/history/${user_id}/customers/order/last`;
+    const url = `${BASE_URL}/users/${user_id}/customers/order/last`;
 
     const response = await fetch(url, { method: 'GET', headers: { 'Content-Type': 'application/json' }, cache: 'no-store' });
     const data = await response.json().catch(() => ({}));
