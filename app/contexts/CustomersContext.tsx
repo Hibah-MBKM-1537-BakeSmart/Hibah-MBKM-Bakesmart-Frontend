@@ -67,8 +67,8 @@ interface CustomersContextType {
   openWhatsAppBlast: () => void;
   closeWhatsAppBlast: () => void;
   exportToCSV: () => void;
-  exportToExcel: () => void;
-  importCustomers: () => void;
+  exportToExcel: () => Promise<void>;
+  importCustomers: (file: File) => Promise<any>;
   refreshCustomers: () => void;
   setCurrentPage: (page: number) => void;
   setItemsPerPage: (items: number) => void;
@@ -162,10 +162,28 @@ export function CustomersProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const importCustomers = () => {
-    // Placeholder for import functionality
-    console.log("Import customers clicked");
-    alert("Fitur import customer akan segera hadir!");
+  const importCustomers = async (file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const response = await fetch("/api/customers/import", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) throw new Error("Failed to import customers");
+
+      const result = await response.json();
+      console.log("Import result:", result);
+
+      // Refresh customers after import
+      await fetchCustomers();
+      return result;
+    } catch (error) {
+      console.error("Import error:", error);
+      throw error;
+    }
   };
 
   useEffect(() => {
@@ -305,9 +323,27 @@ export function CustomersProvider({ children }: { children: React.ReactNode }) {
     link.click();
   };
 
-  const exportToExcel = () => {
-    // For now, we'll use CSV format. In a real app, you'd use a library like xlsx
-    exportToCSV();
+  const exportToExcel = async () => {
+    try {
+      const response = await fetch("/api/customers/export", {
+        method: "GET",
+      });
+
+      if (!response.ok) throw new Error("Failed to export customers");
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", "customers.xlsx");
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Export error:", error);
+      throw error;
+    }
   };
 
   const refreshCustomers = () => {

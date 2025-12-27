@@ -14,7 +14,9 @@ import {
   Minus,
   ArrowUpDown,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  Download,
+  Upload
 } from 'lucide-react';
 import { AddProductModal } from '@/components/adminPage/productsPage/AddProductModal';
 import { CategoryManager } from '@/components/adminPage/productsPage/CategoryManager';
@@ -44,7 +46,53 @@ export default function ProductsPage() {
   const [pendingStockChanges, setPendingStockChanges] = useState<Record<number, number>>({}); // Track pending changes
   const { addToast, ToastContainer } = useToast();
   const { categories } = useCategories();
-  const { products, addProduct, deleteProduct, updateProduct } = useProducts();
+  const { products, addProduct, deleteProduct, updateProduct, exportProduct, importProduct } = useProducts();
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleExport = async () => {
+    try {
+      await exportProduct();
+      addToast({
+        type: 'success',
+        title: 'Export successful',
+        message: 'Products exported successfully.',
+      });
+    } catch (error) {
+      addToast({
+        type: 'error',
+        title: 'Export failed',
+        message: error instanceof Error ? error.message : 'An unknown error occurred',
+      });
+    }
+  };
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      await importProduct(file);
+      addToast({
+        type: 'success',
+        title: 'Import successful',
+        message: 'Products imported successfully.',
+      });
+    } catch (error) {
+      addToast({
+        type: 'error',
+        title: 'Import failed',
+        message: error instanceof Error ? error.message : 'An unknown error occurred',
+      });
+    } finally {
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
 
   // Extract unique jenis from backend products
   const uniqueJenis = React.useMemo(() => {
@@ -380,6 +428,27 @@ export default function ProductsPage() {
           <p className="text-gray-600 text-sm lg:text-base">Manage your bakery products and inventory</p>
         </div>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileChange}
+            className="hidden"
+            accept=".xlsx, .xls"
+          />
+          <button
+            onClick={handleExport}
+            className="flex items-center justify-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
+          >
+            <Download className="w-4 h-4" />
+            <span className="text-sm lg:text-base">Export</span>
+          </button>
+          <button
+            onClick={handleImportClick}
+            className="flex items-center justify-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+          >
+            <Upload className="w-4 h-4" />
+            <span className="text-sm lg:text-base">Import</span>
+          </button>
           <button
             onClick={() => setShowCategoryManager(true)}
             className="flex items-center justify-center space-x-2 bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors whitespace-nowrap"

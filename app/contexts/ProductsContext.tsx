@@ -76,6 +76,8 @@ interface ProductsContextType {
   updateProduct: (id: number, productData: Partial<Product>) => Promise<void>;
   deleteProduct: (id: number) => Promise<void>;
   refreshProducts: () => Promise<void>;
+  exportProduct: () => Promise<void>;
+  importProduct: (file: File) => Promise<any>;
 }
 
 const ProductsContext = createContext<ProductsContextType | undefined>(undefined);
@@ -399,6 +401,50 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const exportProduct = async () => {
+    try {
+      const response = await fetch("/api/products/export", {
+        method: "GET",
+      });
+
+      if (!response.ok) throw new Error("Failed to export products");
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", "products.xlsx");
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Export error:", error);
+      throw error;
+    }
+  };
+
+  const importProduct = async (file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const response = await fetch("/api/products/import", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) throw new Error("Failed to import products");
+
+      const result = await response.json();
+      await refreshProducts();
+      return result;
+    } catch (error) {
+      console.error("Import error:", error);
+      throw error;
+    }
+  };
+
   const contextValue: ProductsContextType = {
     products: state.products,
     loading: state.loading,
@@ -408,6 +454,8 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
     updateProduct,
     deleteProduct,
     refreshProducts,
+    exportProduct,
+    importProduct,
   };
 
   return (
