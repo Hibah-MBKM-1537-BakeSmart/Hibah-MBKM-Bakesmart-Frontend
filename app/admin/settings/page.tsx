@@ -1,180 +1,83 @@
 "use client";
 
-import { useState } from "react";
-import { Button, Input, Select, Textarea, TimePicker } from "@/components/adminPage";
+import { useState, useEffect } from "react";
+import { QRCodeCanvas } from "qrcode.react";
+import { Button, Input, Textarea, TimePicker } from "@/components/adminPage";
 import {
   Save,
-  Upload,
-  Bell,
-  Shield,
-  Palette,
-  Globe,
-  Mail,
   Smartphone,
   Clock,
   AlertCircle,
   MapPin,
   ShoppingCart,
   Loader2,
+  Calendar,
 } from "lucide-react";
-import { useStoreClosure } from "@/app/contexts/StoreClosureContext";
-
-interface Settings {
-  general: {
-    businessName: string;
-    description: string;
-    email: string;
-    phone: string;
-    address: string;
-    timezone: string;
-    currency: string;
-    language: string;
-  };
-  notifications: {
-    emailNotifications: boolean;
-    smsNotifications: boolean;
-    pushNotifications: boolean;
-    orderNotifications: boolean;
-    lowStockNotifications: boolean;
-    userRegistrationNotifications: boolean;
-  };
-  appearance: {
-    theme: string;
-    primaryColor: string;
-    logo?: string;
-  };
-  security: {
-    twoFactorAuth: boolean;
-    passwordRequirements: {
-      minLength: number;
-      requireUppercase: boolean;
-      requireNumbers: boolean;
-      requireSymbols: boolean;
-    };
-    sessionTimeout: number;
-  };
-}
-
-const initialSettings: Settings = {
-  general: {
-    businessName: "BakeSmart",
-    description: "Premium bakery with fresh and delicious baked goods",
-    email: "admin@bakesmart.com",
-    phone: "+62 812-3456-7890",
-    address: "Jl. Raya No. 123, Jakarta, Indonesia",
-    timezone: "Asia/Jakarta",
-    currency: "IDR",
-    language: "id",
-  },
-  notifications: {
-    emailNotifications: true,
-    smsNotifications: false,
-    pushNotifications: true,
-    orderNotifications: true,
-    lowStockNotifications: true,
-    userRegistrationNotifications: false,
-  },
-  appearance: {
-    theme: "light",
-    primaryColor: "#f97316",
-  },
-  security: {
-    twoFactorAuth: false,
-    passwordRequirements: {
-      minLength: 8,
-      requireUppercase: true,
-      requireNumbers: true,
-      requireSymbols: false,
-    },
-    sessionTimeout: 30,
-  },
-};
+import {
+  useStoreClosure,
+  OperatingHour,
+} from "@/app/contexts/StoreClosureContext";
 
 export default function SettingsPage() {
-  const [settings, setSettings] = useState<Settings>(initialSettings);
-  const [activeTab, setActiveTab] = useState("general");
-  const [saving, setSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState("store-closure");
   const [savingStoreConfig, setSavingStoreConfig] = useState(false);
-  const [storeConfigMessage, setStoreConfigMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const { closure, updateClosure, config, updateConfig, saveConfig, isLoading: configLoading, error: configError } = useStoreClosure();
+  const [storeConfigMessage, setStoreConfigMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
+  const {
+    closure,
+    updateClosure,
+    config,
+    updateConfig,
+    saveConfig,
+    isLoading: configLoading,
+    error: configError,
+  } = useStoreClosure();
+
+  // WhatsApp Connect State
+  const [waStatus, setWaStatus] = useState<{
+    is_connected: boolean;
+    qr_code: string | null;
+    message?: string;
+  }>({ is_connected: false, qr_code: null });
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+
+    const fetchWaStatus = async () => {
+      try {
+        if (activeTab !== "notifications") return;
+
+        const res = await fetch("/api/whatsapp/status");
+        const data = await res.json();
+
+        if (data.success) {
+          setWaStatus({
+            is_connected: data.is_connected,
+            qr_code: data.qr_code,
+            message: data.message,
+          });
+        }
+      } catch (err) {
+        console.error("Failed to fetch WhatsApp status", err);
+      }
+    };
+
+    if (activeTab === "notifications") {
+      fetchWaStatus(); // Initial fetch
+      interval = setInterval(fetchWaStatus, 3000); // Poll every 3s
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [activeTab]);
 
   const tabs = [
-    { id: "general", label: "General", icon: Globe },
-    { id: "notifications", label: "Notifications", icon: Bell },
-    { id: "appearance", label: "Appearance", icon: Palette },
-    { id: "security", label: "Security", icon: Shield },
-    { id: "store-closure", label: "Store Closure", icon: AlertCircle },
+    { id: "store-closure", label: "Konfigurasi Toko", icon: AlertCircle },
+    { id: "notifications", label: "Koneksi WhatsApp", icon: Smartphone },
   ];
-
-  const timezoneOptions = [
-    { value: "Asia/Jakarta", label: "Asia/Jakarta (WIB)" },
-    { value: "Asia/Makassar", label: "Asia/Makassar (WITA)" },
-    { value: "Asia/Jayapura", label: "Asia/Jayapura (WIT)" },
-  ];
-
-  const currencyOptions = [
-    { value: "IDR", label: "Indonesian Rupiah (IDR)" },
-    { value: "USD", label: "US Dollar (USD)" },
-  ];
-
-  const languageOptions = [
-    { value: "id", label: "Bahasa Indonesia" },
-    { value: "en", label: "English" },
-  ];
-
-  const themeOptions = [
-    { value: "light", label: "Light" },
-    { value: "dark", label: "Dark" },
-    { value: "auto", label: "Auto" },
-  ];
-
-  const handleSave = async () => {
-    setSaving(true);
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    setSaving(false);
-    alert("Settings saved successfully!");
-  };
-
-  const updateGeneralSettings = (field: string, value: string) => {
-    setSettings((prev) => ({
-      ...prev,
-      general: {
-        ...prev.general,
-        [field]: value,
-      },
-    }));
-  };
-
-  const updateNotificationSettings = (field: string, value: boolean) => {
-    setSettings((prev) => ({
-      ...prev,
-      notifications: {
-        ...prev.notifications,
-        [field]: value,
-      },
-    }));
-  };
-
-  const updateAppearanceSettings = (field: string, value: string) => {
-    setSettings((prev) => ({
-      ...prev,
-      appearance: {
-        ...prev.appearance,
-        [field]: value,
-      },
-    }));
-  };
-
-  const updateSecuritySettings = (field: string, value: any) => {
-    setSettings((prev) => ({
-      ...prev,
-      security: {
-        ...prev.security,
-        [field]: value,
-      },
-    }));
-  };
 
   return (
     <div className="space-y-6">
@@ -186,9 +89,6 @@ export default function SettingsPage() {
             Manage your application settings and preferences
           </p>
         </div>
-        <Button onClick={handleSave} loading={saving} icon={Save}>
-          Save Changes
-        </Button>
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6">
@@ -222,404 +122,53 @@ export default function SettingsPage() {
         {/* Content */}
         <div className="flex-1">
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            {/* General Settings */}
-            {activeTab === "general" && (
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">
-                    General Settings
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <Input
-                      label="Business Name"
-                      value={settings.general.businessName}
-                      onChange={(e) =>
-                        updateGeneralSettings("businessName", e.target.value)
-                      }
-                    />
-                    <Input
-                      label="Email"
-                      type="email"
-                      value={settings.general.email}
-                      onChange={(e) =>
-                        updateGeneralSettings("email", e.target.value)
-                      }
-                      icon={Mail}
-                    />
-                    <Input
-                      label="Phone"
-                      value={settings.general.phone}
-                      onChange={(e) =>
-                        updateGeneralSettings("phone", e.target.value)
-                      }
-                      icon={Smartphone}
-                    />
-                    <Select
-                      label="Timezone"
-                      value={settings.general.timezone}
-                      onChange={(e) =>
-                        updateGeneralSettings("timezone", e.target.value)
-                      }
-                      options={timezoneOptions}
-                    />
-                    <Select
-                      label="Currency"
-                      value={settings.general.currency}
-                      onChange={(e) =>
-                        updateGeneralSettings("currency", e.target.value)
-                      }
-                      options={currencyOptions}
-                    />
-                    <Select
-                      label="Language"
-                      value={settings.general.language}
-                      onChange={(e) =>
-                        updateGeneralSettings("language", e.target.value)
-                      }
-                      options={languageOptions}
-                    />
-                  </div>
-                  <div className="mt-6">
-                    <Textarea
-                      label="Business Description"
-                      value={settings.general.description}
-                      onChange={(e) =>
-                        updateGeneralSettings("description", e.target.value)
-                      }
-                      rows={3}
-                    />
-                  </div>
-                  <div className="mt-6">
-                    <Textarea
-                      label="Address"
-                      value={settings.general.address}
-                      onChange={(e) =>
-                        updateGeneralSettings("address", e.target.value)
-                      }
-                      rows={2}
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-
             {/* Notification Settings */}
             {activeTab === "notifications" && (
               <div className="space-y-6">
                 <div>
                   <h3 className="text-lg font-medium text-gray-900 mb-4">
-                    Notification Settings
+                    WhatsApp Server Connection
                   </h3>
                   <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h4 className="text-sm font-medium text-gray-900">
-                          Email Notifications
-                        </h4>
-                        <p className="text-sm text-gray-500">
-                          Receive notifications via email
-                        </p>
-                      </div>
-                      <input
-                        type="checkbox"
-                        checked={settings.notifications.emailNotifications}
-                        onChange={(e) =>
-                          updateNotificationSettings(
-                            "emailNotifications",
-                            e.target.checked
-                          )
-                        }
-                        className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
-                      />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h4 className="text-sm font-medium text-gray-900">
-                          SMS Notifications
-                        </h4>
-                        <p className="text-sm text-gray-500">
-                          Receive notifications via SMS
-                        </p>
-                      </div>
-                      <input
-                        type="checkbox"
-                        checked={settings.notifications.smsNotifications}
-                        onChange={(e) =>
-                          updateNotificationSettings(
-                            "smsNotifications",
-                            e.target.checked
-                          )
-                        }
-                        className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
-                      />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h4 className="text-sm font-medium text-gray-900">
-                          Push Notifications
-                        </h4>
-                        <p className="text-sm text-gray-500">
-                          Receive browser push notifications
-                        </p>
-                      </div>
-                      <input
-                        type="checkbox"
-                        checked={settings.notifications.pushNotifications}
-                        onChange={(e) =>
-                          updateNotificationSettings(
-                            "pushNotifications",
-                            e.target.checked
-                          )
-                        }
-                        className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
-                      />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h4 className="text-sm font-medium text-gray-900">
-                          Order Notifications
-                        </h4>
-                        <p className="text-sm text-gray-500">
-                          Get notified about new orders
-                        </p>
-                      </div>
-                      <input
-                        type="checkbox"
-                        checked={settings.notifications.orderNotifications}
-                        onChange={(e) =>
-                          updateNotificationSettings(
-                            "orderNotifications",
-                            e.target.checked
-                          )
-                        }
-                        className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
-                      />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h4 className="text-sm font-medium text-gray-900">
-                          Low Stock Notifications
-                        </h4>
-                        <p className="text-sm text-gray-500">
-                          Get notified when products are low in stock
-                        </p>
-                      </div>
-                      <input
-                        type="checkbox"
-                        checked={settings.notifications.lowStockNotifications}
-                        onChange={(e) =>
-                          updateNotificationSettings(
-                            "lowStockNotifications",
-                            e.target.checked
-                          )
-                        }
-                        className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
-                      />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h4 className="text-sm font-medium text-gray-900">
-                          User Registration Notifications
-                        </h4>
-                        <p className="text-sm text-gray-500">
-                          Get notified when new users register
-                        </p>
-                      </div>
-                      <input
-                        type="checkbox"
-                        checked={
-                          settings.notifications.userRegistrationNotifications
-                        }
-                        onChange={(e) =>
-                          updateNotificationSettings(
-                            "userRegistrationNotifications",
-                            e.target.checked
-                          )
-                        }
-                        className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
+                    <p className="text-sm text-gray-500 mb-4">
+                      Scan the QR code to connect the WhatsApp server for
+                      automated notifications.
+                    </p>
 
-            {/* Appearance Settings */}
-            {activeTab === "appearance" && (
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">
-                    Appearance Settings
-                  </h3>
-                  <div className="space-y-6">
-                    <Select
-                      label="Theme"
-                      value={settings.appearance.theme}
-                      onChange={(e) =>
-                        updateAppearanceSettings("theme", e.target.value)
-                      }
-                      options={themeOptions}
-                    />
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Primary Color
-                      </label>
-                      <input
-                        type="color"
-                        value={settings.appearance.primaryColor}
-                        onChange={(e) =>
-                          updateAppearanceSettings(
-                            "primaryColor",
-                            e.target.value
-                          )
-                        }
-                        className="h-10 w-20 border border-gray-300 rounded cursor-pointer"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Logo
-                      </label>
-                      <div className="flex items-center space-x-4">
-                        <Button variant="outline" icon={Upload}>
-                          Upload Logo
-                        </Button>
-                        <span className="text-sm text-gray-500">
-                          Recommended size: 200x60px
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Security Settings */}
-            {activeTab === "security" && (
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">
-                    Security Settings
-                  </h3>
-                  <div className="space-y-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h4 className="text-sm font-medium text-gray-900">
-                          Two-Factor Authentication
-                        </h4>
-                        <p className="text-sm text-gray-500">
-                          Add an extra layer of security to your account
-                        </p>
-                      </div>
-                      <input
-                        type="checkbox"
-                        checked={settings.security.twoFactorAuth}
-                        onChange={(e) =>
-                          updateSecuritySettings(
-                            "twoFactorAuth",
-                            e.target.checked
-                          )
-                        }
-                        className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
-                      />
-                    </div>
-
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-900 mb-3">
-                        Password Requirements
-                      </h4>
-                      <div className="space-y-3">
-                        <Input
-                          label="Minimum Length"
-                          type="number"
-                          value={
-                            settings.security.passwordRequirements.minLength
-                          }
-                          onChange={(e) =>
-                            updateSecuritySettings("passwordRequirements", {
-                              ...settings.security.passwordRequirements,
-                              minLength: Number.parseInt(e.target.value),
-                            })
-                          }
-                          min="6"
-                          max="20"
-                        />
-                        <div className="space-y-2">
-                          <div className="flex items-center">
-                            <input
-                              type="checkbox"
-                              checked={
-                                settings.security.passwordRequirements
-                                  .requireUppercase
-                              }
-                              onChange={(e) =>
-                                updateSecuritySettings("passwordRequirements", {
-                                  ...settings.security.passwordRequirements,
-                                  requireUppercase: e.target.checked,
-                                })
-                              }
-                              className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded mr-2"
-                            />
-                            <label className="text-sm text-gray-700">
-                              Require uppercase letters
-                            </label>
-                          </div>
-                          <div className="flex items-center">
-                            <input
-                              type="checkbox"
-                              checked={
-                                settings.security.passwordRequirements
-                                  .requireNumbers
-                              }
-                              onChange={(e) =>
-                                updateSecuritySettings("passwordRequirements", {
-                                  ...settings.security.passwordRequirements,
-                                  requireNumbers: e.target.checked,
-                                })
-                              }
-                              className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded mr-2"
-                            />
-                            <label className="text-sm text-gray-700">
-                              Require numbers
-                            </label>
-                          </div>
-                          <div className="flex items-center">
-                            <input
-                              type="checkbox"
-                              checked={
-                                settings.security.passwordRequirements
-                                  .requireSymbols
-                              }
-                              onChange={(e) =>
-                                updateSecuritySettings("passwordRequirements", {
-                                  ...settings.security.passwordRequirements,
-                                  requireSymbols: e.target.checked,
-                                })
-                              }
-                              className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded mr-2"
-                            />
-                            <label className="text-sm text-gray-700">
-                              Require special characters
-                            </label>
-                          </div>
+                    {waStatus.is_connected ? (
+                      <div className="p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3">
+                        <div className="h-10 w-10 bg-green-100 rounded-full flex items-center justify-center text-green-600">
+                          <Smartphone className="h-6 w-6" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-green-800">
+                            WhatsApp Connected
+                          </p>
+                          <p className="text-xs text-green-600">
+                            Server is ready to send messages.
+                          </p>
                         </div>
                       </div>
-                    </div>
-
-                    <Input
-                      label="Session Timeout (minutes)"
-                      type="number"
-                      value={settings.security.sessionTimeout}
-                      onChange={(e) =>
-                        updateSecuritySettings(
-                          "sessionTimeout",
-                          Number.parseInt(e.target.value)
-                        )
-                      }
-                      min="5"
-                      max="120"
-                      icon={Clock}
-                    />
+                    ) : (
+                      <div className="bg-white border border-gray-200 rounded-lg p-6 flex flex-col items-center justify-center text-center">
+                        {waStatus.qr_code ? (
+                          <div className="mb-4 p-2 bg-white border rounded shadow-sm">
+                            <QRCodeCanvas value={waStatus.qr_code} size={200} />
+                          </div>
+                        ) : (
+                          <div className="mb-4 h-[200px] w-[200px] bg-gray-100 rounded flex items-center justify-center">
+                            <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+                          </div>
+                        )}
+                        <h5 className="text-sm font-medium text-gray-900 mb-1">
+                          Scan QR Code
+                        </h5>
+                        <p className="text-xs text-gray-500 max-w-xs">
+                          Open WhatsApp on your phone {">"} Menu {">"} Linked
+                          Devices {">"} Link a Device
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -631,7 +180,9 @@ export default function SettingsPage() {
                 {configLoading && (
                   <div className="flex items-center justify-center py-8">
                     <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
-                    <span className="ml-2 text-gray-600">Loading configuration...</span>
+                    <span className="ml-2 text-gray-600">
+                      Loading configuration...
+                    </span>
                   </div>
                 )}
 
@@ -644,14 +195,20 @@ export default function SettingsPage() {
 
                 {/* Success/Error Message */}
                 {storeConfigMessage && (
-                  <div className={`p-4 rounded-lg border ${
-                    storeConfigMessage.type === 'success' 
-                      ? 'bg-green-50 border-green-200' 
-                      : 'bg-red-50 border-red-200'
-                  }`}>
-                    <p className={`text-sm ${
-                      storeConfigMessage.type === 'success' ? 'text-green-600' : 'text-red-600'
-                    }`}>
+                  <div
+                    className={`p-4 rounded-lg border ${
+                      storeConfigMessage.type === "success"
+                        ? "bg-green-50 border-green-200"
+                        : "bg-red-50 border-red-200"
+                    }`}
+                  >
+                    <p
+                      className={`text-sm ${
+                        storeConfigMessage.type === "success"
+                          ? "text-green-600"
+                          : "text-red-600"
+                      }`}
+                    >
                       {storeConfigMessage.text}
                     </p>
                   </div>
@@ -665,7 +222,8 @@ export default function SettingsPage() {
                         Store Closure Settings
                       </h3>
                       <p className="text-sm text-gray-600 mb-6">
-                        Configure when your store will be closed and set a message for customers
+                        Configure when your store will be closed and set a
+                        message for customers
                       </p>
 
                       <div className="space-y-6">
@@ -689,6 +247,17 @@ export default function SettingsPage() {
                           />
                         </div>
 
+                        {/* WhatsApp Number for Closure */}
+                        <Input
+                          label="WhatsApp Number (for Store Closed Modal)"
+                          value={config.whatsapp_number || ""}
+                          onChange={(e) =>
+                            updateConfig({ whatsapp_number: e.target.value })
+                          }
+                          placeholder="6281234567890"
+                          icon={Smartphone}
+                        />
+
                         {/* Closure Details - Show when store is closed */}
                         {config.is_tutup && (
                           <div className="space-y-4 p-4 bg-red-50 rounded-lg border border-red-200">
@@ -709,8 +278,13 @@ export default function SettingsPage() {
                                   if (!config.tgl_buka) return "";
                                   const date = new Date(config.tgl_buka);
                                   const year = date.getFullYear();
-                                  const month = String(date.getMonth() + 1).padStart(2, '0');
-                                  const day = String(date.getDate()).padStart(2, '0');
+                                  const month = String(
+                                    date.getMonth() + 1
+                                  ).padStart(2, "0");
+                                  const day = String(date.getDate()).padStart(
+                                    2,
+                                    "0"
+                                  );
                                   return `${year}-${month}-${day}`;
                                 })()}
                                 onChange={(e) => {
@@ -718,12 +292,18 @@ export default function SettingsPage() {
                                     updateConfig({ tgl_buka: "" });
                                     return;
                                   }
-                                  const existingDate = config.tgl_buka ? new Date(config.tgl_buka) : new Date();
-                                  const [year, month, day] = e.target.value.split('-').map(Number);
+                                  const existingDate = config.tgl_buka
+                                    ? new Date(config.tgl_buka)
+                                    : new Date();
+                                  const [year, month, day] = e.target.value
+                                    .split("-")
+                                    .map(Number);
                                   existingDate.setFullYear(year);
                                   existingDate.setMonth(month - 1);
                                   existingDate.setDate(day);
-                                  updateConfig({ tgl_buka: existingDate.toISOString() });
+                                  updateConfig({
+                                    tgl_buka: existingDate.toISOString(),
+                                  });
                                 }}
                               />
                               <TimePicker
@@ -731,19 +311,29 @@ export default function SettingsPage() {
                                 value={(() => {
                                   if (!config.tgl_buka) return "00:00";
                                   const date = new Date(config.tgl_buka);
-                                  const hours = String(date.getHours()).padStart(2, '0');
-                                  const minutes = String(date.getMinutes()).padStart(2, '0');
+                                  const hours = String(
+                                    date.getHours()
+                                  ).padStart(2, "0");
+                                  const minutes = String(
+                                    date.getMinutes()
+                                  ).padStart(2, "0");
                                   return `${hours}:${minutes}`;
                                 })()}
                                 onChange={(value) => {
                                   if (!value) return;
-                                  const existingDate = config.tgl_buka ? new Date(config.tgl_buka) : new Date();
-                                  const [hours, minutes] = value.split(':').map(Number);
+                                  const existingDate = config.tgl_buka
+                                    ? new Date(config.tgl_buka)
+                                    : new Date();
+                                  const [hours, minutes] = value
+                                    .split(":")
+                                    .map(Number);
                                   existingDate.setHours(hours);
                                   existingDate.setMinutes(minutes);
                                   existingDate.setSeconds(0);
                                   existingDate.setMilliseconds(0);
-                                  updateConfig({ tgl_buka: existingDate.toISOString() });
+                                  updateConfig({
+                                    tgl_buka: existingDate.toISOString(),
+                                  });
                                 }}
                                 icon={Clock}
                               />
@@ -752,14 +342,17 @@ export default function SettingsPage() {
                               <div className="p-3 bg-white rounded border border-red-200">
                                 <p className="text-sm text-gray-600">
                                   <strong>Store will reopen on:</strong>{" "}
-                                  {new Date(config.tgl_buka).toLocaleString("id-ID", {
-                                    weekday: "long",
-                                    year: "numeric",
-                                    month: "long",
-                                    day: "numeric",
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                  })}
+                                  {new Date(config.tgl_buka).toLocaleString(
+                                    "id-ID",
+                                    {
+                                      weekday: "long",
+                                      year: "numeric",
+                                      month: "long",
+                                      day: "numeric",
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                    }
+                                  )}
                                 </p>
                               </div>
                             )}
@@ -784,8 +377,9 @@ export default function SettingsPage() {
                           value={config.limit_pesanan_harian || ""}
                           onChange={(e) => {
                             const val = e.target.value;
-                            updateConfig({ 
-                              limit_pesanan_harian: val === "" ? 0 : parseInt(val, 10)
+                            updateConfig({
+                              limit_pesanan_harian:
+                                val === "" ? 0 : parseInt(val, 10),
                             });
                           }}
                           min="0"
@@ -793,18 +387,159 @@ export default function SettingsPage() {
                         />
                         <TimePicker
                           label="Order Cutoff Time"
-                          value={config.limit_jam_order ? config.limit_jam_order.slice(0, 5) : "00:00"}
+                          value={
+                            config.limit_jam_order
+                              ? config.limit_jam_order.slice(0, 5)
+                              : "00:00"
+                          }
                           onChange={(value) =>
-                            updateConfig({ 
-                              limit_jam_order: value ? `${value}:00` : "" 
+                            updateConfig({
+                              limit_jam_order: value ? `${value}:00` : "",
                             })
                           }
                           icon={Clock}
                         />
                       </div>
                       <p className="text-xs text-gray-500 mt-2">
-                        Orders will not be accepted after the cutoff time each day.
+                        Orders will not be accepted after the cutoff time each
+                        day.
                       </p>
+                    </div>
+
+                    {/* Operating Hours Section */}
+                    <div className="border-t pt-6">
+                      <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
+                        <Calendar className="h-5 w-5" />
+                        Jam Operasional
+                      </h3>
+                      <p className="text-sm text-gray-600 mb-6">
+                        Atur jam buka dan tutup toko untuk setiap hari dalam
+                        seminggu
+                      </p>
+
+                      <div className="space-y-3">
+                        {(config.operating_hours || []).map(
+                          (hour: OperatingHour) => (
+                            <div
+                              key={hour.day_index}
+                              className={`flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-lg border ${
+                                hour.is_open
+                                  ? "bg-green-50 border-green-200"
+                                  : "bg-gray-50 border-gray-200"
+                              }`}
+                            >
+                              {/* Day Name & Toggle */}
+                              <div className="flex items-center justify-between sm:w-36">
+                                <span className="font-medium text-gray-900">
+                                  {hour.day_name}
+                                </span>
+                                <input
+                                  type="checkbox"
+                                  checked={hour.is_open}
+                                  onChange={(e) => {
+                                    const updatedHours =
+                                      config.operating_hours.map((h) =>
+                                        h.day_index === hour.day_index
+                                          ? { ...h, is_open: e.target.checked }
+                                          : h
+                                      );
+                                    updateConfig({
+                                      operating_hours: updatedHours,
+                                    });
+                                  }}
+                                  className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded sm:hidden"
+                                />
+                              </div>
+
+                              {/* Open/Close Toggle for Desktop */}
+                              <div className="hidden sm:flex items-center">
+                                <input
+                                  type="checkbox"
+                                  checked={hour.is_open}
+                                  onChange={(e) => {
+                                    const updatedHours =
+                                      config.operating_hours.map((h) =>
+                                        h.day_index === hour.day_index
+                                          ? { ...h, is_open: e.target.checked }
+                                          : h
+                                      );
+                                    updateConfig({
+                                      operating_hours: updatedHours,
+                                    });
+                                  }}
+                                  className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                                />
+                                <span
+                                  className={`ml-2 text-sm ${
+                                    hour.is_open
+                                      ? "text-green-600"
+                                      : "text-gray-500"
+                                  }`}
+                                >
+                                  {hour.is_open ? "Buka" : "Tutup"}
+                                </span>
+                              </div>
+
+                              {/* Time Pickers */}
+                              {hour.is_open && (
+                                <div className="flex items-center gap-2 flex-1">
+                                  <div className="flex-1">
+                                    <TimePicker
+                                      label=""
+                                      value={hour.open_time}
+                                      onChange={(value) => {
+                                        const updatedHours =
+                                          config.operating_hours.map((h) =>
+                                            h.day_index === hour.day_index
+                                              ? {
+                                                  ...h,
+                                                  open_time: value || "08:00",
+                                                }
+                                              : h
+                                          );
+                                        updateConfig({
+                                          operating_hours: updatedHours,
+                                        });
+                                      }}
+                                      icon={Clock}
+                                    />
+                                  </div>
+                                  <span className="text-gray-500">-</span>
+                                  <div className="flex-1">
+                                    <TimePicker
+                                      label=""
+                                      value={hour.close_time}
+                                      onChange={(value) => {
+                                        const updatedHours =
+                                          config.operating_hours.map((h) =>
+                                            h.day_index === hour.day_index
+                                              ? {
+                                                  ...h,
+                                                  close_time: value || "21:00",
+                                                }
+                                              : h
+                                          );
+                                        updateConfig({
+                                          operating_hours: updatedHours,
+                                        });
+                                      }}
+                                      icon={Clock}
+                                    />
+                                  </div>
+                                </div>
+                              )}
+
+                              {!hour.is_open && (
+                                <div className="flex-1 text-center sm:text-left">
+                                  <span className="text-sm text-gray-500 italic">
+                                    Toko tutup pada hari ini
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          )
+                        )}
+                      </div>
                     </div>
 
                     {/* Store Location Section */}
@@ -813,7 +548,8 @@ export default function SettingsPage() {
                         Store Location
                       </h3>
                       <p className="text-sm text-gray-600 mb-6">
-                        Set your store&apos;s GPS coordinates for delivery calculations
+                        Set your store&apos;s GPS coordinates for delivery
+                        calculations
                       </p>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -861,14 +597,14 @@ export default function SettingsPage() {
                           const success = await saveConfig();
                           setSavingStoreConfig(false);
                           if (success) {
-                            setStoreConfigMessage({ 
-                              type: 'success', 
-                              text: 'Store configuration saved successfully!' 
+                            setStoreConfigMessage({
+                              type: "success",
+                              text: "Store configuration saved successfully!",
                             });
                           } else {
-                            setStoreConfigMessage({ 
-                              type: 'error', 
-                              text: 'Failed to save configuration. Please try again.' 
+                            setStoreConfigMessage({
+                              type: "error",
+                              text: "Failed to save configuration. Please try again.",
                             });
                           }
                           // Clear message after 3 seconds

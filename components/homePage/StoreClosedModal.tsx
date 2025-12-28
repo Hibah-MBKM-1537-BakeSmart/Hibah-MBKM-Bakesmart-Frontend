@@ -7,12 +7,13 @@ import { useStoreClosure } from "@/app/contexts/StoreClosureContext";
 export function StoreClosedModal() {
   const [isOpen, setIsOpen] = useState(false);
   const [nextOpenTime, setNextOpenTime] = useState<string>("");
-  const { closure } = useStoreClosure();
+  const { closure, config } = useStoreClosure();
 
   useEffect(() => {
     const checkStoreStatus = () => {
       const now = new Date();
 
+      // Check manual closure
       if (closure.isActive && closure.startDate && closure.endDate) {
         const startDate = new Date(closure.startDate);
         const endDate = new Date(closure.endDate);
@@ -24,49 +25,93 @@ export function StoreClosedModal() {
         }
       }
 
-      // Check regular operating hours
-      const day = now.getDay();
+      // Check if store is manually closed via backend config
+      if (config.is_tutup) {
+        setIsOpen(true);
+        if (config.tgl_buka) {
+          setNextOpenTime(
+            new Date(config.tgl_buka).toLocaleDateString("id-ID", {
+              weekday: "long",
+              day: "numeric",
+              month: "long",
+              hour: "2-digit",
+              minute: "2-digit",
+            })
+          );
+        } else {
+          setNextOpenTime("Akan diumumkan");
+        }
+        return;
+      }
+
+      // Check regular operating hours from backend config
+      const day = now.getDay(); // 0=Minggu, 1=Senin, dst
       const hours = now.getHours();
       const minutes = now.getMinutes();
       const currentTime = hours * 60 + minutes;
 
-      // Jam operasional: Senin-Jumat 07:00-21:00, Sabtu-Minggu 08:00-22:00
+      // Get today's operating hours
+      const todayHours = config.operating_hours?.find(
+        (h) => h.day_index === day
+      );
+
+      if (todayHours) {
+        // Jika hari ini toko tidak buka
+        if (!todayHours.is_open) {
+          setIsOpen(true);
+          // Find next open day
+          const nextOpenDay = findNextOpenDay(day, config.operating_hours);
+          setNextOpenTime(nextOpenDay);
+          return;
+        }
+
+        // Parse open and close time
+        const [openH, openM] = todayHours.open_time.split(":").map(Number);
+        const [closeH, closeM] = todayHours.close_time.split(":").map(Number);
+        const openTime = openH * 60 + openM;
+        const closeTime = closeH * 60 + closeM;
+
+        // Check if current time is within operating hours
+        if (currentTime < openTime) {
+          // Belum buka
+          setIsOpen(true);
+          setNextOpenTime(`Hari ini pukul ${todayHours.open_time}`);
+          return;
+        } else if (currentTime >= closeTime) {
+          // Sudah tutup
+          setIsOpen(true);
+          // Find next open day
+          const nextOpenDay = findNextOpenDay(day, config.operating_hours);
+          setNextOpenTime(nextOpenDay);
+          return;
+        }
+
+        // Store is open
+        setIsOpen(false);
+        return;
+      }
+
+      // Fallback: use default operating hours if no config
       let storeIsOpen = false;
       let nextOpen = "";
 
-      if (day === 0) {
-        // Minggu: 08:00-22:00
+      if (day === 0 || day === 6) {
+        // Sabtu-Minggu: 08:00-22:00
         if (currentTime >= 8 * 60 && currentTime < 22 * 60) {
           storeIsOpen = true;
         } else if (currentTime < 8 * 60) {
           nextOpen = "Hari ini pukul 08:00";
         } else {
-          nextOpen = "Senin pukul 07:00";
+          nextOpen = day === 6 ? "Minggu pukul 08:00" : "Senin pukul 07:00";
         }
-      } else if (day === 6) {
-        // Sabtu: 08:00-22:00
-        if (currentTime >= 8 * 60 && currentTime < 22 * 60) {
-          storeIsOpen = true;
-        } else if (currentTime < 8 * 60) {
-          nextOpen = "Hari ini pukul 08:00";
-        } else {
-          nextOpen = "Minggu pukul 08:00";
-        }
-      } else if (day >= 1 && day <= 5) {
+      } else {
         // Senin-Jumat: 07:00-21:00
-        if (currentTime >= 3 * 60 && currentTime < 21 * 60) {
+        if (currentTime >= 7 * 60 && currentTime < 21 * 60) {
           storeIsOpen = true;
         } else if (currentTime < 7 * 60) {
           nextOpen = "Hari ini pukul 07:00";
         } else {
-          // Tutup setelah jam 21:00
-          if (day === 5) {
-            // Jumat malam, buka Sabtu pagi
-            nextOpen = "Sabtu pukul 08:00";
-          } else {
-            // Hari biasa, buka besok pagi
-            nextOpen = "Besok pukul 07:00";
-          }
+          nextOpen = day === 5 ? "Sabtu pukul 08:00" : "Besok pukul 07:00";
         }
       }
 
@@ -74,16 +119,37 @@ export function StoreClosedModal() {
       setNextOpenTime(nextOpen);
     };
 
+    // Helper function to find next open day
+    const findNextOpenDay = (
+      currentDay: number,
+      operatingHours: typeof config.operating_hours
+    ) => {
+      if (!operatingHours || operatingHours.length === 0) {
+        return "Besok";
+      }
+
+      for (let i = 1; i <= 7; i++) {
+        const nextDay = (currentDay + i) % 7;
+        const nextDayHours = operatingHours.find(
+          (h) => h.day_index === nextDay
+        );
+        if (nextDayHours?.is_open) {
+          return `${nextDayHours.day_name} pukul ${nextDayHours.open_time}`;
+        }
+      }
+      return "Akan diumumkan";
+    };
+
     checkStoreStatus();
     const interval = setInterval(checkStoreStatus, 60000); // Check setiap menit
 
     return () => clearInterval(interval);
-  }, [closure]);
+  }, [closure, config]);
 
   if (!isOpen) return null;
 
   const handleWhatsApp = () => {
-    const phoneNumber = "6212345678"; // Nomor WhatsApp dari Contact component
+    const phoneNumber = config.whatsapp_number || "6212345678"; // Use config number or fallback
     const message = "Halo, saya ingin menanyakan tentang produk Anda";
     window.open(
       `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`,
