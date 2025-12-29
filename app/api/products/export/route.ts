@@ -20,7 +20,10 @@ export async function GET(request: Request) {
 
     const blob = await response.blob();
     const headers = new Headers();
-    headers.set("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    headers.set(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
     headers.set("Content-Disposition", 'attachment; filename="products.xlsx"');
 
     return new NextResponse(blob, {

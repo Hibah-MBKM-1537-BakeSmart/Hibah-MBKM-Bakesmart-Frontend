@@ -64,7 +64,10 @@ export async function PUT(request: Request) {
       configData.limit_jam_order = body.limit_jam_order;
     if (body.latitude !== undefined) configData.latitude = body.latitude;
     if (body.longitude !== undefined) configData.longitude = body.longitude;
-    if (body.whatsapp_number !== undefined) configData.whatsapp_number = body.whatsapp_number;
+    if (body.whatsapp_number !== undefined)
+      configData.whatsapp_number = body.whatsapp_number;
+    if (body.is_delivery_enabled !== undefined)
+      configData.is_delivery_enabled = body.is_delivery_enabled;
 
     // Handle operating_hours - kirim sebagai array (backend akan handle merge)
     if (body.operating_hours !== undefined) {

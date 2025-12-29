@@ -1,9 +1,15 @@
-'use client';
+"use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from "react";
 
 // Use Next.js API route instead of direct backend call to avoid CORS
-const BACKEND_URL = '/api/products';
+const BACKEND_URL = "/api/products";
 
 export interface Product {
   id: number;
@@ -56,7 +62,7 @@ export interface Product {
   }>;
   sales?: number;
   rating?: number;
-  status: 'active' | 'inactive';
+  status: "active" | "inactive";
   hari_tersedia?: string[];
 }
 
@@ -80,7 +86,9 @@ interface ProductsContextType {
   importProduct: (file: File) => Promise<any>;
 }
 
-const ProductsContext = createContext<ProductsContextType | undefined>(undefined);
+const ProductsContext = createContext<ProductsContextType | undefined>(
+  undefined
+);
 
 export function ProductsProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<ProductsState>({
@@ -92,11 +100,11 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
 
   // Helper function to parse backend response
   const parseBackendResponse = (data: any): Product[] => {
-    console.log('[ProductsContext] Parsing backend response:', data);
-    
+    console.log("[ProductsContext] Parsing backend response:", data);
+
     // Handle different response formats
     let productsArray: any[] = [];
-    
+
     if (Array.isArray(data)) {
       productsArray = data;
     } else if (data?.data) {
@@ -107,45 +115,61 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    console.log('[ProductsContext] Found products array:', productsArray.length);
+    console.log(
+      "[ProductsContext] Found products array:",
+      productsArray.length
+    );
 
     // Map backend format to frontend format
     return productsArray.map((product: any) => ({
       id: product.id,
-      nama: product.nama_en || product.nama_id || product.nama || '',
-      deskripsi: product.deskripsi_en || product.deskripsi_id || product.deskripsi || '',
+      nama: product.nama_en || product.nama_id || product.nama || "",
+      deskripsi:
+        product.deskripsi_en || product.deskripsi_id || product.deskripsi || "",
       harga: product.harga || 0,
       stok: product.stok ?? 0,
       created_at: product.created_at,
       updated_at: product.updated_at,
-      status: (product.status || 'active') as 'active' | 'inactive',
+      status: (product.status || "active") as "active" | "inactive",
       gambars: product.gambars?.filter((g: any) => g && g.id) || [],
-      jenis: product.jenis?.filter((j: any) => j && j.id).map((j: any) => ({
-        id: j.id,
-        nama: j.nama_en || j.nama_id || j.nama || 'Unknown',
-        nama_id: j.nama_id,
-        nama_en: j.nama_en,
-      })) || [],
-      hari: product.hari?.filter((h: any) => h && h.id).map((h: any) => ({
-        id: h.id,
-        nama: h.nama_en || h.nama_id || h.nama || '',
-        nama_id: h.nama_id,
-        nama_en: h.nama_en,
-      })) || [],
-      attributes: product.attributes?.filter((a: any) => a && a.id).map((a: any) => ({
-        id: a.id,
-        nama: a.nama_en || a.nama_id || a.nama || '',
-        harga: a.harga,
-        nama_id: a.nama_id,
-        nama_en: a.nama_en,
-      })) || [],
-      bahans: product.bahans?.filter((b: any) => b && b.id).map((b: any) => ({
-        id: b.id,
-        nama: b.nama_en || b.nama_id || b.nama || '',
-        jumlah: b.jumlah,
-        nama_id: b.nama_id,
-        nama_en: b.nama_en,
-      })) || [],
+      jenis:
+        product.jenis
+          ?.filter((j: any) => j && j.id)
+          .map((j: any) => ({
+            id: j.id,
+            nama: j.nama_en || j.nama_id || j.nama || "Unknown",
+            nama_id: j.nama_id,
+            nama_en: j.nama_en,
+          })) || [],
+      hari:
+        product.hari
+          ?.filter((h: any) => h && h.id)
+          .map((h: any) => ({
+            id: h.id,
+            nama: h.nama_en || h.nama_id || h.nama || "",
+            nama_id: h.nama_id,
+            nama_en: h.nama_en,
+          })) || [],
+      attributes:
+        product.attributes
+          ?.filter((a: any) => a && a.id)
+          .map((a: any) => ({
+            id: a.id,
+            nama: a.nama_en || a.nama_id || a.nama || "",
+            harga: a.harga,
+            nama_id: a.nama_id,
+            nama_en: a.nama_en,
+          })) || [],
+      bahans:
+        product.bahans
+          ?.filter((b: any) => b && b.id)
+          .map((b: any) => ({
+            id: b.id,
+            nama: b.nama_en || b.nama_id || b.nama || "",
+            jumlah: b.jumlah,
+            nama_id: b.nama_id,
+            nama_en: b.nama_en,
+          })) || [],
       sales: product.sales || 0,
       rating: product.rating || 0,
       hari_tersedia: product.hari_tersedia || [],
@@ -155,8 +179,8 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
   // Fetch products from backend
   const refreshProducts = async (): Promise<void> => {
     try {
-      console.log('[ProductsContext] Refreshing products from backend...');
-      setState(prev => ({ ...prev, loading: true, error: null }));
+      console.log("[ProductsContext] Refreshing products from backend...");
+      setState((prev) => ({ ...prev, loading: true, error: null }));
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000); // Increased to 10 seconds
@@ -164,7 +188,7 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
       const response = await fetch(BACKEND_URL, {
         signal: controller.signal,
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
       });
 
@@ -175,12 +199,12 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
       }
 
       const data = await response.json();
-      console.log('[ProductsContext] Backend response:', data);
+      console.log("[ProductsContext] Backend response:", data);
 
       const products = parseBackendResponse(data);
-      console.log('[ProductsContext] Parsed products:', products.length);
+      console.log("[ProductsContext] Parsed products:", products.length);
 
-      setState(prev => ({
+      setState((prev) => ({
         ...prev,
         products,
         loading: false,
@@ -188,20 +212,25 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
         isBackendConnected: true,
       }));
     } catch (error: any) {
-      console.error('[ProductsContext] Error fetching products:', error);
-      
-      let errorMessage = 'Tidak dapat terhubung ke backend. ';
-      if (error.name === 'AbortError') {
-        errorMessage = '⏱️ Backend tidak merespons dalam 10 detik. Pastikan backend server berjalan';
-      } else if (error.message?.includes('Failed to fetch') || error.message?.includes('fetch')) {
-        errorMessage = '🔌 Backend server tidak dapat diakses. Pastikan backend berjalan';
-      } else if (error.message?.includes('ECONNREFUSED')) {
-        errorMessage = '❌ Koneksi ditolak. Backend server tidak berjalan';
+      console.error("[ProductsContext] Error fetching products:", error);
+
+      let errorMessage = "Tidak dapat terhubung ke backend. ";
+      if (error.name === "AbortError") {
+        errorMessage =
+          "⏱️ Backend tidak merespons dalam 10 detik. Pastikan backend server berjalan";
+      } else if (
+        error.message?.includes("Failed to fetch") ||
+        error.message?.includes("fetch")
+      ) {
+        errorMessage =
+          "🔌 Backend server tidak dapat diakses. Pastikan backend berjalan";
+      } else if (error.message?.includes("ECONNREFUSED")) {
+        errorMessage = "❌ Koneksi ditolak. Backend server tidak berjalan";
       } else {
         errorMessage += error.message;
       }
 
-      setState(prev => ({
+      setState((prev) => ({
         ...prev,
         loading: false,
         error: errorMessage,
@@ -218,17 +247,17 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
   // Create product
   const addProduct = async (productData: Partial<Product>): Promise<void> => {
     try {
-      console.log('[ProductsContext] Creating product:', productData);
-      setState(prev => ({ ...prev, error: null }));
+      console.log("[ProductsContext] Creating product:", productData);
+      setState((prev) => ({ ...prev, error: null }));
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000);
 
       const response = await fetch(BACKEND_URL, {
-        method: 'POST',
+        method: "POST",
         signal: controller.signal,
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(productData),
       });
@@ -237,18 +266,20 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        throw new Error(
+          errorData.message || `HTTP error! status: ${response.status}`
+        );
       }
 
       const data = await response.json();
-      console.log('[ProductsContext] Product created successfully:', data);
+      console.log("[ProductsContext] Product created successfully:", data);
 
       // Parse new product and add to state
       if (data.data) {
         const parsed = parseBackendResponse(data);
         const newProduct = parsed[0];
         if (newProduct) {
-          setState(prev => ({
+          setState((prev) => ({
             ...prev,
             products: [...prev.products, newProduct],
             loading: false,
@@ -262,16 +293,16 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
         await refreshProducts();
       }
     } catch (error: any) {
-      console.error('[ProductsContext] Error creating product:', error);
-      
-      let errorMessage = 'Gagal menambahkan produk. ';
-      if (error.name === 'AbortError') {
-        errorMessage += 'Request timeout.';
+      console.error("[ProductsContext] Error creating product:", error);
+
+      let errorMessage = "Gagal menambahkan produk. ";
+      if (error.name === "AbortError") {
+        errorMessage += "Request timeout.";
       } else {
         errorMessage += error.message;
       }
 
-      setState(prev => ({
+      setState((prev) => ({
         ...prev,
         loading: false,
         error: errorMessage,
@@ -281,19 +312,22 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
   };
 
   // Update product
-  const updateProduct = async (id: number, productData: Partial<Product>): Promise<void> => {
+  const updateProduct = async (
+    id: number,
+    productData: Partial<Product>
+  ): Promise<void> => {
     try {
-      console.log('[ProductsContext] Updating product:', id, productData);
-      setState(prev => ({ ...prev, error: null }));
+      console.log("[ProductsContext] Updating product:", id, productData);
+      setState((prev) => ({ ...prev, error: null }));
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000);
 
       const response = await fetch(`${BACKEND_URL}/${id}`, {
-        method: 'PUT',
+        method: "PUT",
         signal: controller.signal,
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(productData),
       });
@@ -302,17 +336,25 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        throw new Error(
+          errorData.message || `HTTP error! status: ${response.status}`
+        );
       }
 
       const data = await response.json();
-      console.log('[ProductsContext] Backend PUT response:', JSON.stringify(data));
+      console.log(
+        "[ProductsContext] Backend PUT response:",
+        JSON.stringify(data)
+      );
 
       // Immediately update local state with optimistic data
       // Don't rely on backend response format, use what we sent
-      setState(prev => {
-        console.log('[ProductsContext] Updating state, current products:', prev.products.length);
-        const updatedProducts = prev.products.map(product => {
+      setState((prev) => {
+        console.log(
+          "[ProductsContext] Updating state, current products:",
+          prev.products.length
+        );
+        const updatedProducts = prev.products.map((product) => {
           if (product.id === id) {
             const updated = { ...product, ...productData };
             console.log(`[ProductsContext] Updating product ${id}:`, updated);
@@ -320,7 +362,10 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
           }
           return product;
         });
-        console.log('[ProductsContext] New products array:', updatedProducts.length);
+        console.log(
+          "[ProductsContext] New products array:",
+          updatedProducts.length
+        );
         return {
           ...prev,
           products: updatedProducts,
@@ -328,18 +373,18 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
         };
       });
 
-      console.log('[ProductsContext] State update completed');
+      console.log("[ProductsContext] State update completed");
     } catch (error: any) {
-      console.error('[ProductsContext] Error updating product:', error);
-      
-      let errorMessage = 'Gagal mengupdate produk. ';
-      if (error.name === 'AbortError') {
-        errorMessage += 'Request timeout.';
+      console.error("[ProductsContext] Error updating product:", error);
+
+      let errorMessage = "Gagal mengupdate produk. ";
+      if (error.name === "AbortError") {
+        errorMessage += "Request timeout.";
       } else {
         errorMessage += error.message;
       }
 
-      setState(prev => ({
+      setState((prev) => ({
         ...prev,
         loading: false,
         error: errorMessage,
@@ -351,17 +396,17 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
   // Delete product
   const deleteProduct = async (id: number): Promise<void> => {
     try {
-      console.log('[ProductsContext] Deleting product:', id);
-      setState(prev => ({ ...prev, error: null }));
+      console.log("[ProductsContext] Deleting product:", id);
+      setState((prev) => ({ ...prev, error: null }));
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000);
 
       const response = await fetch(`${BACKEND_URL}/${id}`, {
-        method: 'DELETE',
+        method: "DELETE",
         signal: controller.signal,
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
       });
 
@@ -369,30 +414,32 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        throw new Error(
+          errorData.message || `HTTP error! status: ${response.status}`
+        );
       }
 
-      console.log('[ProductsContext] Product deleted successfully');
+      console.log("[ProductsContext] Product deleted successfully");
 
       // Immediately remove from local state
-      setState(prev => ({
+      setState((prev) => ({
         ...prev,
-        products: prev.products.filter(product => product.id !== id),
+        products: prev.products.filter((product) => product.id !== id),
         loading: false,
       }));
 
-      console.log('[ProductsContext] Product removed from state');
+      console.log("[ProductsContext] Product removed from state");
     } catch (error: any) {
-      console.error('[ProductsContext] Error deleting product:', error);
-      
-      let errorMessage = 'Gagal menghapus produk. ';
-      if (error.name === 'AbortError') {
-        errorMessage += 'Request timeout.';
+      console.error("[ProductsContext] Error deleting product:", error);
+
+      let errorMessage = "Gagal menghapus produk. ";
+      if (error.name === "AbortError") {
+        errorMessage += "Request timeout.";
       } else {
         errorMessage += error.message;
       }
 
-      setState(prev => ({
+      setState((prev) => ({
         ...prev,
         loading: false,
         error: errorMessage,
@@ -468,7 +515,7 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
 export function useProducts(): ProductsContextType {
   const context = useContext(ProductsContext);
   if (context === undefined) {
-    throw new Error('useProducts must be used within a ProductsProvider');
+    throw new Error("useProducts must be used within a ProductsProvider");
   }
   return context;
 }

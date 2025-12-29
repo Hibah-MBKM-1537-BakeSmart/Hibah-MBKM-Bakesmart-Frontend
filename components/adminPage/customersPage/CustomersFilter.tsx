@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   Search,
   Filter,
@@ -8,6 +8,8 @@ import {
   RefreshCw,
   SortAsc,
   Upload,
+  MessageCircle,
+  Loader2,
 } from "lucide-react";
 import { useCustomers } from "../../../app/contexts/CustomersContext";
 
@@ -19,9 +21,12 @@ export default function CustomersFilter() {
     exportToExcel,
     refreshCustomers,
     importCustomers,
+    openWhatsAppBlast,
   } = useCustomers();
   const [showSortMenu, setShowSortMenu] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isImporting, setIsImporting] = useState(false);
 
   const sortOptions = [
     { value: "newest", label: "Newest First" },
@@ -59,8 +64,39 @@ export default function CustomersFilter() {
     setShowExportMenu(false);
   };
 
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setIsImporting(true);
+      try {
+        const result = await importCustomers(file);
+        alert(
+          `Import berhasil! ${result?.data?.inserted || 0} data ditambahkan, ${
+            result?.data?.skipped || 0
+          } data dilewati.`
+        );
+      } catch (error) {
+        alert("Failed to import customers");
+      } finally {
+        setIsImporting(false);
+        e.target.value = "";
+      }
+    }
+  };
+
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+      <input
+        type="file"
+        ref={fileInputRef}
+        className="hidden"
+        accept=".xlsx, .xls"
+        onChange={handleFileChange}
+      />
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         {/* Search Bar */}
         <div className="relative flex-1 max-w-md">
@@ -122,10 +158,15 @@ export default function CustomersFilter() {
 
           {/* Import Button */}
           <button
-            onClick={importCustomers}
-            className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 font-inter text-sm"
+            onClick={handleImportClick}
+            disabled={isImporting}
+            className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 font-inter text-sm disabled:opacity-50"
           >
-            <Upload className="h-4 w-4" />
+            {isImporting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Upload className="h-4 w-4" />
+            )}
             Import
           </button>
 
@@ -155,6 +196,15 @@ export default function CustomersFilter() {
               </div>
             )}
           </div>
+
+          {/* WhatsApp Blast Button */}
+          <button
+            onClick={openWhatsAppBlast}
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-inter text-sm"
+          >
+            <MessageCircle className="h-4 w-4" />
+            WhatsApp Blast
+          </button>
 
           {/* Refresh Button */}
           <button

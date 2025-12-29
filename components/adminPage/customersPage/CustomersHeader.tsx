@@ -1,63 +1,11 @@
 "use client";
 
-import React, { useRef, useState } from "react";
-import {
-  Users,
-  UserCheck,
-  Activity,
-  MessageCircle,
-  Download,
-  Upload,
-  Loader2,
-} from "lucide-react";
+import React from "react";
+import { Users, UserCheck, Activity } from "lucide-react";
 import { useCustomers } from "../../../app/contexts/CustomersContext";
 
 export default function CustomersHeader() {
-  const {
-    state,
-    openWhatsAppBlast,
-    exportToExcel,
-    importCustomers,
-    refreshCustomers,
-  } = useCustomers();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [isExporting, setIsExporting] = useState(false);
-  const [isImporting, setIsImporting] = useState(false);
-
-  const handleExport = async () => {
-    setIsExporting(true);
-    try {
-      await exportToExcel();
-    } catch (error) {
-      alert("Failed to export customers");
-    } finally {
-      setIsExporting(false);
-    }
-  };
-
-  const handleImportClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setIsImporting(true);
-      try {
-        const result = await importCustomers(file);
-        alert(
-          `Import berhasil! ${result?.data?.inserted || 0} data ditambahkan, ${
-            result?.data?.skipped || 0
-          } data dilewati.`
-        );
-      } catch (error) {
-        alert("Failed to import customers");
-      } finally {
-        setIsImporting(false);
-        e.target.value = "";
-      }
-    }
-  };
+  const { state } = useCustomers();
 
   // Calculate statistics
   const totalCustomers = state.customers.length;
@@ -114,47 +62,7 @@ export default function CustomersHeader() {
           </p>
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex gap-2">
-          <input
-            type="file"
-            ref={fileInputRef}
-            className="hidden"
-            accept=".xlsx, .xls"
-            onChange={handleFileChange}
-          />
-          <button
-            onClick={handleExport}
-            disabled={isExporting}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-inter disabled:opacity-50"
-          >
-            {isExporting ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Download className="w-4 h-4" />
-            )}
-            Export
-          </button>
-          <button
-            onClick={handleImportClick}
-            disabled={isImporting}
-            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-inter disabled:opacity-50"
-          >
-            {isImporting ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Upload className="w-4 h-4" />
-            )}
-            Import
-          </button>
-          <button
-            onClick={openWhatsAppBlast}
-            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-inter"
-          >
-            <MessageCircle className="w-4 h-4" />
-            WhatsApp Blast
-          </button>
-        </div>
+        {/* Action Buttons - Moved to CustomersFilter */}
       </div>
 
       {/* Statistics Cards */}

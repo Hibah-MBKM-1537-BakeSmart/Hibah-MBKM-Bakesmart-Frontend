@@ -41,6 +41,32 @@ export default function SettingsPage() {
     qr_code: string | null;
     message?: string;
   }>({ is_connected: false, qr_code: null });
+  const [disconnecting, setDisconnecting] = useState(false);
+
+  const handleDisconnect = async () => {
+    if (!confirm("Are you sure you want to disconnect WhatsApp?")) return;
+
+    setDisconnecting(true);
+    try {
+      const res = await fetch("/api/whatsapp/disconnect", { method: "POST" });
+      const data = await res.json();
+      if (data.success) {
+        setWaStatus((prev) => ({
+          ...prev,
+          is_connected: false,
+          qr_code: null,
+        }));
+        // The polling interval will pick up the new QR code eventually
+      } else {
+        alert("Failed to disconnect: " + (data.message || "Unknown error"));
+      }
+    } catch (error) {
+      console.error("Error disconnecting:", error);
+      alert("Error disconnecting WhatsApp");
+    } finally {
+      setDisconnecting(false);
+    }
+  };
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -136,18 +162,34 @@ export default function SettingsPage() {
                     </p>
 
                     {waStatus.is_connected ? (
-                      <div className="p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3">
-                        <div className="h-10 w-10 bg-green-100 rounded-full flex items-center justify-center text-green-600">
-                          <Smartphone className="h-6 w-6" />
+                      <div className="space-y-4">
+                        <div className="p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3">
+                          <div className="h-10 w-10 bg-green-100 rounded-full flex items-center justify-center text-green-600">
+                            <Smartphone className="h-6 w-6" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-green-800">
+                              WhatsApp Connected
+                            </p>
+                            <p className="text-xs text-green-600">
+                              Server is ready to send messages.
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-sm font-medium text-green-800">
-                            WhatsApp Connected
-                          </p>
-                          <p className="text-xs text-green-600">
-                            Server is ready to send messages.
-                          </p>
-                        </div>
+                        <Button
+                          onClick={handleDisconnect}
+                          disabled={disconnecting}
+                          className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white border-none"
+                        >
+                          {disconnecting ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Disconnecting...
+                            </>
+                          ) : (
+                            "Disconnect WhatsApp"
+                          )}
+                        </Button>
                       </div>
                     ) : (
                       <div className="bg-white border border-gray-200 rounded-lg p-6 flex flex-col items-center justify-center text-center">
@@ -216,6 +258,37 @@ export default function SettingsPage() {
 
                 {!configLoading && (
                   <>
+                    {/* Delivery Settings Section */}
+                    <div className="border-b pb-6 mb-6">
+                      <h3 className="text-lg font-medium text-gray-900 mb-4">
+                        Delivery Settings
+                      </h3>
+                      <p className="text-sm text-gray-600 mb-6">
+                        Configure delivery options for your customers
+                      </p>
+
+                      <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+                        <div>
+                          <h4 className="text-sm font-medium text-gray-900">
+                            Enable Delivery Service
+                          </h4>
+                          <p className="text-sm text-gray-500">
+                            Allow customers to choose delivery option
+                          </p>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={config.is_delivery_enabled ?? true}
+                          onChange={(e) =>
+                            updateConfig({
+                              is_delivery_enabled: e.target.checked,
+                            })
+                          }
+                          className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                        />
+                      </div>
+                    </div>
+
                     {/* Store Closure Section */}
                     <div>
                       <h3 className="text-lg font-medium text-gray-900 mb-4">

@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Plus,
   Search,
@@ -16,52 +16,70 @@ import {
   ArrowUp,
   ArrowDown,
   Download,
-  Upload
-} from 'lucide-react';
-import { AddProductModal } from '@/components/adminPage/productsPage/AddProductModal';
-import { CategoryManager } from '@/components/adminPage/productsPage/CategoryManager';
-import { ProductDetailModal } from '@/components/adminPage/productsPage/ProductDetailModal';
-import { EditProductModal } from '@/components/adminPage/productsPage/EditProductModal';
-import { useToast } from '@/components/adminPage/Toast';
-import { useCategories } from '@/app/contexts/CategoriesContext';
-import { useProducts, Product } from '@/app/contexts/ProductsContext';
+  Upload,
+} from "lucide-react";
+import { AddProductModal } from "@/components/adminPage/productsPage/AddProductModal";
+import { CategoryManager } from "@/components/adminPage/productsPage/CategoryManager";
+import { ProductDetailModal } from "@/components/adminPage/productsPage/ProductDetailModal";
+import { EditProductModal } from "@/components/adminPage/productsPage/EditProductModal";
+import { useToast } from "@/components/adminPage/Toast";
+import { useCategories } from "@/app/contexts/CategoriesContext";
+import { useProducts, Product } from "@/app/contexts/ProductsContext";
 
 // Mock products moved to ProductsContext
 
 export default function ProductsPage() {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [selectedDay, setSelectedDay] = useState('all');
-  const [sortField, setSortField] = useState<'nama' | 'category' | 'day' | 'harga' | 'stok' | 'sales'>('nama');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
-  const [priceRange, setPriceRange] = useState<{ min: number; max: number }>({ min: 0, max: 1000000 });
-  const [stockRange, setStockRange] = useState<{ min: number; max: number }>({ min: 0, max: 1000 });
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [selectedDay, setSelectedDay] = useState("all");
+  const [sortField, setSortField] = useState<
+    "nama" | "category" | "day" | "harga" | "stok" | "sales"
+  >("nama");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const [priceRange, setPriceRange] = useState<{ min: number; max: number }>({
+    min: 0,
+    max: 1000000,
+  });
+  const [stockRange, setStockRange] = useState<{ min: number; max: number }>({
+    min: 0,
+    max: 1000,
+  });
   const [showAddModal, setShowAddModal] = useState(false);
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [showProductDetail, setShowProductDetail] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [editingStockId, setEditingStockId] = useState<number | null>(null);
-  const [tempStock, setTempStock] = useState<string>(''); // Changed to string to preserve user input
-  const [pendingStockChanges, setPendingStockChanges] = useState<Record<number, number>>({}); // Track pending changes
+  const [tempStock, setTempStock] = useState<string>(""); // Changed to string to preserve user input
+  const [pendingStockChanges, setPendingStockChanges] = useState<
+    Record<number, number>
+  >({}); // Track pending changes
   const { addToast, ToastContainer } = useToast();
   const { categories } = useCategories();
-  const { products, addProduct, deleteProduct, updateProduct, exportProduct, importProduct } = useProducts();
+  const {
+    products,
+    addProduct,
+    deleteProduct,
+    updateProduct,
+    exportProduct,
+    importProduct,
+  } = useProducts();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const handleExport = async () => {
     try {
       await exportProduct();
       addToast({
-        type: 'success',
-        title: 'Export successful',
-        message: 'Products exported successfully.',
+        type: "success",
+        title: "Export successful",
+        message: "Products exported successfully.",
       });
     } catch (error) {
       addToast({
-        type: 'error',
-        title: 'Export failed',
-        message: error instanceof Error ? error.message : 'An unknown error occurred',
+        type: "error",
+        title: "Export failed",
+        message:
+          error instanceof Error ? error.message : "An unknown error occurred",
       });
     }
   };
@@ -70,26 +88,29 @@ export default function ProductsPage() {
     fileInputRef.current?.click();
   };
 
-  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
     try {
       await importProduct(file);
       addToast({
-        type: 'success',
-        title: 'Import successful',
-        message: 'Products imported successfully.',
+        type: "success",
+        title: "Import successful",
+        message: "Products imported successfully.",
       });
     } catch (error) {
       addToast({
-        type: 'error',
-        title: 'Import failed',
-        message: error instanceof Error ? error.message : 'An unknown error occurred',
+        type: "error",
+        title: "Import failed",
+        message:
+          error instanceof Error ? error.message : "An unknown error occurred",
       });
     } finally {
       if (fileInputRef.current) {
-        fileInputRef.current.value = '';
+        fileInputRef.current.value = "";
       }
     }
   };
@@ -97,10 +118,10 @@ export default function ProductsPage() {
   // Extract unique jenis from backend products
   const uniqueJenis = React.useMemo(() => {
     const jenisSet = new Set<string>();
-    products.forEach(product => {
-      product.jenis?.forEach(j => {
+    products.forEach((product) => {
+      product.jenis?.forEach((j) => {
         // Use nama_en for consistency (English names shown in table)
-        const jenisNama = j.nama_en || j.nama_id || j.nama;
+        const jenisNama = (j.nama_en || j.nama_id || j.nama)?.trim();
         if (jenisNama) jenisSet.add(jenisNama);
       });
     });
@@ -110,17 +131,25 @@ export default function ProductsPage() {
   // Extract unique days from backend products
   const uniqueDays = React.useMemo(() => {
     // Define day order (Monday to Sunday)
-    const dayOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    const dayOrder = [
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday",
+      "Sunday",
+    ];
     const daysSet = new Set<string>();
-    
-    products.forEach(product => {
-      product.hari?.forEach(h => {
+
+    products.forEach((product) => {
+      product.hari?.forEach((h) => {
         // Use nama_en for consistency (English names shown in table)
         const dayNama = h.nama_en || h.nama_id || h.nama;
         if (dayNama) daysSet.add(dayNama);
       });
     });
-    
+
     // Sort days according to week order instead of alphabetically
     return Array.from(daysSet).sort((a, b) => {
       const indexA = dayOrder.indexOf(a);
@@ -133,57 +162,82 @@ export default function ProductsPage() {
   }, [products]);
 
   // Combine 'all' with actual jenis from backend
-  const categoryOptions = ['all', ...uniqueJenis];
-  const dayOptions = ['all', ...uniqueDays];
+  const categoryOptions = ["all", ...uniqueJenis];
+  const dayOptions = ["all", ...uniqueDays];
 
   // Sort and filter products
   const filteredProducts = products
-    .filter(product => {
+    .filter((product) => {
       // Add safety checks for undefined values
       if (!product || !product.nama) return false;
-      
+
       // Search filter
-      const matchesSearch = product.nama.toLowerCase().includes(searchTerm.toLowerCase());
-      
+      const matchesSearch = product.nama
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase());
+
       // Category filter - check all jenis for match using nama_en field
-      const matchesCategory = selectedCategory === 'all' || 
-        product.jenis?.some(j => {
-          const jenisNama = j.nama_en || j.nama_id || j.nama;
+      const matchesCategory =
+        selectedCategory === "all" ||
+        product.jenis?.some((j) => {
+          const jenisNama = (j.nama_en || j.nama_id || j.nama)?.trim();
           return jenisNama === selectedCategory;
-        }) || false;
-      
+        }) ||
+        false;
+
       // Day filter - check all hari for match using nama_en field
-      const matchesDay = selectedDay === 'all' || 
-        product.hari?.some(h => {
+      const matchesDay =
+        selectedDay === "all" ||
+        product.hari?.some((h) => {
           const dayNama = h.nama_en || h.nama_id || h.nama;
           return dayNama === selectedDay;
-        }) || false;
-      
+        }) ||
+        false;
+
       // Price range filter
-      const matchesPrice = product.harga >= priceRange.min && product.harga <= priceRange.max;
-      
+      const matchesPrice =
+        product.harga >= priceRange.min && product.harga <= priceRange.max;
+
       // Stock range filter
-      const matchesStock = (product.stok ?? 0) >= stockRange.min && (product.stok ?? 0) <= stockRange.max;
-      
-      return matchesSearch && matchesCategory && matchesDay && matchesPrice && matchesStock;
+      const matchesStock =
+        (product.stok ?? 0) >= stockRange.min &&
+        (product.stok ?? 0) <= stockRange.max;
+
+      return (
+        matchesSearch &&
+        matchesCategory &&
+        matchesDay &&
+        matchesPrice &&
+        matchesStock
+      );
     })
     .sort((a, b) => {
       let comparison = 0;
-      
+
       switch (sortField) {
-        case 'nama':
+        case "nama":
           comparison = a.nama.localeCompare(b.nama);
           break;
-        case 'category':
-          const categoryA = a.jenis?.[0]?.nama_en || a.jenis?.[0]?.nama_id || '';
-          const categoryB = b.jenis?.[0]?.nama_en || b.jenis?.[0]?.nama_id || '';
+        case "category":
+          const categoryA =
+            a.jenis?.[0]?.nama_en || a.jenis?.[0]?.nama_id || "";
+          const categoryB =
+            b.jenis?.[0]?.nama_en || b.jenis?.[0]?.nama_id || "";
           comparison = categoryA.localeCompare(categoryB);
           break;
-        case 'day':
-          const dayA = a.hari?.[0]?.nama_en || a.hari?.[0]?.nama_id || '';
-          const dayB = b.hari?.[0]?.nama_en || b.hari?.[0]?.nama_id || '';
+        case "day":
+          const dayA = a.hari?.[0]?.nama_en || a.hari?.[0]?.nama_id || "";
+          const dayB = b.hari?.[0]?.nama_en || b.hari?.[0]?.nama_id || "";
           // Use day order for proper week sorting
-          const dayOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+          const dayOrder = [
+            "Monday",
+            "Tuesday",
+            "Wednesday",
+            "Thursday",
+            "Friday",
+            "Saturday",
+            "Sunday",
+          ];
           const indexA = dayOrder.indexOf(dayA);
           const indexB = dayOrder.indexOf(dayB);
           if (indexA !== -1 && indexB !== -1) {
@@ -192,47 +246,53 @@ export default function ProductsPage() {
             comparison = dayA.localeCompare(dayB);
           }
           break;
-        case 'harga':
+        case "harga":
           comparison = a.harga - b.harga;
           break;
-        case 'stok':
+        case "stok":
           comparison = (a.stok ?? 0) - (b.stok ?? 0);
           break;
-        case 'sales':
+        case "sales":
           comparison = (a.sales ?? 0) - (b.sales ?? 0);
           break;
         default:
           comparison = 0;
       }
-      
-      return sortDirection === 'asc' ? comparison : -comparison;
+
+      return sortDirection === "asc" ? comparison : -comparison;
     });
 
   // Toggle sort
-  const handleSort = (field: 'nama' | 'category' | 'day' | 'harga' | 'stok' | 'sales') => {
+  const handleSort = (
+    field: "nama" | "category" | "day" | "harga" | "stok" | "sales"
+  ) => {
     if (sortField === field) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
     } else {
       setSortField(field);
-      setSortDirection('asc');
+      setSortDirection("asc");
     }
   };
 
   // Get sort icon
-  const getSortIcon = (field: 'nama' | 'category' | 'day' | 'harga' | 'stok' | 'sales') => {
+  const getSortIcon = (
+    field: "nama" | "category" | "day" | "harga" | "stok" | "sales"
+  ) => {
     if (sortField !== field) {
       return <ArrowUpDown className="w-4 h-4 ml-1 opacity-50" />;
     }
-    return sortDirection === 'asc' 
-      ? <ArrowUp className="w-4 h-4 ml-1" />
-      : <ArrowDown className="w-4 h-4 ml-1" />;
+    return sortDirection === "asc" ? (
+      <ArrowUp className="w-4 h-4 ml-1" />
+    ) : (
+      <ArrowDown className="w-4 h-4 ml-1" />
+    );
   };
 
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0
+    return new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+      minimumFractionDigits: 0,
     }).format(price);
   };
 
@@ -240,42 +300,53 @@ export default function ProductsPage() {
     try {
       await addProduct(newProductData);
       setShowAddModal(false);
-      
+
       addToast({
-        type: 'success',
-        title: 'Product added successfully!',
+        type: "success",
+        title: "Product added successfully!",
         message: `${newProductData.nama} has been added to product catalog.`,
       });
     } catch (error) {
       addToast({
-        type: 'error',
-        title: 'Failed to add product',
-        message: error instanceof Error ? error.message : 'An unknown error occurred',
+        type: "error",
+        title: "Failed to add product",
+        message:
+          error instanceof Error ? error.message : "An unknown error occurred",
       });
     }
   };
 
-  const handleDeleteProduct = async (productId: number, productName: string) => {
-    if (window.confirm(`Are you sure you want to delete product "${productName}"?`)) {
+  const handleDeleteProduct = async (
+    productId: number,
+    productName: string
+  ) => {
+    if (
+      window.confirm(
+        `Are you sure you want to delete product "${productName}"?`
+      )
+    ) {
       try {
         await deleteProduct(productId);
         addToast({
-          type: 'success',
-          title: 'Product deleted successfully!',
+          type: "success",
+          title: "Product deleted successfully!",
           message: `${productName} has been removed from product catalog.`,
         });
       } catch (error) {
         addToast({
-          type: 'error',
-          title: 'Failed to delete product',
-          message: error instanceof Error ? error.message : 'An unknown error occurred',
+          type: "error",
+          title: "Failed to delete product",
+          message:
+            error instanceof Error
+              ? error.message
+              : "An unknown error occurred",
         });
       }
     }
   };
 
   const handleEditProduct = (productId: number, productName: string) => {
-    const product = products.find(p => p.id === productId);
+    const product = products.find((p) => p.id === productId);
     if (product) {
       setSelectedProduct(product);
       setShowEditModal(true);
@@ -284,28 +355,31 @@ export default function ProductsPage() {
 
   const handleUpdateProduct = async (productData: Partial<Product>) => {
     if (!selectedProduct) return;
-    
+
     try {
       await updateProduct(selectedProduct.id, productData);
       setShowEditModal(false);
       setSelectedProduct(null);
-      
+
       addToast({
-        type: 'success',
-        title: 'Product updated successfully!',
-        message: `${productData.nama || selectedProduct.nama} has been updated.`,
+        type: "success",
+        title: "Product updated successfully!",
+        message: `${
+          productData.nama || selectedProduct.nama
+        } has been updated.`,
       });
     } catch (error) {
       addToast({
-        type: 'error',
-        title: 'Failed to update product',
-        message: error instanceof Error ? error.message : 'An unknown error occurred',
+        type: "error",
+        title: "Failed to update product",
+        message:
+          error instanceof Error ? error.message : "An unknown error occurred",
       });
     }
   };
 
   const handleViewProduct = (productId: number) => {
-    const product = products.find(p => p.id === productId);
+    const product = products.find((p) => p.id === productId);
     if (product) {
       setSelectedProduct(product);
       setShowProductDetail(true);
@@ -313,28 +387,42 @@ export default function ProductsPage() {
   };
 
   const handleStockIncrement = (productId: number) => {
-    const product = products.find(p => p.id === productId);
-    if (product && typeof product.stok === 'number') {
+    const product = products.find((p) => p.id === productId);
+    if (product && typeof product.stok === "number") {
       const currentPending = pendingStockChanges[productId] ?? product.stok;
       const newStok = currentPending + 1;
-      console.log('Incrementing stock for product:', productId, 'from', currentPending, 'to', newStok);
-      setPendingStockChanges(prev => ({
+      console.log(
+        "Incrementing stock for product:",
+        productId,
+        "from",
+        currentPending,
+        "to",
+        newStok
+      );
+      setPendingStockChanges((prev) => ({
         ...prev,
-        [productId]: newStok
+        [productId]: newStok,
       }));
     }
   };
 
   const handleStockDecrement = (productId: number) => {
-    const product = products.find(p => p.id === productId);
-    if (product && typeof product.stok === 'number') {
+    const product = products.find((p) => p.id === productId);
+    if (product && typeof product.stok === "number") {
       const currentPending = pendingStockChanges[productId] ?? product.stok;
       if (currentPending > 0) {
         const newStok = currentPending - 1;
-        console.log('Decrementing stock for product:', productId, 'from', currentPending, 'to', newStok);
-        setPendingStockChanges(prev => ({
+        console.log(
+          "Decrementing stock for product:",
+          productId,
+          "from",
+          currentPending,
+          "to",
+          newStok
+        );
+        setPendingStockChanges((prev) => ({
           ...prev,
-          [productId]: newStok
+          [productId]: newStok,
         }));
       }
     }
@@ -345,33 +433,38 @@ export default function ProductsPage() {
     if (newStok === undefined) return;
 
     try {
-      console.log('Confirming stock change for product:', productId, 'New stock:', newStok);
+      console.log(
+        "Confirming stock change for product:",
+        productId,
+        "New stock:",
+        newStok
+      );
       await updateProduct(productId, { stok: newStok });
-      
+
       // Remove from pending changes
-      setPendingStockChanges(prev => {
+      setPendingStockChanges((prev) => {
         const updated = { ...prev };
         delete updated[productId];
         return updated;
       });
 
       addToast({
-        type: 'success',
-        title: 'Stock updated!',
+        type: "success",
+        title: "Stock updated!",
         message: `Stock has been updated to ${newStok}.`,
       });
     } catch (error) {
-      console.error('Error confirming stock change:', error);
+      console.error("Error confirming stock change:", error);
       addToast({
-        type: 'error',
-        title: 'Failed to update stock',
-        message: error instanceof Error ? error.message : 'An error occurred',
+        type: "error",
+        title: "Failed to update stock",
+        message: error instanceof Error ? error.message : "An error occurred",
       });
     }
   };
 
   const cancelStockChange = (productId: number) => {
-    setPendingStockChanges(prev => {
+    setPendingStockChanges((prev) => {
       const updated = { ...prev };
       delete updated[productId];
       return updated;
@@ -385,85 +478,62 @@ export default function ProductsPage() {
 
   const handleStockInputChange = (value: string) => {
     // Allow only numbers, remove leading zeros except for "0"
-    const cleanedValue = value.replace(/[^0-9]/g, '');
+    const cleanedValue = value.replace(/[^0-9]/g, "");
     setTempStock(cleanedValue);
   };
 
   const saveStockEdit = async (productId: number) => {
     try {
       const stockValue = parseInt(tempStock) || 0;
-      console.log('Saving stock edit for product:', productId, 'New stock:', stockValue);
+      console.log(
+        "Saving stock edit for product:",
+        productId,
+        "New stock:",
+        stockValue
+      );
       await updateProduct(productId, { stok: stockValue });
       setEditingStockId(null);
-      setTempStock('');
+      setTempStock("");
       addToast({
-        type: 'success',
-        title: 'Stock updated successfully!',
+        type: "success",
+        title: "Stock updated successfully!",
         message: `Stock has been updated to ${stockValue}.`,
       });
     } catch (error) {
-      console.error('Error in saveStockEdit:', error);
+      console.error("Error in saveStockEdit:", error);
       // Don't reset editingStockId so user can try again
       addToast({
-        type: 'error',
-        title: 'Failed to update stock',
-        message: error instanceof Error ? error.message : 'An error occurred',
+        type: "error",
+        title: "Failed to update stock",
+        message: error instanceof Error ? error.message : "An error occurred",
       });
     }
   };
 
   const cancelStockEdit = () => {
     setEditingStockId(null);
-    setTempStock('');
+    setTempStock("");
   };
 
   return (
     <div className="space-y-6">
       <ToastContainer />
-      
+
       {/* Page Header */}
       <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Products</h1>
-          <p className="text-gray-600 text-sm lg:text-base">Manage your bakery products and inventory</p>
+          <p className="text-gray-600 text-sm lg:text-base">
+            Manage your bakery products and inventory
+          </p>
         </div>
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFileChange}
-            className="hidden"
-            accept=".xlsx, .xls"
-          />
-          <button
-            onClick={handleExport}
-            className="flex items-center justify-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
-          >
-            <Download className="w-4 h-4" />
-            <span className="text-sm lg:text-base">Export</span>
-          </button>
-          <button
-            onClick={handleImportClick}
-            className="flex items-center justify-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
-          >
-            <Upload className="w-4 h-4" />
-            <span className="text-sm lg:text-base">Import</span>
-          </button>
-          <button
-            onClick={() => setShowCategoryManager(true)}
-            className="flex items-center justify-center space-x-2 bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors whitespace-nowrap"
-          >
-            <Settings className="w-4 h-4" />
-            <span className="text-sm lg:text-base">Manage Categories</span>
-          </button>
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="flex items-center justify-center space-x-2 bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition-colors whitespace-nowrap"
-          >
-            <Plus className="w-4 h-4" />
-            <span className="text-sm lg:text-base">Add Product</span>
-          </button>
-        </div>
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileChange}
+          className="hidden"
+          accept=".xlsx, .xls"
+        />
       </div>
 
       {/* Filters */}
@@ -494,9 +564,9 @@ export default function ProductsPage() {
                   onChange={(e) => setSelectedCategory(e.target.value)}
                   className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500 text-sm w-full sm:w-auto"
                 >
-                  {categoryOptions.map(category => (
+                  {categoryOptions.map((category) => (
                     <option key={category} value={category}>
-                      {category === 'all' ? 'All Categories' : category}
+                      {category === "all" ? "All Categories" : category}
                     </option>
                   ))}
                 </select>
@@ -510,17 +580,45 @@ export default function ProductsPage() {
                   onChange={(e) => setSelectedDay(e.target.value)}
                   className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500 text-sm w-full sm:w-auto"
                 >
-                  {dayOptions.map(day => (
+                  {dayOptions.map((day) => (
                     <option key={day} value={day}>
-                      {day === 'all' ? 'All Days' : day}
+                      {day === "all" ? "All Days" : day}
                     </option>
                   ))}
                 </select>
               </div>
             </div>
 
-            <div className="text-sm text-gray-600 text-center lg:text-right">
-              {filteredProducts.length} of {products.length} products
+            {/* Action Buttons */}
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={handleImportClick}
+                className="flex items-center justify-center space-x-2 border border-gray-300 bg-white text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors whitespace-nowrap text-sm"
+              >
+                <Upload className="w-4 h-4" />
+                <span>Import</span>
+              </button>
+              <button
+                onClick={handleExport}
+                className="flex items-center justify-center space-x-2 bg-[#9B6D49] text-white px-4 py-2 rounded-lg hover:bg-[#8b6f47] transition-colors whitespace-nowrap text-sm"
+              >
+                <Download className="w-4 h-4" />
+                <span>Export</span>
+              </button>
+              <button
+                onClick={() => setShowCategoryManager(true)}
+                className="flex items-center justify-center space-x-2 bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors whitespace-nowrap text-sm"
+              >
+                <Settings className="w-4 h-4" />
+                <span>Categories</span>
+              </button>
+              <button
+                onClick={() => setShowAddModal(true)}
+                className="flex items-center justify-center space-x-2 bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition-colors whitespace-nowrap text-sm"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add Product</span>
+              </button>
             </div>
           </div>
 
@@ -528,21 +626,33 @@ export default function ProductsPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-gray-200">
             {/* Price Range */}
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Price Range</label>
+              <label className="text-sm font-medium text-gray-700">
+                Price Range
+              </label>
               <div className="flex items-center gap-2">
                 <input
                   type="number"
                   placeholder="Min"
-                  value={priceRange.min || ''}
-                  onChange={(e) => setPriceRange(prev => ({ ...prev, min: Number(e.target.value) || 0 }))}
+                  value={priceRange.min || ""}
+                  onChange={(e) =>
+                    setPriceRange((prev) => ({
+                      ...prev,
+                      min: Number(e.target.value) || 0,
+                    }))
+                  }
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-orange-500"
                 />
                 <span className="text-gray-400">-</span>
                 <input
                   type="number"
                   placeholder="Max"
-                  value={priceRange.max || ''}
-                  onChange={(e) => setPriceRange(prev => ({ ...prev, max: Number(e.target.value) || 1000000 }))}
+                  value={priceRange.max || ""}
+                  onChange={(e) =>
+                    setPriceRange((prev) => ({
+                      ...prev,
+                      max: Number(e.target.value) || 1000000,
+                    }))
+                  }
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-orange-500"
                 />
               </div>
@@ -550,21 +660,33 @@ export default function ProductsPage() {
 
             {/* Stock Range */}
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Stock Range</label>
+              <label className="text-sm font-medium text-gray-700">
+                Stock Range
+              </label>
               <div className="flex items-center gap-2">
                 <input
                   type="number"
                   placeholder="Min"
-                  value={stockRange.min || ''}
-                  onChange={(e) => setStockRange(prev => ({ ...prev, min: Number(e.target.value) || 0 }))}
+                  value={stockRange.min || ""}
+                  onChange={(e) =>
+                    setStockRange((prev) => ({
+                      ...prev,
+                      min: Number(e.target.value) || 0,
+                    }))
+                  }
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-orange-500"
                 />
                 <span className="text-gray-400">-</span>
                 <input
                   type="number"
                   placeholder="Max"
-                  value={stockRange.max || ''}
-                  onChange={(e) => setStockRange(prev => ({ ...prev, max: Number(e.target.value) || 1000 }))}
+                  value={stockRange.max || ""}
+                  onChange={(e) =>
+                    setStockRange((prev) => ({
+                      ...prev,
+                      max: Number(e.target.value) || 1000,
+                    }))
+                  }
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-orange-500"
                 />
               </div>
@@ -572,16 +694,19 @@ export default function ProductsPage() {
           </div>
 
           {/* Reset Filters Button */}
-          <div className="flex justify-end pt-2">
+          <div className="flex justify-between items-center pt-2">
+            <div className="text-sm text-gray-600">
+              Showing {filteredProducts.length} of {products.length} products
+            </div>
             <button
               onClick={() => {
-                setSearchTerm('');
-                setSelectedCategory('all');
-                setSelectedDay('all');
+                setSearchTerm("");
+                setSelectedCategory("all");
+                setSelectedDay("all");
                 setPriceRange({ min: 0, max: 1000000 });
                 setStockRange({ min: 0, max: 1000 });
-                setSortField('nama');
-                setSortDirection('asc');
+                setSortField("nama");
+                setSortDirection("asc");
               }}
               className="text-sm text-orange-600 hover:text-orange-700 font-medium"
             >
@@ -596,8 +721,12 @@ export default function ProductsPage() {
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 lg:p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs lg:text-sm font-medium text-gray-600">Total Products</p>
-              <p className="text-xl lg:text-2xl font-bold text-gray-900">{products.length}</p>
+              <p className="text-xs lg:text-sm font-medium text-gray-600">
+                Total Products
+              </p>
+              <p className="text-xl lg:text-2xl font-bold text-gray-900">
+                {products.length}
+              </p>
             </div>
             <div className="bg-blue-100 p-2 lg:p-3 rounded-lg">
               <Package className="w-5 h-5 lg:w-6 lg:h-6 text-blue-600" />
@@ -608,9 +737,11 @@ export default function ProductsPage() {
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 lg:p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs lg:text-sm font-medium text-gray-600">Low Stock Items</p>
+              <p className="text-xs lg:text-sm font-medium text-gray-600">
+                Low Stock Items
+              </p>
               <p className="text-xl lg:text-2xl font-bold text-gray-900">
-                {products.filter(p => p.stok < 10).length}
+                {products.filter((p) => p.stok < 10).length}
               </p>
             </div>
             <div className="bg-yellow-100 p-2 lg:p-3 rounded-lg">
@@ -622,9 +753,11 @@ export default function ProductsPage() {
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 lg:p-6 sm:col-span-2 lg:col-span-1">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs lg:text-sm font-medium text-gray-600">Out of Stock</p>
+              <p className="text-xs lg:text-sm font-medium text-gray-600">
+                Out of Stock
+              </p>
               <p className="text-xl lg:text-2xl font-bold text-gray-900">
-                {products.filter(p => p.stok === 0).length}
+                {products.filter((p) => p.stok === 0).length}
               </p>
             </div>
             <div className="bg-red-100 p-2 lg:p-3 rounded-lg">
@@ -642,56 +775,56 @@ export default function ProductsPage() {
               <tr>
                 <th className="px-3 lg:px-6 py-3 text-left whitespace-nowrap w-[280px]">
                   <button
-                    onClick={() => handleSort('nama')}
+                    onClick={() => handleSort("nama")}
                     className="flex items-center space-x-1 text-xs font-medium text-gray-500 uppercase tracking-wider hover:text-gray-700"
                   >
                     <span>Product</span>
-                    {getSortIcon('nama')}
+                    {getSortIcon("nama")}
                   </button>
                 </th>
                 <th className="px-3 lg:px-6 py-3 text-left whitespace-nowrap w-[140px]">
                   <button
-                    onClick={() => handleSort('category')}
+                    onClick={() => handleSort("category")}
                     className="flex items-center space-x-1 text-xs font-medium text-gray-500 uppercase tracking-wider hover:text-gray-700"
                   >
                     <span>Category</span>
-                    {getSortIcon('category')}
+                    {getSortIcon("category")}
                   </button>
                 </th>
                 <th className="px-3 lg:px-6 py-3 text-left whitespace-nowrap w-[180px]">
                   <button
-                    onClick={() => handleSort('day')}
+                    onClick={() => handleSort("day")}
                     className="flex items-center space-x-1 text-xs font-medium text-gray-500 uppercase tracking-wider hover:text-gray-700"
                   >
                     <span>Available Days</span>
-                    {getSortIcon('day')}
+                    {getSortIcon("day")}
                   </button>
                 </th>
                 <th className="px-3 lg:px-6 py-3 text-left whitespace-nowrap w-[130px]">
                   <button
-                    onClick={() => handleSort('harga')}
+                    onClick={() => handleSort("harga")}
                     className="flex items-center space-x-1 text-xs font-medium text-gray-500 uppercase tracking-wider hover:text-gray-700"
                   >
                     <span>Price</span>
-                    {getSortIcon('harga')}
+                    {getSortIcon("harga")}
                   </button>
                 </th>
                 <th className="px-3 lg:px-6 py-3 text-left whitespace-nowrap w-[180px]">
                   <button
-                    onClick={() => handleSort('stok')}
+                    onClick={() => handleSort("stok")}
                     className="flex items-center space-x-1 text-xs font-medium text-gray-500 uppercase tracking-wider hover:text-gray-700"
                   >
                     <span>Order Limit</span>
-                    {getSortIcon('stok')}
+                    {getSortIcon("stok")}
                   </button>
                 </th>
                 <th className="px-3 lg:px-6 py-3 text-left whitespace-nowrap w-[100px]">
                   <button
-                    onClick={() => handleSort('sales')}
+                    onClick={() => handleSort("sales")}
                     className="flex items-center space-x-1 text-xs font-medium text-gray-500 uppercase tracking-wider hover:text-gray-700"
                   >
                     <span>Sales</span>
-                    {getSortIcon('sales')}
+                    {getSortIcon("sales")}
                   </button>
                 </th>
                 <th className="px-3 lg:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap w-[140px]">
@@ -714,16 +847,19 @@ export default function ProductsPage() {
                               onError={(e) => {
                                 // Fallback to default icon if image fails to load
                                 const target = e.target as HTMLImageElement;
-                                target.style.display = 'none';
-                                const fallback = target.parentElement?.querySelector('.fallback-icon') as HTMLElement;
+                                target.style.display = "none";
+                                const fallback =
+                                  target.parentElement?.querySelector(
+                                    ".fallback-icon"
+                                  ) as HTMLElement;
                                 if (fallback) {
-                                  fallback.style.display = 'flex';
+                                  fallback.style.display = "flex";
                                 }
                               }}
                             />
-                            <div 
+                            <div
                               className="fallback-icon absolute inset-0 w-10 h-10 bg-orange-100 rounded-lg items-center justify-center"
-                              style={{ display: 'none' }}
+                              style={{ display: "none" }}
                             >
                               <Package className="w-5 h-5 text-orange-600" />
                             </div>
@@ -746,7 +882,9 @@ export default function ProductsPage() {
                   </td>
                   <td className="px-3 lg:px-6 py-4 whitespace-nowrap w-[140px]">
                     <span className="inline-flex items-center px-2 lg:px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                      {product.jenis?.[0]?.nama_en || product.jenis?.[0]?.nama_id || 'Unknown'}
+                      {product.jenis?.[0]?.nama_en ||
+                        product.jenis?.[0]?.nama_id ||
+                        "Unknown"}
                     </span>
                   </td>
                   <td className="px-3 lg:px-6 py-4 w-[180px]">
@@ -761,12 +899,14 @@ export default function ProductsPage() {
                           </span>
                         ))
                       ) : (
-                        <span className="text-xs text-gray-400 italic">No days set</span>
+                        <span className="text-xs text-gray-400 italic">
+                          No days set
+                        </span>
                       )}
                     </div>
                   </td>
                   <td className="px-3 lg:px-6 py-4 whitespace-nowrap text-xs lg:text-sm font-medium text-gray-900 w-[130px]">
-                    {product.harga ? formatPrice(product.harga) : 'Rp 0'}
+                    {product.harga ? formatPrice(product.harga) : "Rp 0"}
                   </td>
                   <td className="px-3 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-900 w-[180px]">
                     {editingStockId === product.id ? (
@@ -776,11 +916,13 @@ export default function ProductsPage() {
                           inputMode="numeric"
                           pattern="[0-9]*"
                           value={tempStock}
-                          onChange={(e) => handleStockInputChange(e.target.value)}
+                          onChange={(e) =>
+                            handleStockInputChange(e.target.value)
+                          }
                           onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
+                            if (e.key === "Enter") {
                               saveStockEdit(product.id);
-                            } else if (e.key === 'Escape') {
+                            } else if (e.key === "Escape") {
                               cancelStockEdit();
                             }
                           }}
@@ -849,13 +991,15 @@ export default function ProductsPage() {
                           <Minus className="w-4 h-4 text-gray-600 hover:text-red-600" />
                         </button>
                         <button
-                          onClick={() => startEditingStock(product.id, product.stok || 0)}
+                          onClick={() =>
+                            startEditingStock(product.id, product.stok || 0)
+                          }
                           className={`min-w-[45px] px-3 py-1.5 rounded-lg text-sm font-semibold transition-all shadow-sm ${
-                            !product.stok || product.stok === 0 
-                              ? 'bg-red-100 text-red-800 hover:bg-red-200 border border-red-200'
-                              : product.stok < 10 
-                              ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200 border border-yellow-200'
-                              : 'bg-green-100 text-green-800 hover:bg-green-200 border border-green-200'
+                            !product.stok || product.stok === 0
+                              ? "bg-red-100 text-red-800 hover:bg-red-200 border border-red-200"
+                              : product.stok < 10
+                              ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-200 border border-yellow-200"
+                              : "bg-green-100 text-green-800 hover:bg-green-200 border border-green-200"
                           }`}
                           title="Click to edit stock"
                         >
@@ -876,22 +1020,32 @@ export default function ProductsPage() {
                   </td>
                   <td className="px-3 lg:px-6 py-4 whitespace-nowrap text-right text-sm font-medium w-[140px]">
                     <div className="flex items-center justify-end gap-2">
-                      <button 
+                      <button
                         onClick={() => handleViewProduct(product.id)}
                         className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700 transition-colors"
                         title="View Details"
                       >
                         <Eye className="w-4 h-4 lg:w-5 lg:h-5" />
                       </button>
-                      <button 
-                        onClick={() => handleEditProduct(product.id, product.nama || 'Product')}
+                      <button
+                        onClick={() =>
+                          handleEditProduct(
+                            product.id,
+                            product.nama || "Product"
+                          )
+                        }
                         className="p-2 rounded-lg bg-orange-50 text-orange-600 hover:bg-orange-100 hover:text-orange-700 transition-colors"
                         title="Edit Product"
                       >
                         <Edit className="w-4 h-4 lg:w-5 lg:h-5" />
                       </button>
-                      <button 
-                        onClick={() => handleDeleteProduct(product.id, product.nama || 'Product')}
+                      <button
+                        onClick={() =>
+                          handleDeleteProduct(
+                            product.id,
+                            product.nama || "Product"
+                          )
+                        }
                         className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 transition-colors"
                         title="Delete Product"
                       >
@@ -908,8 +1062,12 @@ export default function ProductsPage() {
         {filteredProducts.length === 0 && (
           <div className="text-center py-12">
             <Package className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No products found</h3>
-            <p className="text-gray-600">Try adjusting your search or filter criteria</p>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              No products found
+            </h3>
+            <p className="text-gray-600">
+              Try adjusting your search or filter criteria
+            </p>
           </div>
         )}
       </div>

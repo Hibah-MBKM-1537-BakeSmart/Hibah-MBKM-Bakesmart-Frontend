@@ -29,6 +29,7 @@ export interface StoreConfig {
   latitude: string;
   longitude: string;
   whatsapp_number: string; // WhatsApp number for contact when closed
+  is_delivery_enabled: boolean; // New field for delivery toggle
   operating_hours: OperatingHour[];
 }
 
@@ -116,6 +117,7 @@ const defaultConfig: StoreConfig = {
   latitude: "",
   longitude: "",
   whatsapp_number: "",
+  is_delivery_enabled: true, // Default to true
   operating_hours: defaultOperatingHours,
 };
 
@@ -157,6 +159,11 @@ export function StoreClosureProvider({
       // Ensure operating_hours is always an array
       if (!data.operating_hours || !Array.isArray(data.operating_hours)) {
         data.operating_hours = defaultOperatingHours;
+      }
+
+      // Ensure is_delivery_enabled is set (default to true if missing)
+      if (data.is_delivery_enabled === undefined) {
+        data.is_delivery_enabled = true;
       }
 
       setConfig(data);

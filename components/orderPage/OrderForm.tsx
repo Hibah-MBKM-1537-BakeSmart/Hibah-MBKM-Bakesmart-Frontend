@@ -19,6 +19,7 @@ import { id } from "date-fns/locale";
 import { CalendarIcon, MapPin, Loader2, MapIcon } from "lucide-react";
 import { useTranslation } from "@/app/contexts/TranslationContext";
 import { useCart } from "@/app/contexts/CartContext";
+import { useStoreClosure } from "@/app/contexts/StoreClosureContext";
 
 // Import Map secara Dynamic (SSR False)
 const LocationPicker = dynamic(() => import("./LocationPicker"), {
@@ -46,6 +47,7 @@ export function OrderForm({
   maxDaysAhead = 30,
 }: OrderFormProps) {
   const { t } = useTranslation();
+  const { config } = useStoreClosure();
   const {
     selectedOrderDay: cartOrderDay,
     isCartLockedToDay,
@@ -118,6 +120,24 @@ export function OrderForm({
       onOrderDayChange?.(value);
     }
   };
+
+  // Enforce pickup if delivery is disabled
+  useEffect(() => {
+    if (
+      config.is_delivery_enabled === false &&
+      formData.deliveryMode === "delivery"
+    ) {
+      setFormData((prev) => ({ ...prev, deliveryMode: "pickup" }));
+      onDeliveryModeChange?.("pickup");
+      onDeliveryFeeChange?.(0);
+      setDeliveryOptions([]);
+    }
+  }, [
+    config.is_delivery_enabled,
+    formData.deliveryMode,
+    onDeliveryModeChange,
+    onDeliveryFeeChange,
+  ]);
 
   // --- LOGIKA ONGKIR (BERAT 1 KG FIX) ---
   const calculateDeliveryFee = async () => {
@@ -411,15 +431,17 @@ export function OrderForm({
             onValueChange={(value) => handleInputChange("deliveryMode", value)}
             className="space-y-3"
           >
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="delivery" id="delivery" />
-              <Label
-                htmlFor="delivery"
-                className="text-[#5D4037] font-medium cursor-pointer"
-              >
-                {t("order.deliveryOption")}
-              </Label>
-            </div>
+            {config.is_delivery_enabled !== false && (
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="delivery" id="delivery" />
+                <Label
+                  htmlFor="delivery"
+                  className="text-[#5D4037] font-medium cursor-pointer"
+                >
+                  {t("order.deliveryOption")}
+                </Label>
+              </div>
+            )}
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="pickup" id="pickup" />
               <Label
