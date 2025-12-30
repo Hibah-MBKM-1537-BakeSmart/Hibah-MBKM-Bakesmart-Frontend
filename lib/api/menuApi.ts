@@ -1,11 +1,25 @@
-import {
-  mockMenuItems,
-  mockCategories,
-  mockDays,
-  type MenuItem,
-  type ProductType,
-  type ApiResponse,
-} from "./mockData";
+import type {
+  MenuItem,
+  ProductType,
+} from "@/lib/types";
+
+// API Response type
+interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+  message?: string;
+}
+
+// Available days for ordering
+const availableDays = [
+  { id: "Senin", name_id: "Senin", name_en: "Monday" },
+  { id: "Selasa", name_id: "Selasa", name_en: "Tuesday" },
+  { id: "Rabu", name_id: "Rabu", name_en: "Wednesday" },
+  { id: "Kamis", name_id: "Kamis", name_en: "Thursday" },
+  { id: "Jumat", name_id: "Jumat", name_en: "Friday" },
+  { id: "Sabtu", name_id: "Sabtu", name_en: "Saturday" },
+  { id: "Minggu", name_id: "Minggu", name_en: "Sunday" },
+];
 
 // Simulate network delay
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -27,22 +41,20 @@ export class MenuAPI {
     await delay(500); // Simulate network delay
 
     try {
-      // Try to fetch from localhost:5000/products first, fallback to mock data
       let items: MenuItem[] = [];
 
-      try {
-        const response = await fetch("http://localhost:5000/products");
-        if (response.ok) {
-          const apiData = await response.json();
-          items = apiData.data || apiData; // Handle both {data: [...]} and [...] formats
-          console.log("[v0] Successfully fetched from localhost:5000/products");
-        } else {
-          items = mockMenuItems;
-          console.log("[v0] Using mock data - API response not ok");
-        }
-      } catch (fetchError) {
-        console.log("[v0] Using mock data as localhost:5000 is not available");
-        items = mockMenuItems;
+      const response = await fetch("http://localhost:5000/products");
+      if (response.ok) {
+        const apiData = await response.json();
+        items = apiData.data || apiData; // Handle both {data: [...]} and [...] formats
+        console.log("[v0] Successfully fetched from localhost:5000/products");
+      } else {
+        console.log("[v0] API response not ok");
+        return {
+          success: false,
+          data: [],
+          message: "Failed to fetch menu items",
+        };
       }
 
       let filteredItems = [...items];
@@ -91,22 +103,21 @@ export class MenuAPI {
     await delay(300);
 
     try {
-      // Try to fetch from localhost:5000/products first, fallback to mock data
       let items: MenuItem[] = [];
 
-      try {
-        const response = await fetch("http://localhost:5000/products");
-        if (response.ok) {
-          const apiData = await response.json();
-          items = apiData.data || apiData;
-          console.log(
-            "[v0] Successfully fetched bestsellers from localhost:5000/products"
-          );
-        } else {
-          items = mockMenuItems;
-        }
-      } catch (fetchError) {
-        items = mockMenuItems;
+      const response = await fetch("http://localhost:5000/products");
+      if (response.ok) {
+        const apiData = await response.json();
+        items = apiData.data || apiData;
+        console.log(
+          "[v0] Successfully fetched bestsellers from localhost:5000/products"
+        );
+      } else {
+        return {
+          success: false,
+          data: [],
+          message: "Failed to fetch best sellers",
+        };
       }
 
       const bestSellers = items.filter((item) => item.isBestSeller);
@@ -132,19 +143,18 @@ export class MenuAPI {
     await delay(200);
 
     try {
-      // Try to fetch from localhost:5000/products first, fallback to mock data
       let items: MenuItem[] = [];
 
-      try {
-        const response = await fetch("http://localhost:5000/products");
-        if (response.ok) {
-          const apiData = await response.json();
-          items = apiData.data || apiData;
-        } else {
-          items = mockMenuItems;
-        }
-      } catch (fetchError) {
-        items = mockMenuItems;
+      const response = await fetch("http://localhost:5000/products");
+      if (response.ok) {
+        const apiData = await response.json();
+        items = apiData.data || apiData;
+      } else {
+        return {
+          success: false,
+          data: null,
+          message: "Failed to fetch menu item",
+        };
       }
 
       const item = items.find((item) => item.id === id);
@@ -166,14 +176,24 @@ export class MenuAPI {
     }
   }
 
-  // Get all categories
+  // Get all categories from API
   static async getCategories(): Promise<ApiResponse<ProductType[]>> {
     await delay(200);
 
     try {
+      const response = await fetch("http://localhost:5000/categories");
+      if (response.ok) {
+        const apiData = await response.json();
+        const categories = apiData.data || apiData;
+        return {
+          success: true,
+          data: categories,
+        };
+      }
       return {
-        success: true,
-        data: mockCategories,
+        success: false,
+        data: [],
+        message: "Failed to fetch categories",
       };
     } catch (error) {
       return {
@@ -184,14 +204,14 @@ export class MenuAPI {
     }
   }
 
-  // Get available days
-  static async getAvailableDays(): Promise<ApiResponse<typeof mockDays>> {
+  // Get available days (static data)
+  static async getAvailableDays(): Promise<ApiResponse<typeof availableDays>> {
     await delay(200);
 
     try {
       return {
         success: true,
-        data: mockDays,
+        data: availableDays,
       };
     } catch (error) {
       return {
@@ -208,19 +228,18 @@ export class MenuAPI {
     await delay(400);
 
     try {
-      // Try to fetch from localhost:5000/products first, fallback to mock data
       let items: MenuItem[] = [];
 
-      try {
-        const response = await fetch("http://localhost:5000/products");
-        if (response.ok) {
-          const apiData = await response.json();
-          items = apiData.data || apiData;
-        } else {
-          items = mockMenuItems;
-        }
-      } catch (fetchError) {
-        items = mockMenuItems;
+      const response = await fetch("http://localhost:5000/products");
+      if (response.ok) {
+        const apiData = await response.json();
+        items = apiData.data || apiData;
+      } else {
+        return {
+          success: false,
+          data: [],
+          message: "Failed to search menu items",
+        };
       }
 
       const searchResults = items.filter(

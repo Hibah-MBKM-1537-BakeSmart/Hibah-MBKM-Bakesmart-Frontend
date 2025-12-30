@@ -13,7 +13,7 @@ import {
 import { useCart } from "@/app/contexts/CartContext";
 import { useTranslation } from "@/app/contexts/TranslationContext";
 import { EditCustomizationModal } from "@/components/menuPage/EditCustomizationModal";
-import type { MenuItem } from "@/lib/api/mockData";
+import type { MenuItem } from "@/lib/types";
 import { useMenuData } from "@/app/hooks/useMenuData";
 import Link from "next/link";
 import { useState } from "react";

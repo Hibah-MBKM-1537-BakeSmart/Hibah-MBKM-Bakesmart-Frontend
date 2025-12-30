@@ -80,214 +80,76 @@ interface ProductionData {
   };
 }
 
-// Demo data untuk testing
-const DEMO_PRODUCTION_DATA = (): Order[] => [
-  // VERIFYING STATUS
-  {
-    id: 2001,
-    user: {
-      id: 201,
-      nama: "Ahmad Rizki",
-      no_hp: "085804065841",
-    },
-    order_products: [
-      {
-        id: 601,
-        product: {
-          id: 1,
-          nama: "Roti Tawar",
-          gambar: "/img/roti-tawar.jpg",
+// Backend API response interfaces
+interface BackendOrderProduct {
+  product_id: number;
+  product_name_id: string;
+  product_name_en?: string;
+  product_price: number;
+  jumlah: number;
+  harga_beli: number;
+  note?: string;
+}
+
+interface BackendOrder {
+  id: number;
+  user_id: number;
+  user?: {
+    id: number;
+    nama: string;
+    no_hp: string;
+  };
+  total_harga: number;
+  status: string;
+  production_status?: "pending" | "in_production" | "completed";
+  products: BackendOrderProduct[];
+  created_at?: string;
+  notes?: string;
+}
+
+interface OrderGroup {
+  id: number;
+  tanggal: string;
+  orders: BackendOrder[];
+}
+
+// Transform backend data to frontend Order format
+const transformBackendData = (groups: OrderGroup[]): Order[] => {
+  const allOrders: Order[] = [];
+
+  groups.forEach((group) => {
+    group.orders.forEach((order) => {
+      allOrders.push({
+        id: order.id,
+        user: {
+          id: order.user?.id || order.user_id,
+          nama: order.user?.nama || "Unknown",
+          no_hp: order.user?.no_hp || "-",
         },
-        jumlah: 3,
-        harga_beli: 15000,
-        note: "Dipanggang golden",
-        addons: [
-          { addon_id: 1, nama: "Topping Coklat", harga: 2000, quantity: 2 },
-        ],
-      },
-    ],
-    status: "verifying",
-    created_at: "2025-12-25T08:00:00Z",
-    scheduled_date: "2025-12-25",
-    notes: "Pesanan baru - menunggu verifikasi",
-  },
-  // PENDING STATUS
-  {
-    id: 2002,
-    user: {
-      id: 202,
-      nama: "Siti Nur",
-      no_hp: "08222333444",
-    },
-    order_products: [
-      {
-        id: 602,
-        product: {
-          id: 2,
-          nama: "Cupcakes",
-          gambar: "/img/cupcakes.jpg",
-        },
-        jumlah: 12,
-        harga_beli: 8000,
-        note: "Warna merah muda",
-        addons: [
-          {
-            addon_id: 4,
-            nama: "Frosting Strawberry",
-            harga: 2000,
-            quantity: 10,
+        order_products: order.products.map((p) => ({
+          id: p.product_id,
+          product: {
+            id: p.product_id,
+            nama: p.product_name_id,
           },
-        ],
-      },
-    ],
-    status: "pending",
-    created_at: "2025-12-24T14:30:00Z",
-    scheduled_date: "2025-12-25",
-    notes: "Menunggu bukti pembayaran",
-  },
-  // PAID STATUS
-  {
-    id: 1001,
-    user: {
-      id: 101,
-      nama: "John Doe",
-      no_hp: "08123456789",
-    },
-    order_products: [
-      {
-        id: 501,
-        product: {
-          id: 1,
-          nama: "Roti Tawar",
-          gambar: "/img/roti-tawar.jpg",
-        },
-        jumlah: 5,
-        harga_beli: 15000,
-        note: "Dipanggang hingga golden brown",
-        addons: [
-          { addon_id: 1, nama: "Topping Coklat", harga: 2000, quantity: 3 },
-          { addon_id: 2, nama: "Keju Cheddar", harga: 3000, quantity: 2 },
-        ],
-      },
-      {
-        id: 502,
-        product: {
-          id: 3,
-          nama: "Donuts",
-          gambar: "/img/donuts.jpg",
-        },
-        jumlah: 10,
-        harga_beli: 5000,
-        note: "",
-        addons: [{ addon_id: 3, nama: "Sprinkles", harga: 1000, quantity: 10 }],
-      },
-    ],
-    status: "paid",
-    created_at: "2025-12-25T09:00:00Z",
-    scheduled_date: "2025-12-25",
-    notes: "Pesanan untuk acara kantor",
-    production_status: "pending",
-  },
-  {
-    id: 1002,
-    user: {
-      id: 102,
-      nama: "Jane Smith",
-      no_hp: "08987654321",
-    },
-    order_products: [
-      {
-        id: 503,
-        product: {
-          id: 2,
-          nama: "Cupcakes",
-          gambar: "/img/cupcakes.jpg",
-        },
-        jumlah: 20,
-        harga_beli: 8000,
-        note: "Warna pink dan biru",
-        addons: [
-          { addon_id: 4, nama: "Frosting Vanila", harga: 2000, quantity: 15 },
-        ],
-      },
-    ],
-    status: "paid",
-    created_at: "2025-12-25T10:30:00Z",
-    scheduled_date: "2025-12-25",
-    notes: "",
-    production_status: "in_production",
-  },
-  {
-    id: 1003,
-    user: {
-      id: 103,
-      nama: "Budi Santoso",
-      no_hp: "08765432100",
-    },
-    order_products: [
-      {
-        id: 504,
-        product: {
-          id: 4,
-          nama: "Roti Tawar",
-          gambar: "/img/roti-tawar.jpg",
-        },
-        jumlah: 4,
-        harga_beli: 8000,
-        note: "Pesanan dari warung ABC",
-        addons: [
-          { addon_id: 5, nama: "Addon Coklat", harga: 2000, quantity: 3 },
-          { addon_id: 7, nama: "Addon Potong", harga: 1500, quantity: 2 },
-        ],
-      },
-      {
-        id: 507,
-        product: {
-          id: 3,
-          nama: "Croissant",
-          gambar: "/img/croissant.jpg",
-        },
-        jumlah: 6,
-        harga_beli: 10000,
-        note: "",
-        addons: [],
-      },
-    ],
-    status: "paid",
-    created_at: "2025-12-25T11:00:00Z",
-    scheduled_date: "2025-12-25",
-    notes: "⭐ TARGET: Siap jam 2 siang untuk pengiriman",
-    production_status: "pending",
-  },
-  // COMPLETED STATUS
-  {
-    id: 2003,
-    user: {
-      id: 203,
-      nama: "Dewi Lestari",
-      no_hp: "08444555666",
-    },
-    order_products: [
-      {
-        id: 605,
-        product: {
-          id: 5,
-          nama: "Bread Pudding",
-          gambar: "/img/bread-pudding.jpg",
-        },
-        jumlah: 5,
-        harga_beli: 20000,
-        note: "",
-        addons: [],
-      },
-    ],
-    status: "completed",
-    created_at: "2025-12-23T09:00:00Z",
-    scheduled_date: "2025-12-23",
-    notes: "Sudah dikirim",
-    production_status: "completed",
-  },
-];
+          jumlah: p.jumlah,
+          harga_beli: p.harga_beli,
+          note: p.note || "",
+          addons: [],
+        })),
+        status: order.status,
+        created_at: order.created_at || group.tanggal,
+        scheduled_date: group.tanggal,
+        notes: order.notes || "",
+        production_status: order.production_status || "pending",
+      });
+    });
+  });
+
+  return allOrders;
+};
+
+
 
 function ProductionItemRow({
   item,
@@ -404,10 +266,9 @@ function ProductionOrderCard({
 
   return (
     <div
-      className={`border-2 rounded-lg p-4 ${
-        statusColors[order.production_status || "pending"] ||
+      className={`border-2 rounded-lg p-4 ${statusColors[order.production_status || "pending"] ||
         "bg-gray-50 border-gray-300"
-      }`}
+        }`}
     >
       {/* Header */}
       <div className="flex items-start justify-between gap-3 mb-4">
@@ -416,9 +277,8 @@ function ProductionOrderCard({
           <p className="text-xs text-gray-600">{order.user.nama}</p>
         </div>
         <span
-          className={`px-2 py-1 rounded text-xs font-semibold whitespace-nowrap ${
-            statusBadgeColors[order.production_status || "pending"]
-          }`}
+          className={`px-2 py-1 rounded text-xs font-semibold whitespace-nowrap ${statusBadgeColors[order.production_status || "pending"]
+            }`}
         >
           {statusLabels[order.production_status || "pending"]}
         </span>
@@ -498,23 +358,10 @@ export default function ProductionPage() {
   const [selectedDate, setSelectedDate] = useState<string>(
     format(new Date(), "yyyy-MM-dd")
   );
-  const [dateRange, setDateRange] = useState<{ start: string; end: string }>({
-    start: format(new Date(), "yyyy-MM-dd"),
-    end: format(
-      new Date(new Date().getTime() + 6 * 24 * 60 * 60 * 1000),
-      "yyyy-MM-dd"
-    ),
-  });
-  const [orderDateRange, setOrderDateRange] = useState<{
-    start: string;
-    end: string;
-  }>({
-    start: format(new Date(), "yyyy-MM-dd"),
-    end: format(
-      new Date(new Date().getTime() + 6 * 24 * 60 * 60 * 1000),
-      "yyyy-MM-dd"
-    ),
-  });
+  // Multi-select dates for Order tab (using Set for easy toggle)
+  const [selectedOrderDates, setSelectedOrderDates] = useState<Set<string>>(new Set());
+  // Multi-select dates for Production tab
+  const [selectedProductionDates, setSelectedProductionDates] = useState<Set<string>>(new Set());
   const [allOrders, setAllOrders] = useState<Order[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -533,64 +380,78 @@ export default function ProductionPage() {
   const [orderStatusFilter, setOrderStatusFilter] = useState<
     "all" | "verifying" | "pending" | "paid" | "completed"
   >("all");
+  const [showAllDates, setShowAllDates] = useState(true); // Default to show all dates for orders tab
+  const [showAllProductionDates, setShowAllProductionDates] = useState(true); // Default to show all dates for production tab
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
   const [isEditingOrder, setIsEditingOrder] = useState(false);
   const [editedOrder, setEditedOrder] = useState<Order | null>(null);
 
   useEffect(() => {
     fetchProductionList();
-  }, [dateRange]);
+  }, []);  // Remove dateRange dependency to always fetch all data
 
   const fetchProductionList = async () => {
     setLoading(true);
     setError(null);
     try {
-      // Load semua orders (untuk all tabs)
-      const allDemoData = DEMO_PRODUCTION_DATA();
-      setAllOrders(allDemoData);
+      // Fetch order groups from backend API
+      const response = await fetch('/api/orders/group');
+      const result = await response.json();
 
-      // Filter hanya yang status paid dan dalam range tanggal untuk production list
-      const filteredOrders = allDemoData.filter((order) => {
-        const orderDate = order.scheduled_date
-          ? order.scheduled_date.split("T")[0]
-          : null;
-        return (
-          orderDate &&
-          orderDate >= dateRange.start &&
-          orderDate <= dateRange.end &&
-          order.status === "paid"
+      console.log('[Production] API Response:', result);
+
+      // Backend returns { message: "Order retrieved", data: [...] } without status field
+      // Check if we have data array (success case)
+      if (Array.isArray(result.data)) {
+        // Transform backend data to frontend Order format
+        const transformedOrders = transformBackendData(result.data);
+        console.log('[Production] Transformed orders:', transformedOrders.length);
+        setAllOrders(transformedOrders);
+        
+        // Set orders to all paid/completed orders for production tracking
+        // Production shows orders that are paid (ready for production) or completed
+        const productionOrders = transformedOrders.filter((order: Order) => 
+          order.status === "paid" || order.status === "completed"
         );
-      });
-
-      setOrders(filteredOrders);
+        console.log('[Production] Orders for production:', productionOrders.length);
+        setOrders(productionOrders);
+      } else if (result.status === 'error') {
+        console.error('[Production] API error:', result.message);
+        setError(result.message || 'Gagal memuat data dari server');
+        setAllOrders([]);
+        setOrders([]);
+      } else {
+        console.error('[Production] Unexpected response format:', result);
+        setError('Format response tidak sesuai');
+        setAllOrders([]);
+        setOrders([]);
+      }
     } catch (err) {
-      console.log("Error loading data");
-      setError("Gagal memuat data");
-      const allDemoData = DEMO_PRODUCTION_DATA();
-      setAllOrders(allDemoData);
-      const filteredOrders = allDemoData.filter((order) => {
-        const orderDate = order.scheduled_date
-          ? order.scheduled_date.split("T")[0]
-          : null;
-        return (
-          orderDate &&
-          orderDate >= dateRange.start &&
-          orderDate <= dateRange.end &&
-          order.status === "paid"
-        );
-      });
-      setOrders(filteredOrders);
+      console.error('[Production] Fetch error:', err);
+      setError('Gagal memuat data. Pastikan backend server berjalan.');
+      setAllOrders([]);
+      setOrders([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const totalProducts = orders.reduce(
+
+  // Compute filtered production orders based on selected dates
+  const filteredProductionOrders = orders.filter((order: Order) => {
+    if (showAllProductionDates || selectedProductionDates.size === 0) return true;
+    const orderDate = order.scheduled_date
+      ? order.scheduled_date.split("T")[0]
+      : null;
+    return orderDate && selectedProductionDates.has(orderDate);
+  });
+
+  const totalProducts = filteredProductionOrders.reduce(
     (sum, order) => sum + order.order_products.length,
     0
   );
 
-  const totalAddons = orders.reduce((sum, order) => {
+  const totalAddons = filteredProductionOrders.reduce((sum, order) => {
     return (
       sum +
       order.order_products.reduce((itemSum, item) => {
@@ -656,14 +517,14 @@ export default function ProductionPage() {
         <div class="info">
           <div style="display: flex; justify-content: space-between;">
             <span>${new Date(order.created_at).toLocaleDateString(
-              "id-ID"
-            )}</span>
+      "id-ID"
+    )}</span>
             <span>Admin</span>
           </div>
           <div style="display: flex; justify-content: space-between;">
             <span>${new Date(order.created_at).toLocaleTimeString(
-              "id-ID"
-            )}</span>
+      "id-ID"
+    )}</span>
             <span>${order.user.nama.substring(0, 15)}</span>
           </div>
           <div>No. #${order.id}</div>
@@ -673,29 +534,28 @@ export default function ProductionPage() {
 
         <div class="items">
           ${order.order_products
-            .map((item) => {
-              const itemTotal = item.jumlah * item.harga_beli;
-              const addonsTotal =
-                item.addons?.reduce(
-                  (sum, addon) => sum + (addon.quantity || 0) * addon.harga,
-                  0
-                ) || 0;
-              const total = itemTotal + addonsTotal;
+        .map((item) => {
+          const itemTotal = item.jumlah * item.harga_beli;
+          const addonsTotal =
+            item.addons?.reduce(
+              (sum, addon) => sum + (addon.quantity || 0) * addon.harga,
+              0
+            ) || 0;
+          const total = itemTotal + addonsTotal;
 
-              return `
+          return `
             <div class="item">
               <div class="item-name">${item.product.nama}</div>
               <div class="item-details">
                 <span>${item.jumlah} x ${item.harga_beli.toLocaleString(
-                "id-ID"
-              )}</span>
+            "id-ID"
+          )}</span>
                 <span>Rp ${itemTotal.toLocaleString("id-ID")}</span>
               </div>
-              ${
-                item.addons && item.addons.length > 0
-                  ? item.addons
-                      .map(
-                        (addon) => `
+              ${item.addons && item.addons.length > 0
+              ? item.addons
+                .map(
+                  (addon) => `
                   <div class="item-details addon">
                     <span>+ ${addon.nama} (${addon.quantity || 0}x)</span>
                     <span>Rp ${(
@@ -703,44 +563,44 @@ export default function ProductionPage() {
                     ).toLocaleString("id-ID")}</span>
                   </div>
                 `
-                      )
-                      .join("")
-                  : ""
-              }
+                )
+                .join("")
+              : ""
+            }
             </div>
           `;
-            })
-            .join("")}
+        })
+        .join("")}
         </div>
 
         <div class="total-section">
           <div class="row">
             <span>Total</span>
             <span>Rp ${order.order_products
-              .reduce((sum, item) => {
-                const itemTotal = item.jumlah * item.harga_beli;
-                const addonsTotal =
-                  item.addons?.reduce(
-                    (s, a) => s + (a.quantity || 0) * a.harga,
-                    0
-                  ) || 0;
-                return sum + itemTotal + addonsTotal;
-              }, 0)
-              .toLocaleString("id-ID")}</span>
+        .reduce((sum, item) => {
+          const itemTotal = item.jumlah * item.harga_beli;
+          const addonsTotal =
+            item.addons?.reduce(
+              (s, a) => s + (a.quantity || 0) * a.harga,
+              0
+            ) || 0;
+          return sum + itemTotal + addonsTotal;
+        }, 0)
+        .toLocaleString("id-ID")}</span>
           </div>
           <div class="row">
             <span>Bayar (Cash)</span>
             <span>Rp ${order.order_products
-              .reduce((sum, item) => {
-                const itemTotal = item.jumlah * item.harga_beli;
-                const addonsTotal =
-                  item.addons?.reduce(
-                    (s, a) => s + (a.quantity || 0) * a.harga,
-                    0
-                  ) || 0;
-                return sum + itemTotal + addonsTotal;
-              }, 0)
-              .toLocaleString("id-ID")}</span>
+        .reduce((sum, item) => {
+          const itemTotal = item.jumlah * item.harga_beli;
+          const addonsTotal =
+            item.addons?.reduce(
+              (s, a) => s + (a.quantity || 0) * a.harga,
+              0
+            ) || 0;
+          return sum + itemTotal + addonsTotal;
+        }, 0)
+        .toLocaleString("id-ID")}</span>
           </div>
           <div class="row">
             <span>Kembali</span>
@@ -778,7 +638,7 @@ export default function ProductionPage() {
       }
     > = {};
 
-    orders.forEach((order) =>
+    filteredProductionOrders.forEach((order) =>
       order.order_products.forEach((item) => {
         const productName = item.product.nama;
         if (!productMap[productName]) {
@@ -862,21 +722,19 @@ export default function ProductionPage() {
       <body>
         <div class="header">
           <h2>DAFTAR PRODUKSI</h2>
-          <p>Tanggal: ${format(new Date(dateRange.start), "dd MMMM yyyy", {
-            locale: idLocale,
-          })} - ${format(new Date(dateRange.end), "dd MMMM yyyy", {
-      locale: idLocale,
-    })}</p>
-          <p>Total ${orders.length} Pesanan</p>
+          <p>Tanggal: ${showAllProductionDates || selectedProductionDates.size === 0 
+            ? 'Semua Tanggal' 
+            : Array.from(selectedProductionDates).sort().map(d => format(new Date(d), "dd MMM", { locale: idLocale })).join(", ")
+          }</p>
+          <p>Total ${filteredProductionOrders.length} Pesanan</p>
         </div>
 
-        ${
-          generalNotes
-            ? `<div class="notes"><div class="notes-title">📌 CATATAN UMUM:</div>${generalNotes
-                .split("\\n")
-                .join("<br>")}</div>`
-            : ""
-        }
+        ${generalNotes
+        ? `<div class="notes"><div class="notes-title">📌 CATATAN UMUM:</div>${generalNotes
+          .split("\\n")
+          .join("<br>")}</div>`
+        : ""
+      }
 
         <table>
           <thead>
@@ -890,29 +748,29 @@ export default function ProductionPage() {
           </thead>
           <tbody>
             ${allRows
-              .map((row) => {
-                const targetKey = row.product;
-                const target = productionTargets[targetKey] || row.totalQty;
+        .map((row) => {
+          const targetKey = row.product;
+          const target = productionTargets[targetKey] || row.totalQty;
 
-                // Count breakdown items: items without addons + number of different addons
-                const breakdownItems: Array<{ label: string; qty: number }> =
-                  [];
-                if (row.withoutAddons > 0) {
-                  breakdownItems.push({
-                    label: "(tanpa addon)",
-                    qty: row.withoutAddons,
-                  });
-                }
-                row.addons.forEach((addon) => {
-                  breakdownItems.push({
-                    label: addon.nama,
-                    qty: addon.quantity,
-                  });
-                });
+          // Count breakdown items: items without addons + number of different addons
+          const breakdownItems: Array<{ label: string; qty: number }> =
+            [];
+          if (row.withoutAddons > 0) {
+            breakdownItems.push({
+              label: "(tanpa addon)",
+              qty: row.withoutAddons,
+            });
+          }
+          row.addons.forEach((addon) => {
+            breakdownItems.push({
+              label: addon.nama,
+              qty: addon.quantity,
+            });
+          });
 
-                // If no breakdown items, just show product row
-                if (breakdownItems.length === 0) {
-                  return `
+          // If no breakdown items, just show product row
+          if (breakdownItems.length === 0) {
+            return `
                   <tr>
                     <td class="product-col"><strong>${row.product}</strong></td>
                     <td class="addon-col">-</td>
@@ -921,39 +779,35 @@ export default function ProductionPage() {
                     <td class="target-col">${target}</td>
                   </tr>
                 `;
-                }
+          }
 
-                // If has breakdown items, show product with first breakdown item, then remaining items
-                return `
+          // If has breakdown items, show product with first breakdown item, then remaining items
+          return `
                 <tr>
-                  <td class="product-col" rowspan="${
-                    breakdownItems.length
-                  }"><strong>${row.product}</strong></td>
-                  <td class="addon-col"><span class="addon-item">└─ ${
-                    breakdownItems[0].label
-                  }</span></td>
+                  <td class="product-col" rowspan="${breakdownItems.length
+            }"><strong>${row.product}</strong></td>
+                  <td class="addon-col"><span class="addon-item">└─ ${breakdownItems[0].label
+            }</span></td>
                   <td class="qty-col">${breakdownItems[0].qty}</td>
-                  <td class="qty-col" rowspan="${
-                    breakdownItems.length
-                  }"><strong>${row.totalQty}</strong></td>
-                  <td class="target-col" rowspan="${
-                    breakdownItems.length
-                  }"><strong>${target}</strong></td>
+                  <td class="qty-col" rowspan="${breakdownItems.length
+            }"><strong>${row.totalQty}</strong></td>
+                  <td class="target-col" rowspan="${breakdownItems.length
+            }"><strong>${target}</strong></td>
                 </tr>
                 ${breakdownItems
-                  .slice(1)
-                  .map(
-                    (item) => `
+              .slice(1)
+              .map(
+                (item) => `
                   <tr class="addon-row">
                     <td class="addon-col"><span class="addon-item">└─ ${item.label}</span></td>
                     <td class="qty-col">${item.qty}</td>
                   </tr>
                 `
-                  )
-                  .join("")}
-              `;
-              })
+              )
               .join("")}
+              `;
+        })
+        .join("")}
           </tbody>
         </table>
       </body>
@@ -971,7 +825,7 @@ export default function ProductionPage() {
 
   const handleMarkComplete = async (orderId: number) => {
     try {
-      // Update local state
+      // Optimistic update - update local state first
       setOrders(
         orders.map((order) =>
           order.id === orderId
@@ -979,92 +833,198 @@ export default function ProductionPage() {
             : order
         )
       );
+      setAllOrders(
+        allOrders.map((order) =>
+          order.id === orderId
+            ? { ...order, production_status: "completed" as const }
+            : order
+        )
+      );
 
-      // Attempt to call backend API
-      await fetch(`/api/admin/orders/${orderId}/complete`, {
-        method: "POST",
+      // Call backend API to update production status
+      const response = await fetch(`/api/orders/${orderId}/production`, {
+        method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
-        credentials: "include",
+        body: JSON.stringify({ production_status: "completed" }),
       });
+
+      if (!response.ok) {
+        console.error("[Production] Failed to update production status");
+        // Optionally revert or show error
+      }
     } catch (err) {
-      console.log("Status updated locally");
+      console.error("[Production] Error updating production status:", err);
     }
   };
 
   const handleApproveOrder = async (orderId: number) => {
-    setAllOrders(
-      allOrders.map((o) =>
-        o.id === orderId ? { ...o, status: "pending" as const } : o
-      )
-    );
+    try {
+      // Optimistic update
+      setAllOrders(
+        allOrders.map((o) =>
+          o.id === orderId ? { ...o, status: "pending" as const } : o
+        )
+      );
+
+      // Call backend API to update order status
+      const response = await fetch(`/api/orders/${orderId}/status`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ status: "pending" }),
+      });
+
+      if (!response.ok) {
+        console.error("[Production] Failed to approve order");
+      }
+    } catch (err) {
+      console.error("[Production] Error approving order:", err);
+    }
   };
 
   const handleRejectOrder = async (orderId: number) => {
-    setAllOrders(allOrders.filter((o) => o.id !== orderId));
+    try {
+      // Optimistic update
+      setAllOrders(allOrders.filter((o) => o.id !== orderId));
+
+      // Call backend API to delete order
+      const response = await fetch(`/api/orders/${orderId}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        console.error("[Production] Failed to reject/delete order");
+        // Optionally refetch data on error
+      }
+    } catch (err) {
+      console.error("[Production] Error rejecting order:", err);
+    }
   };
 
   const handleVerifyPayment = async (orderId: number) => {
-    setAllOrders(
-      allOrders.map((o) =>
-        o.id === orderId ? { ...o, status: "paid" as const } : o
-      )
-    );
+    try {
+      // Optimistic update
+      setAllOrders(
+        allOrders.map((o) =>
+          o.id === orderId ? { ...o, status: "paid" as const } : o
+        )
+      );
+
+      // Call backend API to update order status to paid
+      const response = await fetch(`/api/orders/${orderId}/status`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ status: "paid" }),
+      });
+
+      if (!response.ok) {
+        console.error("[Production] Failed to verify payment");
+      }
+    } catch (err) {
+      console.error("[Production] Error verifying payment:", err);
+    }
   };
 
   const handleCompleteOrder = async (orderId: number) => {
-    setAllOrders(
-      allOrders.map((o) =>
-        o.id === orderId ? { ...o, status: "completed" as const } : o
-      )
-    );
+    try {
+      // Optimistic update
+      setAllOrders(
+        allOrders.map((o) =>
+          o.id === orderId ? { ...o, status: "completed" as const } : o
+        )
+      );
+
+      // Call backend API to update order status to completed
+      const response = await fetch(`/api/orders/${orderId}/status`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ status: "completed" }),
+      });
+
+      if (!response.ok) {
+        console.error("[Production] Failed to complete order");
+      }
+    } catch (err) {
+      console.error("[Production] Error completing order:", err);
+    }
+  };
+
+  // Handle date toggle for Orders tab (click to add/remove date)
+  const handleOrderDateClick = (dateStr: string) => {
+    setShowAllDates(false);
+    setSelectedOrderDates(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(dateStr)) {
+        newSet.delete(dateStr);
+        // If no dates selected, show all
+        if (newSet.size === 0) {
+          setShowAllDates(true);
+        }
+      } else {
+        // Max 7 dates
+        if (newSet.size >= 7) {
+          return prev; // Don't add more
+        }
+        newSet.add(dateStr);
+      }
+      return newSet;
+    });
+  };
+
+  // Handle date toggle for Production tab
+  const handleProductionDateClick = (dateStr: string) => {
+    setShowAllProductionDates(false);
+    setSelectedProductionDates(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(dateStr)) {
+        newSet.delete(dateStr);
+        // If no dates selected, show all
+        if (newSet.size === 0) {
+          setShowAllProductionDates(true);
+        }
+      } else {
+        // Max 7 dates
+        if (newSet.size >= 7) {
+          return prev; // Don't add more
+        }
+        newSet.add(dateStr);
+      }
+      return newSet;
+    });
+  };
+
+  // Helper function to check if order date matches selected dates
+  const isOrderDateSelected = (orderDate: string | null): boolean => {
+    if (showAllDates || selectedOrderDates.size === 0) return true;
+    return orderDate ? selectedOrderDates.has(orderDate) : false;
   };
 
   const groupedOrders = {
     verifying: allOrders.filter((o) => {
-      const orderDate = o.scheduled_date
-        ? o.scheduled_date.split("T")[0]
-        : null;
-      return (
-        o.status === "verifying" &&
-        orderDate &&
-        orderDate >= orderDateRange.start &&
-        orderDate <= orderDateRange.end
-      );
+      const orderDate = o.scheduled_date ? o.scheduled_date.split("T")[0] : null;
+      return isOrderDateSelected(orderDate) && o.status === "verifying";
     }),
     pending: allOrders.filter((o) => {
-      const orderDate = o.scheduled_date
-        ? o.scheduled_date.split("T")[0]
-        : null;
-      return (
-        o.status === "pending" &&
-        orderDate &&
-        orderDate >= orderDateRange.start &&
-        orderDate <= orderDateRange.end
-      );
+      const orderDate = o.scheduled_date ? o.scheduled_date.split("T")[0] : null;
+      return isOrderDateSelected(orderDate) && o.status === "pending";
     }),
     paid: allOrders.filter((o) => {
-      const orderDate = o.scheduled_date
-        ? o.scheduled_date.split("T")[0]
-        : null;
-      return (
-        o.status === "paid" &&
-        orderDate &&
-        orderDate >= orderDateRange.start &&
-        orderDate <= orderDateRange.end
-      );
+      const orderDate = o.scheduled_date ? o.scheduled_date.split("T")[0] : null;
+      return isOrderDateSelected(orderDate) && o.status === "paid";
     }),
     completed: allOrders.filter((o) => {
-      const orderDate = o.scheduled_date
-        ? o.scheduled_date.split("T")[0]
-        : null;
-      return (
-        o.status === "completed" &&
-        orderDate &&
-        orderDate >= orderDateRange.start &&
-        orderDate <= orderDateRange.end
-      );
+      const orderDate = o.scheduled_date ? o.scheduled_date.split("T")[0] : null;
+      return isOrderDateSelected(orderDate) && o.status === "completed";
     }),
   };
 
@@ -1081,21 +1041,19 @@ export default function ProductionPage() {
       <div className="flex gap-1 border-b border-gray-200">
         <button
           onClick={() => setActiveTab("orders")}
-          className={`px-4 py-2 text-sm font-medium transition-colors flex items-center gap-2 ${
-            activeTab === "orders"
-              ? "border-b-2 border-[#9B6D49] text-[#9B6D49] -mb-px"
-              : "text-gray-500 hover:text-gray-700"
-          }`}
+          className={`px-4 py-2 text-sm font-medium transition-colors flex items-center gap-2 ${activeTab === "orders"
+            ? "border-b-2 border-[#9B6D49] text-[#9B6D49] -mb-px"
+            : "text-gray-500 hover:text-gray-700"
+            }`}
         >
           <ClipboardList size={16} /> Kelola Order
         </button>
         <button
           onClick={() => setActiveTab("production")}
-          className={`px-4 py-2 text-sm font-medium transition-colors flex items-center gap-2 ${
-            activeTab === "production"
-              ? "border-b-2 border-[#9B6D49] text-[#9B6D49] -mb-px"
-              : "text-gray-500 hover:text-gray-700"
-          }`}
+          className={`px-4 py-2 text-sm font-medium transition-colors flex items-center gap-2 ${activeTab === "production"
+            ? "border-b-2 border-[#9B6D49] text-[#9B6D49] -mb-px"
+            : "text-gray-500 hover:text-gray-700"
+            }`}
         >
           <ChefHat size={16} /> Daftar Produksi
         </button>
@@ -1109,6 +1067,11 @@ export default function ProductionPage() {
             <div className="mb-2">
               <h3 className="text-sm font-bold text-gray-900 mb-2 flex items-center gap-2">
                 <Calendar size={16} /> Filter
+                {selectedOrderDates.size > 0 && !showAllDates && (
+                  <span className="text-[10px] text-gray-500 font-normal ml-2">
+                    ({selectedOrderDates.size}/7 tanggal dipilih)
+                  </span>
+                )}
               </h3>
               <div className="flex gap-1.5 flex-wrap">
                 {Array.from({ length: 7 }).map((_, i) => {
@@ -1120,26 +1083,26 @@ export default function ProductionPage() {
                     locale: idLocale,
                   });
                   const dayNum = format(currentDate, "d");
-                  const isStart = dateStr === orderDateRange.start;
-                  const isEnd = dateStr === orderDateRange.end;
-                  const isInRange =
-                    dateStr >= orderDateRange.start &&
-                    dateStr <= orderDateRange.end;
+                  const isSelected = selectedOrderDates.has(dateStr) && !showAllDates;
 
                   return (
                     <button
                       key={dateStr}
-                      onClick={() => {
-                        setOrderDateRange({ start: dateStr, end: dateStr });
-                      }}
-                      className={`px-2.5 py-1.5 rounded font-medium text-xs transition-colors ${
-                        isStart && isEnd
+                      onClick={() => handleOrderDateClick(dateStr)}
+                      className={`relative px-2.5 py-1.5 rounded font-medium text-xs transition-colors ${
+                        isSelected
                           ? "bg-[#9B6D49] text-white"
-                          : isInRange
-                          ? "bg-[#e8dcc8] text-[#9B6D49]"
                           : "bg-gray-50 text-gray-700 border border-gray-200 hover:border-[#9B6D49]"
                       }`}
                     >
+                      {/* Checkbox indicator */}
+                      <div className={`absolute -top-1 -right-1 w-3.5 h-3.5 rounded border-2 flex items-center justify-center text-[8px] ${
+                        isSelected 
+                          ? "bg-[#9B6D49] border-[#9B6D49] text-white" 
+                          : "bg-white border-gray-300"
+                      }`}>
+                        {isSelected && "✓"}
+                      </div>
                       <div className="text-[10px] font-bold">{dayName}</div>
                       <div className="text-sm">{dayNum}</div>
                     </button>
@@ -1152,23 +1115,34 @@ export default function ProductionPage() {
             <div className="flex flex-wrap gap-2 items-center text-xs">
               <button
                 onClick={() => {
-                  const today = format(new Date(), "yyyy-MM-dd");
-                  setOrderDateRange({ start: today, end: today });
+                  setShowAllDates(true);
+                  setSelectedOrderDates(new Set());
                 }}
-                className="px-2 py-1 bg-gray-50 text-gray-600 border border-gray-200 rounded hover:bg-gray-100"
+                className={`px-2 py-1 border rounded ${showAllDates ? 'bg-[#9B6D49] text-white border-[#9B6D49]' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'}`}
+              >
+                Semua
+              </button>
+              <button
+                onClick={() => {
+                  const today = format(new Date(), "yyyy-MM-dd");
+                  setSelectedOrderDates(new Set([today]));
+                  setShowAllDates(false);
+                }}
+                className={`px-2 py-1 border rounded ${!showAllDates && selectedOrderDates.size === 1 && selectedOrderDates.has(format(new Date(), "yyyy-MM-dd")) ? 'bg-[#9B6D49] text-white border-[#9B6D49]' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'}`}
               >
                 Hari Ini
               </button>
               <button
                 onClick={() => {
-                  const start = format(new Date(), "yyyy-MM-dd");
-                  const end = format(
-                    new Date(new Date().getTime() + 6 * 24 * 60 * 60 * 1000),
-                    "yyyy-MM-dd"
-                  );
-                  setOrderDateRange({ start, end });
+                  // Select all 7 days
+                  const dates = new Set<string>();
+                  for (let i = 0; i < 7; i++) {
+                    dates.add(format(new Date(new Date().getTime() + i * 24 * 60 * 60 * 1000), "yyyy-MM-dd"));
+                  }
+                  setSelectedOrderDates(dates);
+                  setShowAllDates(false);
                 }}
-                className="px-2 py-1 bg-gray-50 text-gray-600 border border-gray-200 rounded hover:bg-gray-100"
+                className={`px-2 py-1 border rounded ${!showAllDates && selectedOrderDates.size === 7 ? 'bg-[#9B6D49] text-white border-[#9B6D49]' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'}`}
               >
                 7 Hari
               </button>
@@ -1185,23 +1159,22 @@ export default function ProductionPage() {
               </select>
               <input
                 type="date"
-                value={orderDateRange.start}
                 onChange={(e) => {
-                  setOrderDateRange({
-                    start: e.target.value,
-                    end: e.target.value,
-                  });
+                  if (e.target.value) {
+                    setSelectedOrderDates(new Set([e.target.value]));
+                    setShowAllDates(false);
+                  }
                 }}
                 className="px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-[#9B6D49]"
               />
               <span className="text-gray-400 ml-auto">
-                {format(new Date(orderDateRange.start), "d MMM", {
-                  locale: idLocale,
-                })}{" "}
-                -{" "}
-                {format(new Date(orderDateRange.end), "d MMM yyyy", {
-                  locale: idLocale,
-                })}
+                {showAllDates || selectedOrderDates.size === 0 ? (
+                  "Semua Tanggal"
+                ) : (
+                  Array.from(selectedOrderDates).sort().map(d => 
+                    format(new Date(d), "d MMM", { locale: idLocale })
+                  ).join(", ")
+                )}
               </span>
             </div>
           </div>
@@ -1470,25 +1443,25 @@ export default function ProductionPage() {
                                   ""
                                 )}?text=${encodeURIComponent(
                                   `Halo Kak ${order.user.nama}, berikut detail pesanan Anda:\n\n` +
-                                    `*Pesanan #${order.id}*\n` +
-                                    `Jadwal: ${format(
-                                      new Date(
-                                        order.scheduled_date || order.created_at
-                                      ),
-                                      "dd MMM yyyy",
-                                      { locale: idLocale }
-                                    )}\n\n` +
-                                    `*Rincian Produk:*\n` +
-                                    order.order_products
-                                      .map(
-                                        (p) =>
-                                          `- ${p.product.nama} (${p.jumlah}x)`
-                                      )
-                                      .join("\n") +
-                                    `\n\n*Total: Rp ${totalPrice.toLocaleString(
-                                      "id-ID"
-                                    )}*\n\n` +
-                                    `Mohon ditunggu updatenya ya kak! Terima kasih`
+                                  `*Pesanan #${order.id}*\n` +
+                                  `Jadwal: ${format(
+                                    new Date(
+                                      order.scheduled_date || order.created_at
+                                    ),
+                                    "dd MMM yyyy",
+                                    { locale: idLocale }
+                                  )}\n\n` +
+                                  `*Rincian Produk:*\n` +
+                                  order.order_products
+                                    .map(
+                                      (p) =>
+                                        `- ${p.product.nama} (${p.jumlah}x)`
+                                    )
+                                    .join("\n") +
+                                  `\n\n*Total: Rp ${totalPrice.toLocaleString(
+                                    "id-ID"
+                                  )}*\n\n` +
+                                  `Mohon ditunggu updatenya ya kak! Terima kasih`
                                 )}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
@@ -1519,6 +1492,11 @@ export default function ProductionPage() {
               <div className="mb-3">
                 <h3 className="text-sm font-bold text-gray-900 mb-2 flex items-center gap-2">
                   <Calendar size={16} /> Jadwal
+                  {selectedProductionDates.size > 0 && !showAllProductionDates && (
+                    <span className="text-[10px] text-gray-500 font-normal ml-2">
+                      ({selectedProductionDates.size}/7 tanggal dipilih)
+                    </span>
+                  )}
                 </h3>
                 <div className="flex gap-1.5 flex-wrap">
                   {Array.from({ length: 7 }).map((_, i) => {
@@ -1530,25 +1508,26 @@ export default function ProductionPage() {
                       locale: idLocale,
                     });
                     const dayNum = format(currentDate, "d");
-                    const isStart = dateStr === dateRange.start;
-                    const isEnd = dateStr === dateRange.end;
-                    const isInRange =
-                      dateStr >= dateRange.start && dateStr <= dateRange.end;
+                    const isSelected = selectedProductionDates.has(dateStr) && !showAllProductionDates;
 
                     return (
                       <button
                         key={dateStr}
-                        onClick={() => {
-                          setDateRange({ start: dateStr, end: dateStr });
-                        }}
-                        className={`px-2.5 py-1.5 rounded font-medium text-xs transition-colors ${
-                          isStart && isEnd
+                        onClick={() => handleProductionDateClick(dateStr)}
+                        className={`relative px-2.5 py-1.5 rounded font-medium text-xs transition-colors ${
+                          isSelected
                             ? "bg-[#9B6D49] text-white"
-                            : isInRange
-                            ? "bg-[#e8dcc8] text-[#9B6D49]"
                             : "bg-gray-50 text-gray-700 border border-gray-200 hover:border-[#9B6D49]"
                         }`}
                       >
+                        {/* Checkbox indicator */}
+                        <div className={`absolute -top-1 -right-1 w-3.5 h-3.5 rounded border-2 flex items-center justify-center text-[8px] ${
+                          isSelected 
+                            ? "bg-[#9B6D49] border-[#9B6D49] text-white" 
+                            : "bg-white border-gray-300"
+                        }`}>
+                          {isSelected && "✓"}
+                        </div>
                         <div className="text-[10px] font-bold">{dayName}</div>
                         <div className="text-sm">{dayNum}</div>
                       </button>
@@ -1561,23 +1540,34 @@ export default function ProductionPage() {
               <div className="flex flex-wrap gap-2 items-center text-xs">
                 <button
                   onClick={() => {
-                    const today = format(new Date(), "yyyy-MM-dd");
-                    setDateRange({ start: today, end: today });
+                    setShowAllProductionDates(true);
+                    setSelectedProductionDates(new Set());
                   }}
-                  className="px-2 py-1 bg-gray-50 text-gray-600 border border-gray-200 rounded hover:bg-gray-100"
+                  className={`px-2 py-1 border rounded ${showAllProductionDates ? 'bg-[#9B6D49] text-white border-[#9B6D49]' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'}`}
+                >
+                  Semua
+                </button>
+                <button
+                  onClick={() => {
+                    const today = format(new Date(), "yyyy-MM-dd");
+                    setSelectedProductionDates(new Set([today]));
+                    setShowAllProductionDates(false);
+                  }}
+                  className={`px-2 py-1 border rounded ${!showAllProductionDates && selectedProductionDates.size === 1 && selectedProductionDates.has(format(new Date(), "yyyy-MM-dd")) ? 'bg-[#9B6D49] text-white border-[#9B6D49]' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'}`}
                 >
                   Hari Ini
                 </button>
                 <button
                   onClick={() => {
-                    const start = format(new Date(), "yyyy-MM-dd");
-                    const end = format(
-                      new Date(new Date().getTime() + 6 * 24 * 60 * 60 * 1000),
-                      "yyyy-MM-dd"
-                    );
-                    setDateRange({ start, end });
+                    // Select all 7 days
+                    const dates = new Set<string>();
+                    for (let i = 0; i < 7; i++) {
+                      dates.add(format(new Date(new Date().getTime() + i * 24 * 60 * 60 * 1000), "yyyy-MM-dd"));
+                    }
+                    setSelectedProductionDates(dates);
+                    setShowAllProductionDates(false);
                   }}
-                  className="px-2 py-1 bg-gray-50 text-gray-600 border border-gray-200 rounded hover:bg-gray-100"
+                  className={`px-2 py-1 border rounded ${!showAllProductionDates && selectedProductionDates.size === 7 ? 'bg-[#9B6D49] text-white border-[#9B6D49]' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'}`}
                 >
                   7 Hari
                 </button>
@@ -1586,10 +1576,10 @@ export default function ProductionPage() {
                   onChange={(e) =>
                     setProductionStatusFilter(
                       e.target.value as
-                        | "all"
-                        | "pending"
-                        | "in_production"
-                        | "completed"
+                      | "all"
+                      | "pending"
+                      | "in_production"
+                      | "completed"
                     )
                   }
                   className="px-2 py-1 border border-gray-200 rounded bg-white text-xs text-gray-700 focus:outline-none focus:ring-1 focus:ring-[#9B6D49]"
@@ -1600,23 +1590,22 @@ export default function ProductionPage() {
                 </select>
                 <input
                   type="date"
-                  value={dateRange.start}
                   onChange={(e) => {
-                    setDateRange({
-                      start: e.target.value,
-                      end: e.target.value,
-                    });
+                    if (e.target.value) {
+                      setSelectedProductionDates(new Set([e.target.value]));
+                      setShowAllProductionDates(false);
+                    }
                   }}
                   className="px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-[#9B6D49]"
                 />
                 <span className="text-gray-400 ml-auto">
-                  {format(new Date(dateRange.start), "d MMM", {
-                    locale: idLocale,
-                  })}{" "}
-                  -{" "}
-                  {format(new Date(dateRange.end), "d MMM yyyy", {
-                    locale: idLocale,
-                  })}
+                  {showAllProductionDates || selectedProductionDates.size === 0 ? (
+                    "Semua Tanggal"
+                  ) : (
+                    Array.from(selectedProductionDates).sort().map(d => 
+                      format(new Date(d), "d MMM", { locale: idLocale })
+                    ).join(", ")
+                  )}
                 </span>
               </div>
             </div>
@@ -1626,7 +1615,7 @@ export default function ProductionPage() {
               <div className="bg-white rounded-lg px-3 py-2 shadow-sm border border-gray-200">
                 <p className="text-[10px] text-gray-500">Order</p>
                 <p className="text-lg font-bold text-blue-600">
-                  {orders.length}
+                  {filteredProductionOrders.length}
                 </p>
               </div>
               <div className="bg-white rounded-lg px-3 py-2 shadow-sm border border-gray-200">
@@ -1644,19 +1633,19 @@ export default function ProductionPage() {
             </div>
 
             {/* Action Buttons */}
-            {orders.length > 0 && (
+            {filteredProductionOrders.length > 0 && (
               <button
                 onClick={handlePrintAll}
                 className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-medium transition-colors w-fit"
               >
                 <Printer className="w-3.5 h-3.5" />
-                Cetak Semua ({orders.length})
+                Cetak Semua ({filteredProductionOrders.length})
               </button>
             )}
           </div>
 
           {/* Production Target Form - Compact */}
-          {orders.length > 0 && (
+          {filteredProductionOrders.length > 0 && (
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 space-y-2">
               <h2 className="text-sm font-bold text-yellow-900 flex items-center gap-2">
                 <Star size={16} className="text-yellow-600" /> TARGET PRODUKSI
@@ -1735,13 +1724,13 @@ export default function ProductionPage() {
           )}
 
           {/* Production Orders List - Card Format */}
-          {!loading && orders.length > 0 && (
+          {!loading && filteredProductionOrders.length > 0 && (
             <div className="space-y-2">
               <div className="flex items-center justify-between gap-2">
                 <h2 className="text-sm font-bold text-gray-900 flex items-center gap-2">
                   <ClipboardList size={16} /> Daftar (
                   {
-                    orders.filter((o) => {
+                    filteredProductionOrders.filter((o) => {
                       const status = o.production_status || "pending";
                       if (productionStatusFilter === "all") return true;
                       if (productionStatusFilter === "in_production") {
@@ -1756,7 +1745,7 @@ export default function ProductionPage() {
                 </h2>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                {orders
+                {filteredProductionOrders
                   .filter((o) => {
                     const status = o.production_status || "pending";
                     if (productionStatusFilter === "all") return true;
@@ -1806,13 +1795,12 @@ export default function ProductionPage() {
                       >
                         {/* Status Strip */}
                         <div
-                          className={`h-1 w-full ${
-                            status === "pending"
-                              ? "bg-yellow-400"
-                              : status === "in_production"
+                          className={`h-1 w-full ${status === "pending"
+                            ? "bg-yellow-400"
+                            : status === "in_production"
                               ? "bg-blue-500"
                               : "bg-green-500"
-                          }`}
+                            }`}
                         />
 
                         <div className="p-3">
@@ -1833,10 +1821,10 @@ export default function ProductionPage() {
                             >
                               {(status === "pending" ||
                                 status === "in_production") && (
-                                <>
-                                  <Flame size={10} /> Proses Masak
-                                </>
-                              )}
+                                  <>
+                                    <Flame size={10} /> Proses Masak
+                                  </>
+                                )}
                               {status === "completed" && (
                                 <>
                                   <CheckCircle size={10} /> Selesai
@@ -1897,11 +1885,13 @@ export default function ProductionPage() {
                               value={
                                 status === "pending" ? "in_production" : status
                               }
-                              onChange={(e) => {
+                              onChange={async (e) => {
                                 const newStatus = e.target.value as
                                   | "pending"
                                   | "in_production"
                                   | "completed";
+
+                                // Optimistic update
                                 setOrders(
                                   orders.map((o) =>
                                     o.id === order.id
@@ -1916,13 +1906,29 @@ export default function ProductionPage() {
                                       : o
                                   )
                                 );
+
+                                // Call backend API
+                                try {
+                                  const response = await fetch(`/api/orders/${order.id}/production`, {
+                                    method: "PUT",
+                                    headers: {
+                                      "Content-Type": "application/json",
+                                    },
+                                    body: JSON.stringify({ production_status: newStatus }),
+                                  });
+                                  if (!response.ok) {
+                                    console.error("[Production] Failed to update production status");
+                                  }
+                                } catch (err) {
+                                  console.error("[Production] Error updating production status:", err);
+                                }
                               }}
-                              className={`w-full py-1.5 px-2 text-xs font-medium rounded-lg appearance-none text-center cursor-pointer focus:outline-none transition-colors ${
-                                status === "pending" ||
+
+                              className={`w-full py-1.5 px-2 text-xs font-medium rounded-lg appearance-none text-center cursor-pointer focus:outline-none transition-colors ${status === "pending" ||
                                 status === "in_production"
-                                  ? "bg-blue-50 text-blue-700 hover:bg-blue-100"
-                                  : "bg-green-50 text-green-700 hover:bg-green-100"
-                              }`}
+                                ? "bg-blue-50 text-blue-700 hover:bg-blue-100"
+                                : "bg-green-50 text-green-700 hover:bg-green-100"
+                                }`}
                             >
                               <option value="in_production">
                                 Proses Masak
@@ -1939,7 +1945,7 @@ export default function ProductionPage() {
           )}
 
           {/* Empty State */}
-          {!loading && orders.length === 0 && (
+          {!loading && filteredProductionOrders.length === 0 && (
             <div className="bg-white rounded-lg p-12 text-center">
               <p className="text-gray-600">
                 Tidak ada pesanan untuk diproduksi pada tanggal ini

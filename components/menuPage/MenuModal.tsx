@@ -6,7 +6,7 @@ import { useCart } from "@/app/contexts/CartContext";
 import { useTranslation } from "@/app/contexts/TranslationContext";
 import { useStoreClosure } from "@/app/contexts/StoreClosureContext";
 import { ImagePopup } from "./ImagePopup";
-import type { MenuItem, ProductAttribute } from "@/lib/api/mockData";
+import type { MenuItem, ProductAttribute } from "@/lib/types";
 
 interface MenuModalProps {
   item: MenuItem | null;

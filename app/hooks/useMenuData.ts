@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { MenuAPI } from "@/lib/api/menuApi";
-import type { MenuItem, ProductType } from "@/lib/api/mockData";
+import type { MenuItem, ProductType } from "@/lib/types";
 
 interface UseMenuDataProps {
   category?: string;

@@ -7,7 +7,7 @@ import { useStoreClosure } from "@/app/contexts/StoreClosureContext";
 import { useTranslation } from "@/app/contexts/TranslationContext";
 import { useState, useEffect, useRef } from "react";
 
-import type { MenuItem } from "@/lib/api/mockData";
+import type { MenuItem } from "@/lib/types";
 
 interface MenuCardProps {
   item: MenuItem;

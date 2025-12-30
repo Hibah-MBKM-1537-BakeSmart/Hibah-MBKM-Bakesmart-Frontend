@@ -2,7 +2,7 @@
 
 import type React from "react";
 import { createContext, useContext, useState, useEffect } from "react";
-import { stockManager } from "@/lib/api/stockManager";
+// Note: Stock is now managed via item.stock property directly
 import type { CartItem } from "@/lib/types";
 
 export // Using CartItem from @/lib/types
@@ -165,7 +165,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   };
 
   const canAddToCart = (item: Omit<CartItem, "quantity" | "cartId">) => {
-    const currentStock = stockManager.getStock(item.id);
+    const currentStock = item.stock || 0;
     if (currentStock <= 0) {
       return { canAdd: false, reason: "Stok habis" };
     }
@@ -260,7 +260,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           .reduce((total, cartItem) => total + cartItem.quantity, 0);
 
         const newQuantity = existingItem.quantity + 1;
-        const currentStock = stockManager.getStock(item.id);
+        const currentStock = existingItem.stock || 0;
 
         if (totalQuantityForProduct + newQuantity > currentStock) {
           alert(
@@ -323,7 +323,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       return false;
     }
 
-    const currentStock = stockManager.getStock(targetItem.id);
+    const currentStock = targetItem.stock || 0;
 
     // Filter semua item yang sama (termasuk variasi berbeda) untuk cek stok
     const totalQuantityForProduct = cartItems
@@ -432,19 +432,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   };
 
   // Function to complete order and decrease stock
+  // Note: Stock management is now handled by the backend
   const completeOrder = () => {
-    const validItems = getValidItems();
-
-    // Decrease stock untuk setiap item
-    for (const item of validItems) {
-      const success = stockManager.decreaseStock(item.id, item.quantity);
-      if (!success) {
-        alert(`Gagal memproses pesanan. Stok ${item.name} tidak mencukupi.`);
-        return false;
-      }
-    }
-
-    // Clear cart setelah order berhasil
+    // Clear cart after order is processed by backend
     clearCart();
     return true;
   };

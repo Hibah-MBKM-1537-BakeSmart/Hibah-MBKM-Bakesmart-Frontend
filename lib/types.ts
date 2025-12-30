@@ -1,4 +1,43 @@
-import type { ProductAttribute } from "@/lib/api/mockData";
+// Product-related types (formerly from mockData.ts)
+export interface ProductAttribute {
+  id: number;
+  harga: number;
+  nama_en: string;
+  nama_id: string;
+}
+
+export interface ProductType {
+  id: number;
+  nama_en: string;
+  nama_id: string;
+}
+
+export interface ProductDay {
+  id: number;
+  nama_en: string;
+  nama_id: string;
+}
+
+export interface ProductImage {
+  id: number;
+  file_path: string;
+  product_id: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProductIngredient {
+  id: number;
+  jumlah: number;
+  nama_en: string;
+  nama_id: string;
+}
+
+export interface Category {
+  id: string;
+  name: string;
+  nameEn: string;
+}
 
 export interface CartItem {
   id: number;

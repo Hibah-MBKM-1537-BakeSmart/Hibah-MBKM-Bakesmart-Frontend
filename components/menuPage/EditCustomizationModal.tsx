@@ -4,7 +4,7 @@ import { X, Save, Minus, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useCart } from "@/app/contexts/CartContext";
 import { useTranslation } from "@/app/contexts/TranslationContext";
-import type { MenuItem, ProductAttribute } from "@/lib/api/mockData";
+import type { MenuItem, ProductAttribute } from "@/lib/types";
 
 interface EditCustomizationModalProps {
   item: MenuItem | null;

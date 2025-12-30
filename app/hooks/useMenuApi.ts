@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import type { MenuItem, Category } from "@/lib/api/mockData";
+import type { MenuItem, Category } from "@/lib/types";
 
 interface UseMenuApiProps {
   category?: string;
