@@ -9,6 +9,7 @@ import {
   CategoryDistributionChart,
   TopProductsCard,
   CustomerStatisticsCard,
+  MLPredictionCard,
 } from "@/components/adminPage/statisticsPage";
 
 export default function StatisticsPage() {
@@ -21,22 +22,28 @@ export default function StatisticsPage() {
     setIsRefreshing(false);
   };
 
-  // Use data from backend
-  const totalRevenue = state.totalRevenue || state.monthlySalesData.reduce(
-    (sum, month) => sum + month.revenue,
-    0
-  );
-  const totalSales = state.totalSales || state.topProducts.reduce(
-    (sum, product) => sum + product.sales,
-    0
-  );
+  // Logic kalkulasi data dari backend
+  const totalRevenue =
+    state.totalRevenue ||
+    state.monthlySalesData.reduce((sum, month) => sum + month.revenue, 0);
+
+  const totalSales =
+    state.totalSales ||
+    state.topProducts.reduce((sum, product) => sum + product.sales, 0);
+
   const averageMonthlyRevenue =
     state.monthlySalesData.length > 0
       ? totalRevenue / state.monthlySalesData.length
       : 0;
+
   const highestMonth = state.monthlySalesData.reduce(
     (prev, current) => (current.revenue > prev.revenue ? current : prev),
-    state.monthlySalesData[0] || { month: "N/A", revenue: 0, sales: 0, orders: 0 }
+    state.monthlySalesData[0] || {
+      month: "N/A",
+      revenue: 0,
+      sales: 0,
+      orders: 0,
+    }
   );
 
   return (
@@ -46,8 +53,7 @@ export default function StatisticsPage() {
         <div>
           <h1
             className="text-3xl font-bold font-admin-heading"
-            style={{ color: "#5d4037" }}
-          >
+            style={{ color: "#5d4037" }}>
             Analytics & Statistics
           </h1>
           <p className="font-admin-body mt-1" style={{ color: "#8b6f47" }}>
@@ -61,8 +67,7 @@ export default function StatisticsPage() {
           style={{
             backgroundColor: "#8b6f47",
             color: "white",
-          }}
-        >
+          }}>
           <RefreshCw
             className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`}
           />
@@ -89,15 +94,26 @@ export default function StatisticsPage() {
       </div>
 
       {/* Bottom Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
         {/* Top Products */}
         <TopProductsCard products={state.topProducts} />
 
         {/* Customer Statistics */}
         <CustomerStatisticsCard stats={state.customerStats} />
+
+        {/* ML Prediction Card */}
+        <MLPredictionCard
+          products={[
+            { id: "1", name: "Kopi Susu Gula Aren" },
+            { id: "2", name: "Caramel Macchiato" },
+            { id: "3", name: "Chocolate Hazelnut" },
+            { id: "4", name: "Croissant Almond" },
+            { id: "5", name: "Matcha Latte" },
+          ]}
+        />
       </div>
 
-      {/* Additional Info */}
+      {/* Error Info */}
       {state.error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
           <p className="text-red-700 text-sm font-admin-body">{state.error}</p>
