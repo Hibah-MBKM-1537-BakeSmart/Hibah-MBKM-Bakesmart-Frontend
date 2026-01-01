@@ -14,6 +14,13 @@ import {
   Clock,
 } from "lucide-react";
 import { useAdminTranslation } from "@/app/contexts/AdminTranslationContext";
+import { Modal } from "@/components/adminPage/Modal";
+import { AddProductModal } from "@/components/adminPage/productsPage/AddProductModal";
+import { AddUserModal } from "@/components/adminPage/users/AddUserModal";
+import { WhatsAppBlastModal } from "@/components/adminPage/customersPage/WhatsAppBlastModal";
+import { useProducts } from "@/app/contexts/ProductsContext";
+import { useAdmin } from "@/app/contexts/UsersContext";
+import { useToast } from "@/app/contexts/ToastContext";
 
 interface StatCard {
   title: string;
@@ -25,83 +32,32 @@ interface StatCard {
   key: string;
 }
 
-const recentOrders = [
-  {
-    id: 1,
-    customer: "Budi Santoso",
-    customerPhone: "081234567890",
-    product: "Chocolate Cake",
-    quantity: 1,
-    amount: 125000,
-    status: "completed" as const,
-    created_at: "2024-12-15T08:00:00.000Z",
-  },
-  {
-    id: 2,
-    customer: "Siti Nurhasanah",
-    customerPhone: "082345678901",
-    product: "Birthday Cake",
-    quantity: 1,
-    amount: 200000,
-    status: "baked" as const,
-    created_at: "2024-12-15T12:00:00.000Z",
-  },
-  {
-    id: 3,
-    customer: "Ahmad Wijaya",
-    customerPhone: "083456789012",
-    product: "Donuts Box (12 pcs)",
-    quantity: 2,
-    amount: 120000,
-    status: "completed" as const,
-    created_at: "2024-12-14T14:00:00.000Z",
-  },
-  {
-    id: 4,
-    customer: "Rina Marlina",
-    customerPhone: "084567890123",
-    product: "Wedding Cake",
-    quantity: 1,
-    amount: 750000,
-    status: "paid" as const,
-    created_at: "2024-12-14T08:00:00.000Z",
-  },
-];
-
-const topProducts = [
-  {
-    id: 1,
-    nama: "Chocolate Cake",
-    sales: 145,
-    revenue: 18125000,
-    stok: 10,
-  },
-  {
-    id: 2,
-    nama: "Red Velvet Cupcakes",
-    sales: 89,
-    revenue: 1335000,
-    stok: 24,
-  },
-  {
-    id: 4,
-    nama: "Birthday Cake",
-    sales: 67,
-    revenue: 13400000,
-    stok: 5,
-  },
-  {
-    id: 5,
-    nama: "Donuts Box (12 pcs)",
-    sales: 234,
-    revenue: 14040000,
-    stok: 8,
-  },
-];
-
 export default function DashboardPage() {
   const router = useRouter();
   const { language, tAdminSync } = useAdminTranslation();
+  const { addProduct } = useProducts();
+  const { createAdmin } = useAdmin();
+  const { addToast } = useToast();
+
+  const [activeModal, setActiveModal] = useState<
+    "addProduct" | "addUser" | "waBlast" | null
+  >(null);
+  const [roles, setRoles] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchRoles = async () => {
+      try {
+        const response = await fetch("/api/roles");
+        if (response.ok) {
+          const data = await response.json();
+          setRoles(data.data || []);
+        }
+      } catch (error) {
+        console.error("Failed to fetch roles", error);
+      }
+    };
+    fetchRoles();
+  }, []);
 
   // State tunggal untuk menampung SEMUA teks UI statis agar bisa ditranslate API
   const [uiText, setUiText] = useState({
@@ -114,9 +70,8 @@ export default function DashboardPage() {
     topProducts: "Top Products",
     quickActions: "Quick Actions",
     addProduct: "Add Product",
-    viewKasir: "View Kasir",
     manageUsers: "Manage Users",
-    viewReports: "View Reports",
+    waBlast: "WA Blast",
     minutesAgo: "minutes ago",
     hoursAgo: "hours ago",
     daysAgo: "days ago",
@@ -129,31 +84,98 @@ export default function DashboardPage() {
     [key: string]: string;
   }>({});
 
-  const stats: StatCard[] = useMemo(
-    () => [
+  // State untuk data real dari API
+  const [dashboardStats, setDashboardStats] = useState<any>(null);
+  const [recentOrdersData, setRecentOrdersData] = useState<any[]>([]);
+  const [topProductsData, setTopProductsData] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Fetch Data Real dari API
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      setIsLoading(true);
+      try {
+        // 1. Fetch Stats
+        const statsRes = await fetch("/api/dashboard/stats");
+        const statsData = await statsRes.json();
+        if (statsData.success) {
+          setDashboardStats(statsData.data);
+        }
+
+        // 2. Fetch Recent Orders (Ambil 5 teratas)
+        const ordersRes = await fetch("/api/orders");
+        const ordersData = await ordersRes.json();
+        if (ordersData.data) {
+          // Sort by created_at desc dan ambil 5
+          const sortedOrders = ordersData.data
+            .sort(
+              (a: any, b: any) =>
+                new Date(b.created_at).getTime() -
+                new Date(a.created_at).getTime()
+            )
+            .slice(0, 5);
+          setRecentOrdersData(sortedOrders);
+        }
+
+        // 3. Fetch Top Products (Ambil 5 teratas berdasarkan sales/stok sementara)
+        const productsRes = await fetch("/api/products");
+        const productsData = await productsRes.json();
+        if (productsData.data) {
+          // Mock logic: sort by stok (karena belum ada field sales di response product list biasa)
+          const sortedProducts = productsData.data
+            .sort((a: any, b: any) => (b.stok || 0) - (a.stok || 0))
+            .slice(0, 5);
+          setTopProductsData(sortedProducts);
+        }
+      } catch (error) {
+        console.error("Error fetching dashboard data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, []);
+
+  const stats: StatCard[] = useMemo(() => {
+    if (!dashboardStats) return [];
+
+    return [
       {
         title: "Total Revenue",
         key: "Total Revenue",
-        value: "Rp 45,320,000",
-        change: "+12.5%",
-        changeType: "increase",
+        value: `Rp ${parseInt(dashboardStats.total_revenue || 0).toLocaleString(
+          "id-ID"
+        )}`,
+        change: dashboardStats.revenue_growth
+          ? `${dashboardStats.revenue_growth > 0 ? "+" : ""}${
+              dashboardStats.revenue_growth
+            }%`
+          : "+0%",
+        changeType:
+          (dashboardStats.revenue_growth || 0) >= 0 ? "increase" : "decrease",
         icon: DollarSign,
         color: "#10B981",
       },
       {
         title: "Total Orders",
         key: "Total Orders",
-        value: "1,234",
-        change: "+8.2%",
-        changeType: "increase",
+        value: dashboardStats.total_orders?.toString() || "0",
+        change: dashboardStats.orders_growth
+          ? `${dashboardStats.orders_growth > 0 ? "+" : ""}${
+              dashboardStats.orders_growth
+            }%`
+          : "+0%",
+        changeType:
+          (dashboardStats.orders_growth || 0) >= 0 ? "increase" : "decrease",
         icon: ShoppingCart,
         color: "#3B82F6",
       },
       {
         title: "Total Products",
         key: "Total Products",
-        value: "156",
-        change: "+3.1%",
+        value: dashboardStats.total_products?.toString() || "0",
+        change: "+0%", // Backend belum kirim growth produk
         changeType: "increase",
         icon: Package,
         color: "#8B5CF6",
@@ -161,15 +183,19 @@ export default function DashboardPage() {
       {
         title: "Total Customers",
         key: "Total Customers",
-        value: "2,847",
-        change: "-2.4%",
-        changeType: "decrease",
+        value: dashboardStats.total_customers?.toString() || "0",
+        change: dashboardStats.customers_growth
+          ? `${dashboardStats.customers_growth > 0 ? "+" : ""}${
+              dashboardStats.customers_growth
+            }%`
+          : "+0%",
+        changeType:
+          (dashboardStats.customers_growth || 0) >= 0 ? "increase" : "decrease",
         icon: Users,
         color: "#F59E0B",
       },
-    ],
-    []
-  );
+    ];
+  }, [dashboardStats]);
 
   const [translatedOrders, setTranslatedOrders] = useState<any[]>([]);
   const [translatedProducts, setTranslatedProducts] = useState<any[]>([]);
@@ -191,9 +217,8 @@ export default function DashboardPage() {
           topProducts: "Produk Terlaris",
           quickActions: "Aksi Cepat",
           addProduct: "Tambah Produk",
-          viewKasir: "Lihat Kasir",
           manageUsers: "Kelola Pengguna",
-          viewReports: "Lihat Laporan",
+          waBlast: "WA Blast",
           minutesAgo: "menit lalu",
           hoursAgo: "jam lalu",
           daysAgo: "hari lalu",
@@ -208,6 +233,7 @@ export default function DashboardPage() {
           paid: "Dibayar",
           verifying: "Memverifikasi",
           pending: "Tertunda",
+          cancelled: "Dibatalkan",
         });
 
         // Mapping Stats Titles
@@ -219,18 +245,29 @@ export default function DashboardPage() {
         });
 
         // Data Dinamis
-        setTranslatedOrders(
-          recentOrders.map((order) => ({
-            ...order,
-            displayText: `${order.customer} (${order.customerPhone}) • ${order.product} (${order.quantity}x)`,
-          }))
-        );
-        setTranslatedProducts(
-          topProducts.map((product) => ({
-            ...product,
-            displayText: `${product.sales} penjualan • Stok: ${product.stok}`,
-          }))
-        );
+        if (recentOrdersData.length > 0) {
+          setTranslatedOrders(
+            recentOrdersData.map((order) => ({
+              ...order,
+              displayText: `${order.customer?.nama || "Guest"} (${
+                order.customer?.no_hp || "-"
+              }) • ${order.items?.[0]?.productName || "Item"} (${
+                order.items?.[0]?.quantity || 1
+              }x)`,
+            }))
+          );
+        }
+
+        if (topProductsData.length > 0) {
+          setTranslatedProducts(
+            topProductsData.map((product) => ({
+              ...product,
+              displayText: `${product.sales || 0} penjualan • Stok: ${
+                product.stok
+              }`,
+            }))
+          );
+        }
         return;
       }
 
@@ -246,7 +283,11 @@ export default function DashboardPage() {
             fetch("/api/translate", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ text, targetLanguage: language }),
+              body: JSON.stringify({
+                text,
+                targetLanguage: language,
+                sourceLanguage: "en",
+              }),
             })
               .then((r) => r.json())
               .then((d) => d.translatedText || text)
@@ -261,19 +302,29 @@ export default function DashboardPage() {
         setUiText(newUiText);
 
         // B. Translate Stats Titles
-        stats.forEach(async (stat) => {
-          const res = await fetch("/api/translate", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ text: stat.key, targetLanguage: language }),
-          }).then((r) => r.json());
+        const statsTranslations = await Promise.all(
+          stats.map((stat) =>
+            fetch("/api/translate", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                text: stat.key,
+                targetLanguage: language,
+              }),
+            })
+              .then((r) => r.json())
+              .then((d) => ({ key: stat.key, text: d.translatedText }))
+          )
+        );
 
-          if (res.translatedText) {
-            setApiTranslations((prev) => ({
-              ...prev,
-              [stat.key]: res.translatedText,
-            }));
-          }
+        setApiTranslations((prev) => {
+          const next = { ...prev };
+          statsTranslations.forEach((t) => {
+            if (t.text) {
+              next[t.key] = t.text;
+            }
+          });
+          return next;
         });
 
         // C. Translate Status Map
@@ -283,6 +334,7 @@ export default function DashboardPage() {
           "Paid",
           "Verifying",
           "Pending",
+          "Cancelled",
         ];
         const statusRes = await Promise.all(
           statusKeys.map((s) =>
@@ -300,85 +352,138 @@ export default function DashboardPage() {
           paid: statusRes[2].translatedText || "Paid",
           verifying: statusRes[3].translatedText || "Verifying",
           pending: statusRes[4].translatedText || "Pending",
+          cancelled: statusRes[5].translatedText || "Cancelled",
         });
 
         // D. Translate Orders & Products (Dynamic Data)
-        // Translate Order Info
-        const ordersTranslated = await Promise.all(
-          recentOrders.map((order) =>
-            fetch("/api/translate", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                text: `${order.customer} • ${order.product}`,
-                targetLanguage: language,
-              }),
-            })
-              .then((r) => r.json())
-              .then((d) => ({
-                displayText: `${
-                  d.translatedText || `${order.customer} • ${order.product}`
-                } (${order.quantity}x)`,
-              }))
-          )
-        );
+        if (recentOrdersData.length > 0) {
+          const ordersTranslated = await Promise.all(
+            recentOrdersData.map((order) =>
+              fetch("/api/translate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  text: `${order.customer?.nama || "Guest"} • ${
+                    order.items?.[0]?.productName || "Item"
+                  }`,
+                  targetLanguage: language,
+                }),
+              })
+                .then((r) => r.json())
+                .then((d) => ({
+                  displayText: `${
+                    d.translatedText ||
+                    `${order.customer?.nama || "Guest"} • ${
+                      order.items?.[0]?.productName || "Item"
+                    }`
+                  } (${order.items?.[0]?.quantity || 1}x)`,
+                }))
+            )
+          );
+          setTranslatedOrders(
+            recentOrdersData.map((order, index) => ({
+              ...order,
+              displayText: ordersTranslated[index].displayText,
+            }))
+          );
+        }
 
-        // Translate Product Info
-        const productsTranslated = await Promise.all(
-          topProducts.map((product) =>
-            fetch("/api/translate", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                text: `${product.sales} sales • Stock: ${product.stok}`,
-                targetLanguage: language,
-              }),
-            })
-              .then((r) => r.json())
-              .then((d) => ({
-                displayText:
-                  d.translatedText ||
-                  `${product.sales} sales • Stock: ${product.stok}`,
-              }))
-          )
-        );
-
-        setTranslatedOrders(
-          recentOrders.map((order, index) => ({
-            ...order,
-            displayText: ordersTranslated[index].displayText,
-          }))
-        );
-        setTranslatedProducts(
-          topProducts.map((product, index) => ({
-            ...product,
-            displayText: productsTranslated[index].displayText,
-          }))
-        );
+        if (topProductsData.length > 0) {
+          const productsTranslated = await Promise.all(
+            topProductsData.map((product) =>
+              fetch("/api/translate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  text: `${product.sales || 0} sales • Stock: ${product.stok}`,
+                  targetLanguage: language,
+                }),
+              })
+                .then((r) => r.json())
+                .then((d) => ({
+                  displayText:
+                    d.translatedText ||
+                    `${product.sales || 0} sales • Stock: ${product.stok}`,
+                }))
+            )
+          );
+          setTranslatedProducts(
+            topProductsData.map((product, index) => ({
+              ...product,
+              displayText: productsTranslated[index].displayText,
+            }))
+          );
+        }
       } catch (error) {
         console.error("[v0] Translation error:", error);
       }
     };
 
     translateAllContent();
-  }, [language]);
+  }, [language, recentOrdersData, topProductsData, stats]);
 
   const handleQuickAction = (action: string) => {
     switch (action) {
       case "add-product":
-        router.push("/admin/products");
-        break;
-      case "view-kasir":
-        router.push("/admin/kasir");
+        setActiveModal("addProduct");
         break;
       case "manage-users":
-        router.push("/admin/users");
+        setActiveModal("addUser");
         break;
-      case "view-reports":
-        router.push("/admin/dashboard");
+      case "wa-blast":
+        setActiveModal("waBlast");
         break;
       default:
         break;
+    }
+  };
+
+  const handleAddProduct = async (productData: any) => {
+    try {
+      await addProduct(productData);
+      addToast({
+        type: "success",
+        title: "Success",
+        message: "Product added successfully",
+      });
+      setActiveModal(null);
+    } catch (error) {
+      addToast({
+        type: "error",
+        title: "Error",
+        message: "Failed to add product",
+      });
+    }
+  };
+
+  const handleAddUser = async (userData: any) => {
+    try {
+      // Map role string to ID
+      const roleObj = roles.find(
+        (r) => r.name.toLowerCase() === userData.role.toLowerCase()
+      );
+      // Fallback IDs: 1=Owner, 2=Admin, 3=Customer/Member? Need to check DB but fallback is better than crash
+      const roleId = roleObj ? roleObj.id : userData.role === "admin" ? 2 : 3;
+
+      await createAdmin({
+        nama: userData.name,
+        no_hp: userData.phone,
+        role_ids: [roleId],
+        password: userData.password,
+      });
+
+      addToast({
+        type: "success",
+        title: "Success",
+        message: "User added successfully",
+      });
+      setActiveModal(null);
+    } catch (error) {
+      addToast({
+        type: "error",
+        title: "Error",
+        message: "Failed to add user",
+      });
     }
   };
 
@@ -572,11 +677,16 @@ export default function DashboardPage() {
                       </span>
                     </div>
                     <p className="text-sm font-admin-body text-gray-600">
-                      {order.displayText} ({order.customerPhone})
+                      {order.displayText}
                     </p>
                     <div className="flex items-center justify-between mt-2">
                       <p className="font-semibold font-admin-heading text-gray-900">
-                        Rp {order.amount.toLocaleString("id-ID")}
+                        Rp{" "}
+                        {(
+                          order.total_amount ||
+                          order.amount ||
+                          0
+                        ).toLocaleString("id-ID")}
                       </p>
                       <div className="flex items-center text-xs text-gray-500 font-admin-body">
                         <Clock className="w-3 h-3 mr-1" />
@@ -627,7 +737,7 @@ export default function DashboardPage() {
                       </div>
                       <div>
                         <p className="font-medium font-admin-heading text-gray-900">
-                          {product.nama}
+                          {product.nama || product.name}
                         </p>
                         <p className="text-sm font-admin-body text-gray-600">
                           {product.displayText}
@@ -636,7 +746,13 @@ export default function DashboardPage() {
                     </div>
                     <div className="text-right">
                       <p className="font-semibold font-admin-heading text-gray-900">
-                        Rp {product.revenue.toLocaleString("id-ID")}
+                        Rp{" "}
+                        {(
+                          product.revenue ||
+                          product.harga ||
+                          product.price ||
+                          0
+                        ).toLocaleString("id-ID")}
                       </p>
                     </div>
                   </div>
@@ -657,7 +773,7 @@ export default function DashboardPage() {
             {uiText.quickActions}
           </h2>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           <button
             onClick={() => handleQuickAction("add-product")}
             className="flex flex-col items-center p-6 rounded-xl bg-purple-400 hover:bg-purple-500 transition-all duration-200 shadow-sm hover:shadow-md hover:scale-105"
@@ -665,15 +781,6 @@ export default function DashboardPage() {
             <Package className="w-8 h-8 mb-2 text-white" />
             <span className="text-sm font-medium font-admin-body text-white">
               {uiText.addProduct}
-            </span>
-          </button>
-          <button
-            onClick={() => handleQuickAction("view-kasir")}
-            className="flex flex-col items-center p-6 rounded-xl bg-blue-400 hover:bg-blue-500 transition-all duration-200 shadow-sm hover:shadow-md hover:scale-105"
-          >
-            <ShoppingCart className="w-8 h-8 mb-2 text-white" />
-            <span className="text-sm font-medium font-admin-body text-white">
-              {uiText.viewKasir}
             </span>
           </button>
           <button
@@ -686,16 +793,34 @@ export default function DashboardPage() {
             </span>
           </button>
           <button
-            onClick={() => handleQuickAction("view-reports")}
+            onClick={() => handleQuickAction("wa-blast")}
             className="flex flex-col items-center p-6 rounded-xl bg-green-400 hover:bg-green-500 transition-all duration-200 shadow-sm hover:shadow-md hover:scale-105"
           >
             <TrendingUp className="w-8 h-8 mb-2 text-white" />
             <span className="text-sm font-medium font-admin-body text-white">
-              {uiText.viewReports}
+              {uiText.waBlast}
             </span>
           </button>
         </div>
       </div>
+
+      {/* Modals */}
+      <AddProductModal
+        isOpen={activeModal === "addProduct"}
+        onClose={() => setActiveModal(null)}
+        onAddProduct={handleAddProduct}
+      />
+
+      <AddUserModal
+        isOpen={activeModal === "addUser"}
+        onClose={() => setActiveModal(null)}
+        onAddUser={handleAddUser}
+      />
+
+      <WhatsAppBlastModal
+        isOpen={activeModal === "waBlast"}
+        onClose={() => setActiveModal(null)}
+      />
     </div>
   );
 }

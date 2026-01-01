@@ -2,7 +2,14 @@ import { type NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest) {
   try {
-    const { text, targetLanguage } = await request.json();
+    let body;
+    try {
+      body = await request.json();
+    } catch (e) {
+      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    }
+
+    const { text, targetLanguage, sourceLanguage = "en" } = body;
 
     if (!text || !targetLanguage) {
       return NextResponse.json(
@@ -11,10 +18,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Skip translation if source and target are the same
+    if (sourceLanguage === targetLanguage) {
+      return NextResponse.json({
+        translatedText: text,
+      });
+    }
+
     const response = await fetch(
       `https://api.mymemory.translated.net/get?q=${encodeURIComponent(
         text
-      )}&langpair=id|${targetLanguage}`
+      )}&langpair=${sourceLanguage}|${targetLanguage}`
     );
 
     if (!response.ok) {
