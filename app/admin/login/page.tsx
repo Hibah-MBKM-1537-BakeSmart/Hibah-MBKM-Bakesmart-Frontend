@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/contexts/AuthContext";
-import { Eye, EyeOff, Lock, Phone, AlertCircle, Coffee } from "lucide-react";
+import { Eye, EyeOff, Lock, Phone, AlertCircle, Cake} from "lucide-react";
 
 interface LoginForm {
   no_hp: string;
@@ -108,7 +108,7 @@ export default function AdminLoginPage() {
             className="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center"
             style={{ backgroundColor: "#8b6f47" }}
           >
-            <Coffee className="w-8 h-8 text-white" />
+            <Cake className="w-8 h-8 text-white" />
           </div>
           <h1
             className="text-3xl font-bold font-admin-heading mb-2"
@@ -225,7 +225,7 @@ export default function AdminLoginPage() {
         {/* Footer */}
         <div className="text-center mt-8">
           <p className="text-xs font-admin-body" style={{ color: "#8b6f47" }}>
-            © 2024 BakeSmart. All rights reserved.
+            © 2025 BakeSmart. All rights reserved.
           </p>
         </div>
       </div>

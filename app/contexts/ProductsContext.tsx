@@ -20,19 +20,30 @@ export interface Product {
   deskripsi_en?: string;
   deskripsi: string;
   harga: number;
+  harga_diskon?: number | null;
   stok: number;
+  isBestSeller?: boolean;
+  isDaily?: boolean;
+  daily_stock?: number | null;
   created_at?: string;
   updated_at?: string;
   gambars?: Array<{
     id: number;
     file_path: string;
-    product_id: number;
+    product_id?: number;
   }>;
   jenis?: Array<{
     id: number;
     nama_id?: string;
     nama_en?: string;
     nama: string;
+  }>;
+  sub_jenis?: Array<{
+    id: number;
+    nama_id?: string;
+    nama_en?: string;
+    nama: string;
+    jenis_id?: number;
   }>;
   hari?: Array<{
     id: number;
@@ -59,6 +70,11 @@ export interface Product {
     nama: string;
     harga_tambahan: number;
     is_active: boolean;
+  }>;
+  vouchers?: Array<{
+    id: number;
+    kode?: string;
+    nama?: string;
   }>;
   sales?: number;
   rating?: number;
@@ -123,11 +139,19 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
     // Map backend format to frontend format
     return productsArray.map((product: any) => ({
       id: product.id,
+      nama_id: product.nama_id,
+      nama_en: product.nama_en,
       nama: product.nama_en || product.nama_id || product.nama || "",
+      deskripsi_id: product.deskripsi_id,
+      deskripsi_en: product.deskripsi_en,
       deskripsi:
         product.deskripsi_en || product.deskripsi_id || product.deskripsi || "",
       harga: product.harga || 0,
+      harga_diskon: product.harga_diskon || null,
       stok: product.stok ?? 0,
+      isBestSeller: product.isBestSeller || false,
+      isDaily: product.isDaily || false,
+      daily_stock: product.daily_stock || null,
       created_at: product.created_at,
       updated_at: product.updated_at,
       status: (product.status || "active") as "active" | "inactive",
@@ -140,6 +164,16 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
             nama: j.nama_en || j.nama_id || j.nama || "Unknown",
             nama_id: j.nama_id,
             nama_en: j.nama_en,
+          })) || [],
+      sub_jenis:
+        product.sub_jenis
+          ?.filter((sj: any) => sj && sj.id)
+          .map((sj: any) => ({
+            id: sj.id,
+            nama: sj.nama_en || sj.nama_id || sj.nama || "Unknown",
+            nama_id: sj.nama_id,
+            nama_en: sj.nama_en,
+            jenis_id: sj.jenis_id,
           })) || [],
       hari:
         product.hari

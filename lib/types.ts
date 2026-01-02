@@ -21,9 +21,9 @@ export interface ProductDay {
 export interface ProductImage {
   id: number;
   file_path: string;
-  product_id: number;
-  created_at: string;
-  updated_at: string;
+  product_id?: number;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface ProductIngredient {
@@ -33,6 +33,23 @@ export interface ProductIngredient {
   nama_id: string;
 }
 
+// Jenis (Category) - from backend /jenis endpoint
+export interface Jenis {
+  id: number;
+  nama_id: string;
+  nama_en: string;
+}
+
+// Sub Jenis (Subcategory) - from backend /sub_jenis endpoint
+export interface SubJenis {
+  id: number;
+  nama_id: string;
+  nama_en: string;
+  jenis_id: number;
+  jenis?: Jenis; // Optional: populated when fetching with relations
+}
+
+// Legacy Category interface (for backwards compatibility)
 export interface Category {
   id: string;
   name: string;
@@ -67,12 +84,13 @@ export interface ApiProduct {
   harga_diskon?: number | null;
   stok?: number;
   isBestSeller?: boolean;
-  isDaily?: boolean; // Ada di contoh JSON kamu
-  daily_stock?: number | null; // Ada di contoh JSON kamu
-  created_at?: string; // Ada di contoh JSON kamu
-  updated_at?: string; // Ada di contoh JSON kamu
+  isDaily?: boolean;
+  daily_stock?: number | null;
+  created_at?: string;
+  updated_at?: string;
   gambars?: Array<{ id: number; file_path: string } | null>;
   jenis?: Array<{ id: number; nama_en: string; nama_id: string }>;
+  sub_jenis?: Array<{ id: number; nama_en: string; nama_id: string; jenis_id?: number }>;
   hari?: Array<{ id: number; nama_en: string; nama_id: string }>;
   attributes?: Array<{
     id: number;
@@ -85,6 +103,11 @@ export interface ApiProduct {
     jumlah: number;
     nama_en: string;
     nama_id: string;
+  }>;
+  vouchers?: Array<{
+    id: number;
+    kode?: string;
+    nama?: string;
   }>;
 }
 
@@ -106,11 +129,12 @@ export interface MenuItem {
   gambars: Array<{
     id: number;
     file_path: string;
-    product_id: number;
-    created_at: string;
-    updated_at: string;
+    product_id?: number;
+    created_at?: string;
+    updated_at?: string;
   }>;
   jenis: Array<{ id: number; nama_en: string; nama_id: string }>;
+  sub_jenis?: Array<{ id: number; nama_en: string; nama_id: string; jenis_id?: number }>;
   hari: Array<{ id: number; nama_en: string; nama_id: string }>;
   attributes: Array<{
     id: number;

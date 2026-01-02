@@ -9,7 +9,6 @@ import {
   Trash2,
   Eye,
   Package,
-  MoreHorizontal,
   Settings,
   Minus,
   ArrowUpDown,
@@ -17,14 +16,266 @@ import {
   ArrowDown,
   Download,
   Upload,
+  Layers,
+  ChevronDown,
+  ChevronRight,
+  Tag,
 } from "lucide-react";
 import { AddProductModal } from "@/components/adminPage/productsPage/AddProductModal";
-import { CategoryManager } from "@/components/adminPage/productsPage/CategoryManager";
+import { JenisManager } from "@/components/adminPage/productsPage/JenisManager";
 import { ProductDetailModal } from "@/components/adminPage/productsPage/ProductDetailModal";
 import { EditProductModal } from "@/components/adminPage/productsPage/EditProductModal";
 import { useToast } from "@/components/adminPage/Toast";
-import { useCategories } from "@/app/contexts/CategoriesContext";
+import { useJenis } from "@/app/contexts/JenisContext";
+import { useSubJenis } from "@/app/contexts/SubJenisContext";
 import { useProducts, Product } from "@/app/contexts/ProductsContext";
+
+// ProductTableRow Component for reusability
+interface ProductTableRowProps {
+  product: Product;
+  isGrouped: boolean;
+  editingStockId: number | null;
+  tempStock: string;
+  pendingStockChanges: Record<number, number>;
+  formatPrice: (price: number) => string;
+  handleStockInputChange: (value: string) => void;
+  saveStockEdit: (productId: number) => void;
+  cancelStockEdit: () => void;
+  handleStockDecrement: (productId: number) => void;
+  handleStockIncrement: (productId: number) => void;
+  confirmStockChange: (productId: number) => void;
+  cancelStockChange: (productId: number) => void;
+  startEditingStock: (productId: number, currentStock: number) => void;
+  handleViewProduct: (productId: number) => void;
+  handleEditProduct: (productId: number, productName: string) => void;
+  handleDeleteProduct: (productId: number, productName: string) => void;
+}
+
+function ProductTableRow({
+  product,
+  isGrouped,
+  editingStockId,
+  tempStock,
+  pendingStockChanges,
+  formatPrice,
+  handleStockInputChange,
+  saveStockEdit,
+  cancelStockEdit,
+  handleStockDecrement,
+  handleStockIncrement,
+  confirmStockChange,
+  cancelStockChange,
+  startEditingStock,
+  handleViewProduct,
+  handleEditProduct,
+  handleDeleteProduct,
+}: ProductTableRowProps) {
+  return (
+    <tr className={`hover:bg-gray-50 ${isGrouped ? 'bg-white' : ''}`}>
+      {isGrouped && <td className="w-[40px]"></td>}
+      <td className="px-3 lg:px-6 py-4 w-[280px]">
+        <div className="flex items-center">
+          <div className="w-10 h-10 rounded-lg mr-3 lg:mr-4 flex-shrink-0 relative">
+            {product.gambars && product.gambars.length > 0 ? (
+              <>
+                <img
+                  src={product.gambars[0].file_path}
+                  alt={product.nama}
+                  className="w-10 h-10 rounded-lg object-cover border border-gray-200"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = "none";
+                    const fallback = target.parentElement?.querySelector(
+                      ".fallback-icon"
+                    ) as HTMLElement;
+                    if (fallback) {
+                      fallback.style.display = "flex";
+                    }
+                  }}
+                />
+                <div
+                  className="fallback-icon absolute inset-0 w-10 h-10 bg-orange-100 rounded-lg items-center justify-center"
+                  style={{ display: "none" }}
+                >
+                  <Package className="w-5 h-5 text-orange-600" />
+                </div>
+              </>
+            ) : (
+              <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+                <Package className="w-5 h-5 text-orange-600" />
+              </div>
+            )}
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="text-sm font-medium text-gray-900 truncate">
+              {product.nama}
+            </div>
+            <div className="text-xs lg:text-sm text-gray-500 truncate max-w-[150px] lg:max-w-xs">
+              {product.deskripsi}
+            </div>
+          </div>
+        </div>
+      </td>
+      <td className="px-3 lg:px-6 py-4 whitespace-nowrap w-[140px]">
+        <span className="inline-flex items-center px-2 lg:px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+          {product.jenis?.[0]?.nama_en ||
+            product.jenis?.[0]?.nama_id ||
+            "Unknown"}
+        </span>
+      </td>
+      <td className="px-3 lg:px-6 py-4 w-[180px]">
+        <div className="flex flex-wrap gap-1">
+          {product.hari && product.hari.length > 0 ? (
+            product.hari.map((day) => (
+              <span
+                key={day.id}
+                className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800"
+              >
+                {day.nama_id || day.nama}
+              </span>
+            ))
+          ) : (
+            <span className="text-xs text-gray-400 italic">No days set</span>
+          )}
+        </div>
+      </td>
+      <td className="px-3 lg:px-6 py-4 whitespace-nowrap text-xs lg:text-sm font-medium text-gray-900 w-[130px]">
+        {product.harga ? formatPrice(product.harga) : "Rp 0"}
+      </td>
+      <td className="px-3 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-900 w-[180px]">
+        {editingStockId === product.id ? (
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              value={tempStock}
+              onChange={(e) => handleStockInputChange(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  saveStockEdit(product.id);
+                } else if (e.key === "Escape") {
+                  cancelStockEdit();
+                }
+              }}
+              className="w-20 px-3 py-2 border-2 border-orange-500 rounded-lg text-center focus:outline-none focus:ring-2 focus:ring-orange-500 font-semibold"
+              autoFocus
+              placeholder="0"
+            />
+            <button
+              onClick={() => saveStockEdit(product.id)}
+              className="p-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors shadow-sm"
+              title="Save"
+            >
+              <span className="text-base font-bold">✓</span>
+            </button>
+            <button
+              onClick={cancelStockEdit}
+              className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors shadow-sm"
+              title="Cancel"
+            >
+              <span className="text-base font-bold">✕</span>
+            </button>
+          </div>
+        ) : pendingStockChanges[product.id] !== undefined ? (
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => handleStockDecrement(product.id)}
+              className="p-1.5 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent border border-gray-200 hover:border-red-300"
+              disabled={pendingStockChanges[product.id] === 0}
+              title="Decrease stock"
+            >
+              <Minus className="w-4 h-4 text-gray-600 hover:text-red-600" />
+            </button>
+            <div className="min-w-[45px] px-3 py-1.5 rounded-lg text-sm font-semibold bg-orange-100 text-orange-800 border-2 border-orange-400 shadow-md animate-pulse">
+              {pendingStockChanges[product.id]}
+            </div>
+            <button
+              onClick={() => handleStockIncrement(product.id)}
+              className="p-1.5 hover:bg-green-50 rounded-lg transition-colors border border-gray-200 hover:border-green-300"
+              title="Increase stock"
+            >
+              <Plus className="w-4 h-4 text-gray-600 hover:text-green-600" />
+            </button>
+            <button
+              onClick={() => confirmStockChange(product.id)}
+              className="ml-2 px-3 py-1.5 bg-green-500 text-white text-xs font-semibold rounded-lg hover:bg-green-600 transition-colors shadow-sm"
+              title="Confirm and save to database"
+            >
+              ✓ Confirm
+            </button>
+            <button
+              onClick={() => cancelStockChange(product.id)}
+              className="px-3 py-1.5 bg-red-500 text-white text-xs font-semibold rounded-lg hover:bg-red-600 transition-colors shadow-sm"
+              title="Cancel changes"
+            >
+              ✕ Cancel
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => handleStockDecrement(product.id)}
+              className="p-1.5 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent border border-gray-200 hover:border-red-300"
+              disabled={!product.stok || product.stok === 0}
+              title="Decrease stock"
+            >
+              <Minus className="w-4 h-4 text-gray-600 hover:text-red-600" />
+            </button>
+            <button
+              onClick={() => startEditingStock(product.id, product.stok || 0)}
+              className={`min-w-[45px] px-3 py-1.5 rounded-lg text-sm font-semibold transition-all shadow-sm ${
+                !product.stok || product.stok === 0
+                  ? "bg-red-100 text-red-800 hover:bg-red-200 border border-red-200"
+                  : product.stok < 10
+                  ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-200 border border-yellow-200"
+                  : "bg-green-100 text-green-800 hover:bg-green-200 border border-green-200"
+              }`}
+              title="Click to edit stock"
+            >
+              {product.stok ?? 0}
+            </button>
+            <button
+              onClick={() => handleStockIncrement(product.id)}
+              className="p-1.5 hover:bg-green-50 rounded-lg transition-colors border border-gray-200 hover:border-green-300"
+              title="Increase stock"
+            >
+              <Plus className="w-4 h-4 text-gray-600 hover:text-green-600" />
+            </button>
+          </div>
+        )}
+      </td>
+      <td className="px-3 lg:px-6 py-4 whitespace-nowrap text-xs lg:text-sm text-gray-900 w-[100px]">
+        {product.sales ?? 0}
+      </td>
+      <td className="px-3 lg:px-6 py-4 whitespace-nowrap text-right text-sm font-medium w-[140px]">
+        <div className="flex items-center justify-end gap-2">
+          <button
+            onClick={() => handleViewProduct(product.id)}
+            className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700 transition-colors"
+            title="View Details"
+          >
+            <Eye className="w-4 h-4 lg:w-5 lg:h-5" />
+          </button>
+          <button
+            onClick={() => handleEditProduct(product.id, product.nama || "Product")}
+            className="p-2 rounded-lg bg-orange-50 text-orange-600 hover:bg-orange-100 hover:text-orange-700 transition-colors"
+            title="Edit Product"
+          >
+            <Edit className="w-4 h-4 lg:w-5 lg:h-5" />
+          </button>
+          <button
+            onClick={() => handleDeleteProduct(product.id, product.nama || "Product")}
+            className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 transition-colors"
+            title="Delete Product"
+          >
+            <Trash2 className="w-4 h-4 lg:w-5 lg:h-5" />
+          </button>
+        </div>
+      </td>
+    </tr>
+  );
+}
 
 // Mock products moved to ProductsContext
 
@@ -32,6 +283,8 @@ export default function ProductsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedDay, setSelectedDay] = useState("all");
+  const [groupBy, setGroupBy] = useState<"none" | "jenis" | "sub_jenis" | "jenis_sub_jenis">("none");
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [sortField, setSortField] = useState<
     "nama" | "category" | "day" | "harga" | "stok" | "sales"
   >("nama");
@@ -55,7 +308,8 @@ export default function ProductsPage() {
     Record<number, number>
   >({}); // Track pending changes
   const { addToast, ToastContainer } = useToast();
-  const { categories } = useCategories();
+  const { jenisList } = useJenis();
+  const { subJenisList } = useSubJenis();
   const {
     products,
     addProduct,
@@ -261,6 +515,146 @@ export default function ProductsPage() {
 
       return sortDirection === "asc" ? comparison : -comparison;
     });
+
+  // Group products by Jenis, Sub Jenis, or Both (hierarchical)
+  const groupedProducts = React.useMemo(() => {
+    if (groupBy === "none") {
+      return null;
+    }
+
+    const groups: Record<string, { 
+      name: string; 
+      nameEn: string; 
+      products: Product[]; 
+      type: 'jenis' | 'sub_jenis';
+      parentId?: string;
+    }> = {};
+
+    if (groupBy === "jenis") {
+      // Group by Jenis only
+      filteredProducts.forEach((product) => {
+        const jenis = product.jenis?.[0];
+        const key = `jenis_${jenis?.id?.toString() || "uncategorized"}`;
+        const name = jenis?.nama_id || "Tanpa Kategori";
+        const nameEn = jenis?.nama_en || "Uncategorized";
+
+        if (!groups[key]) {
+          groups[key] = { name, nameEn, products: [], type: 'jenis' };
+        }
+        groups[key].products.push(product);
+      });
+    } else if (groupBy === "sub_jenis") {
+      // Group by Sub Jenis only
+      filteredProducts.forEach((product) => {
+        const subJenis = product.sub_jenis?.[0];
+        const key = `sub_${subJenis?.id?.toString() || "uncategorized"}`;
+        const name = subJenis?.nama_id || "Tanpa Sub Kategori";
+        const nameEn = subJenis?.nama_en || "Uncategorized";
+
+        if (!groups[key]) {
+          groups[key] = { name, nameEn, products: [], type: 'sub_jenis' };
+        }
+        groups[key].products.push(product);
+      });
+    } else if (groupBy === "jenis_sub_jenis") {
+      // Group by Jenis first, then Sub Jenis (hierarchical)
+      filteredProducts.forEach((product) => {
+        const jenis = product.jenis?.[0];
+        const subJenis = product.sub_jenis?.[0];
+        
+        const jenisKey = `jenis_${jenis?.id?.toString() || "uncategorized"}`;
+        const jenisName = jenis?.nama_id || "Tanpa Kategori";
+        const jenisNameEn = jenis?.nama_en || "Uncategorized";
+        
+        // Create jenis group if not exists
+        if (!groups[jenisKey]) {
+          groups[jenisKey] = { 
+            name: jenisName, 
+            nameEn: jenisNameEn, 
+            products: [], 
+            type: 'jenis' 
+          };
+        }
+        
+        // Create sub_jenis group under jenis
+        const subKey = `${jenisKey}_sub_${subJenis?.id?.toString() || "uncategorized"}`;
+        const subName = subJenis?.nama_id || "Tanpa Sub Kategori";
+        const subNameEn = subJenis?.nama_en || "Uncategorized";
+        
+        if (!groups[subKey]) {
+          groups[subKey] = { 
+            name: subName, 
+            nameEn: subNameEn, 
+            products: [], 
+            type: 'sub_jenis',
+            parentId: jenisKey
+          };
+        }
+        groups[subKey].products.push(product);
+      });
+    }
+
+    return groups;
+  }, [filteredProducts, groupBy]);
+
+  // Toggle group expansion
+  const toggleGroup = (groupKey: string, e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+    }
+    setExpandedGroups((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(groupKey)) {
+        newSet.delete(groupKey);
+      } else {
+        newSet.add(groupKey);
+      }
+      return newSet;
+    });
+  };
+
+  // Expand all groups
+  const expandAllGroups = React.useCallback(() => {
+    if (groupedProducts) {
+      const allKeys = new Set<string>();
+      Object.entries(groupedProducts).forEach(([key, group]) => {
+        allKeys.add(key);
+        // Also add parent keys for hierarchical mode
+        if (group.parentId) {
+          allKeys.add(group.parentId);
+        }
+      });
+      setExpandedGroups(allKeys);
+    }
+  }, [groupedProducts]);
+
+  // Collapse all groups
+  const collapseAllGroups = React.useCallback(() => {
+    setExpandedGroups(new Set());
+  }, []);
+
+  // Get all group keys (for dependency tracking)
+  const groupKeys = React.useMemo(() => {
+    if (!groupedProducts) return '';
+    return Object.keys(groupedProducts).sort().join(',');
+  }, [groupedProducts]);
+
+  // Auto-expand all groups when groupBy changes or groups change
+  React.useEffect(() => {
+    if (groupBy !== "none" && groupedProducts) {
+      const allKeys = new Set<string>();
+      Object.entries(groupedProducts).forEach(([key, group]) => {
+        allKeys.add(key);
+        // Also add parent keys for hierarchical mode
+        if (group.parentId) {
+          allKeys.add(group.parentId);
+        }
+      });
+      setExpandedGroups(allKeys);
+    } else {
+      setExpandedGroups(new Set());
+    }
+  }, [groupBy, groupKeys]);
 
   // Toggle sort
   const handleSort = (
@@ -587,6 +981,21 @@ export default function ProductsPage() {
                   ))}
                 </select>
               </div>
+
+              {/* Group By Filter */}
+              <div className="flex items-center space-x-2">
+                <Layers className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                <select
+                  value={groupBy}
+                  onChange={(e) => setGroupBy(e.target.value as "none" | "jenis" | "sub_jenis" | "jenis_sub_jenis")}
+                  className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500 text-sm w-full sm:w-auto"
+                >
+                  <option value="none">Group By ....</option>
+                  <option value="jenis">Group by Jenis</option>
+                  <option value="sub_jenis">Group by Sub Jenis</option>
+                  <option value="jenis_sub_jenis">Group by Jenis & Sub Jenis</option>
+                </select>
+              </div>
             </div>
 
             {/* Action Buttons */}
@@ -695,14 +1104,40 @@ export default function ProductsPage() {
 
           {/* Reset Filters Button */}
           <div className="flex justify-between items-center pt-2">
-            <div className="text-sm text-gray-600">
-              Showing {filteredProducts.length} of {products.length} products
+            <div className="flex items-center gap-4">
+              <div className="text-sm text-gray-600">
+                Showing {filteredProducts.length} of {products.length} products
+                {groupBy !== "none" && groupedProducts && (
+                  <span className="ml-2 text-orange-600">
+                    ({Object.keys(groupedProducts).length} groups)
+                  </span>
+                )}
+              </div>
+              {groupBy !== "none" && (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={expandAllGroups}
+                    className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                  >
+                    Expand All
+                  </button>
+                  <span className="text-gray-300">|</span>
+                  <button
+                    onClick={collapseAllGroups}
+                    className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                  >
+                    Collapse All
+                  </button>
+                </div>
+              )}
             </div>
             <button
               onClick={() => {
                 setSearchTerm("");
                 setSelectedCategory("all");
                 setSelectedDay("all");
+                setGroupBy("none");
+                setExpandedGroups(new Set());
                 setPriceRange({ min: 0, max: 1000000 });
                 setStockRange({ min: 0, max: 1000 });
                 setSortField("nama");
@@ -773,6 +1208,11 @@ export default function ProductsPage() {
           <table className="min-w-full divide-y divide-gray-200 w-full">
             <thead className="bg-gray-50">
               <tr>
+                {groupBy !== "none" && (
+                  <th className="px-3 lg:px-4 py-3 text-left whitespace-nowrap w-[40px]">
+                    {/* Expand/Collapse column */}
+                  </th>
+                )}
                 <th className="px-3 lg:px-6 py-3 text-left whitespace-nowrap w-[280px]">
                   <button
                     onClick={() => handleSort("nama")}
@@ -833,228 +1273,257 @@ export default function ProductsPage() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredProducts.map((product) => (
-                <tr key={product.id} className="hover:bg-gray-50">
-                  <td className="px-3 lg:px-6 py-4 w-[280px]">
-                    <div className="flex items-center">
-                      <div className="w-10 h-10 rounded-lg mr-3 lg:mr-4 flex-shrink-0 relative">
-                        {product.gambars && product.gambars.length > 0 ? (
-                          <>
-                            <img
-                              src={product.gambars[0].file_path}
-                              alt={product.nama}
-                              className="w-10 h-10 rounded-lg object-cover border border-gray-200"
-                              onError={(e) => {
-                                // Fallback to default icon if image fails to load
-                                const target = e.target as HTMLImageElement;
-                                target.style.display = "none";
-                                const fallback =
-                                  target.parentElement?.querySelector(
-                                    ".fallback-icon"
-                                  ) as HTMLElement;
-                                if (fallback) {
-                                  fallback.style.display = "flex";
-                                }
-                              }}
-                            />
-                            <div
-                              className="fallback-icon absolute inset-0 w-10 h-10 bg-orange-100 rounded-lg items-center justify-center"
-                              style={{ display: "none" }}
-                            >
-                              <Package className="w-5 h-5 text-orange-600" />
-                            </div>
-                          </>
-                        ) : (
-                          <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
-                            <Package className="w-5 h-5 text-orange-600" />
-                          </div>
-                        )}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="text-sm font-medium text-gray-900 truncate">
-                          {product.nama}
-                        </div>
-                        <div className="text-xs lg:text-sm text-gray-500 truncate max-w-[150px] lg:max-w-xs">
-                          {product.deskripsi}
-                        </div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-3 lg:px-6 py-4 whitespace-nowrap w-[140px]">
-                    <span className="inline-flex items-center px-2 lg:px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                      {product.jenis?.[0]?.nama_en ||
-                        product.jenis?.[0]?.nama_id ||
-                        "Unknown"}
-                    </span>
-                  </td>
-                  <td className="px-3 lg:px-6 py-4 w-[180px]">
-                    <div className="flex flex-wrap gap-1">
-                      {product.hari && product.hari.length > 0 ? (
-                        product.hari.map((day) => (
-                          <span
-                            key={day.id}
-                            className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800"
-                          >
-                            {day.nama_id || day.nama}
-                          </span>
-                        ))
-                      ) : (
-                        <span className="text-xs text-gray-400 italic">
-                          No days set
-                        </span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-3 lg:px-6 py-4 whitespace-nowrap text-xs lg:text-sm font-medium text-gray-900 w-[130px]">
-                    {product.harga ? formatPrice(product.harga) : "Rp 0"}
-                  </td>
-                  <td className="px-3 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-900 w-[180px]">
-                    {editingStockId === product.id ? (
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          pattern="[0-9]*"
-                          value={tempStock}
-                          onChange={(e) =>
-                            handleStockInputChange(e.target.value)
-                          }
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                              saveStockEdit(product.id);
-                            } else if (e.key === "Escape") {
-                              cancelStockEdit();
+              {/* Grouped View */}
+              {groupBy !== "none" && groupedProducts ? (
+                (() => {
+                  // Sort groups: jenis groups first (without parentId), then sub_jenis groups (with parentId) after their parent
+                  const sortedEntries = Object.entries(groupedProducts).sort((a, b) => {
+                    const [keyA, groupA] = a;
+                    const [keyB, groupB] = b;
+                    
+                    // If both are jenis (no parentId), sort alphabetically
+                    if (!groupA.parentId && !groupB.parentId) {
+                      return groupA.name.localeCompare(groupB.name);
+                    }
+                    // If A is jenis and B is sub_jenis
+                    if (!groupA.parentId && groupB.parentId) {
+                      // If B's parent is A, B comes after A
+                      if (groupB.parentId === keyA) return -1;
+                      // Otherwise compare by parent
+                      return keyA.localeCompare(groupB.parentId);
+                    }
+                    // If A is sub_jenis and B is jenis
+                    if (groupA.parentId && !groupB.parentId) {
+                      // If A's parent is B, A comes after B
+                      if (groupA.parentId === keyB) return 1;
+                      // Otherwise compare by parent
+                      return groupA.parentId.localeCompare(keyB);
+                    }
+                    // Both are sub_jenis
+                    if (groupA.parentId === groupB.parentId) {
+                      return groupA.name.localeCompare(groupB.name);
+                    }
+                    return groupA.parentId!.localeCompare(groupB.parentId!);
+                  });
+
+                  return sortedEntries.map(([groupKey, group]) => {
+                    // Skip jenis-only groups in jenis_sub_jenis mode (they're just parents)
+                    if (groupBy === "jenis_sub_jenis" && group.type === "jenis" && group.products.length === 0) {
+                      return null;
+                    }
+
+                    const isSubGroup = group.type === "sub_jenis" && group.parentId;
+                    const parentGroup = isSubGroup ? groupedProducts[group.parentId!] : null;
+
+                    return (
+                      <React.Fragment key={groupKey}>
+                        {/* Show parent header for first sub_jenis of each jenis */}
+                        {groupBy === "jenis_sub_jenis" && isSubGroup && parentGroup && (
+                          (() => {
+                            // Check if this is the first sub_jenis for this parent
+                            const siblingKeys = sortedEntries
+                              .filter(([, g]) => g.parentId === group.parentId)
+                              .map(([k]) => k);
+                            const isFirstSibling = siblingKeys[0] === groupKey;
+                            
+                            if (isFirstSibling) {
+                              return (
+                                <tr 
+                                  key={`parent-${group.parentId}`}
+                                  className="bg-gradient-to-r from-orange-100 to-amber-100 cursor-pointer transition-colors"
+                                  onClick={(e) => toggleGroup(group.parentId!, e)}
+                                >
+                                  <td colSpan={8} className="px-3 lg:px-4 py-3">
+                                    <div className="flex items-center gap-3">
+                                      <button 
+                                        className="p-1 hover:bg-orange-200 rounded transition-colors"
+                                        onClick={(e) => toggleGroup(group.parentId!, e)}
+                                      >
+                                        {expandedGroups.has(group.parentId!) ? (
+                                          <ChevronDown className="w-5 h-5 text-orange-700" />
+                                        ) : (
+                                          <ChevronRight className="w-5 h-5 text-orange-700" />
+                                        )}
+                                      </button>
+                                      <div className="flex items-center gap-2">
+                                        <Tag className="w-4 h-4 text-orange-700" />
+                                        <span className="font-bold text-gray-900">
+                                          {parentGroup.name}
+                                        </span>
+                                        <span className="text-sm text-gray-600">
+                                          ({parentGroup.nameEn})
+                                        </span>
+                                      </div>
+                                      <span className="ml-auto px-2.5 py-1 bg-white rounded-full text-xs font-medium text-gray-700 border border-gray-300">
+                                        {siblingKeys.reduce((total, key) => total + (groupedProducts[key]?.products.length || 0), 0)} produk
+                                      </span>
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
                             }
-                          }}
-                          className="w-20 px-3 py-2 border-2 border-orange-500 rounded-lg text-center focus:outline-none focus:ring-2 focus:ring-orange-500 font-semibold"
-                          autoFocus
-                          placeholder="0"
-                        />
-                        <button
-                          onClick={() => saveStockEdit(product.id)}
-                          className="p-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors shadow-sm"
-                          title="Save"
-                        >
-                          <span className="text-base font-bold">✓</span>
-                        </button>
-                        <button
-                          onClick={cancelStockEdit}
-                          className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors shadow-sm"
-                          title="Cancel"
-                        >
-                          <span className="text-base font-bold">✕</span>
-                        </button>
-                      </div>
-                    ) : pendingStockChanges[product.id] !== undefined ? (
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          onClick={() => handleStockDecrement(product.id)}
-                          className="p-1.5 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent border border-gray-200 hover:border-red-300"
-                          disabled={pendingStockChanges[product.id] === 0}
-                          title="Decrease stock"
-                        >
-                          <Minus className="w-4 h-4 text-gray-600 hover:text-red-600" />
-                        </button>
-                        <div className="min-w-[45px] px-3 py-1.5 rounded-lg text-sm font-semibold bg-orange-100 text-orange-800 border-2 border-orange-400 shadow-md animate-pulse">
-                          {pendingStockChanges[product.id]}
-                        </div>
-                        <button
-                          onClick={() => handleStockIncrement(product.id)}
-                          className="p-1.5 hover:bg-green-50 rounded-lg transition-colors border border-gray-200 hover:border-green-300"
-                          title="Increase stock"
-                        >
-                          <Plus className="w-4 h-4 text-gray-600 hover:text-green-600" />
-                        </button>
-                        <button
-                          onClick={() => confirmStockChange(product.id)}
-                          className="ml-2 px-3 py-1.5 bg-green-500 text-white text-xs font-semibold rounded-lg hover:bg-green-600 transition-colors shadow-sm"
-                          title="Confirm and save to database"
-                        >
-                          ✓ Confirm
-                        </button>
-                        <button
-                          onClick={() => cancelStockChange(product.id)}
-                          className="px-3 py-1.5 bg-red-500 text-white text-xs font-semibold rounded-lg hover:bg-red-600 transition-colors shadow-sm"
-                          title="Cancel changes"
-                        >
-                          ✕ Cancel
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          onClick={() => handleStockDecrement(product.id)}
-                          className="p-1.5 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent border border-gray-200 hover:border-red-300"
-                          disabled={!product.stok || product.stok === 0}
-                          title="Decrease stock"
-                        >
-                          <Minus className="w-4 h-4 text-gray-600 hover:text-red-600" />
-                        </button>
-                        <button
-                          onClick={() =>
-                            startEditingStock(product.id, product.stok || 0)
-                          }
-                          className={`min-w-[45px] px-3 py-1.5 rounded-lg text-sm font-semibold transition-all shadow-sm ${
-                            !product.stok || product.stok === 0
-                              ? "bg-red-100 text-red-800 hover:bg-red-200 border border-red-200"
-                              : product.stok < 10
-                              ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-200 border border-yellow-200"
-                              : "bg-green-100 text-green-800 hover:bg-green-200 border border-green-200"
-                          }`}
-                          title="Click to edit stock"
-                        >
-                          {product.stok ?? 0}
-                        </button>
-                        <button
-                          onClick={() => handleStockIncrement(product.id)}
-                          className="p-1.5 hover:bg-green-50 rounded-lg transition-colors border border-gray-200 hover:border-green-300"
-                          title="Increase stock"
-                        >
-                          <Plus className="w-4 h-4 text-gray-600 hover:text-green-600" />
-                        </button>
-                      </div>
-                    )}
-                  </td>
-                  <td className="px-3 lg:px-6 py-4 whitespace-nowrap text-xs lg:text-sm text-gray-900 w-[100px]">
-                    {product.sales ?? 0}
-                  </td>
-                  <td className="px-3 lg:px-6 py-4 whitespace-nowrap text-right text-sm font-medium w-[140px]">
-                    <div className="flex items-center justify-end gap-2">
-                      <button
-                        onClick={() => handleViewProduct(product.id)}
-                        className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700 transition-colors"
-                        title="View Details"
-                      >
-                        <Eye className="w-4 h-4 lg:w-5 lg:h-5" />
-                      </button>
-                      <button
-                        onClick={() =>
-                          handleEditProduct(
-                            product.id,
-                            product.nama || "Product"
+                            return null;
+                          })()
+                        )}
+                        
+                        {/* Sub-group header (only show if parent is expanded in jenis_sub_jenis mode) */}
+                        {groupBy === "jenis_sub_jenis" && isSubGroup ? (
+                          expandedGroups.has(group.parentId!) && (
+                            <>
+                              <tr 
+                                className="bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 cursor-pointer transition-colors"
+                                onClick={(e) => toggleGroup(groupKey, e)}
+                              >
+                                <td colSpan={8} className="px-3 lg:px-4 py-2.5 pl-10">
+                                  <div className="flex items-center gap-3">
+                                    <button 
+                                      className="p-1 hover:bg-blue-200 rounded transition-colors"
+                                      onClick={(e) => toggleGroup(groupKey, e)}
+                                    >
+                                      {expandedGroups.has(groupKey) ? (
+                                        <ChevronDown className="w-4 h-4 text-blue-600" />
+                                      ) : (
+                                        <ChevronRight className="w-4 h-4 text-blue-600" />
+                                      )}
+                                    </button>
+                                    <div className="flex items-center gap-2">
+                                      <Layers className="w-3.5 h-3.5 text-blue-600" />
+                                      <span className="font-medium text-gray-700 text-sm">
+                                        {group.name}
+                                      </span>
+                                      <span className="text-xs text-gray-500">
+                                        ({group.nameEn})
+                                      </span>
+                                    </div>
+                                    <span className="ml-auto px-2 py-0.5 bg-white rounded-full text-xs font-medium text-gray-600 border border-gray-200">
+                                      {group.products.length} produk
+                                    </span>
+                                  </div>
+                                </td>
+                              </tr>
+                              {/* Products in sub-group */}
+                              {expandedGroups.has(groupKey) && group.products.map((product) => (
+                                <ProductTableRow
+                                  key={product.id}
+                                  product={product}
+                                  isGrouped={true}
+                                  editingStockId={editingStockId}
+                                  tempStock={tempStock}
+                                  pendingStockChanges={pendingStockChanges}
+                                  formatPrice={formatPrice}
+                                  handleStockInputChange={handleStockInputChange}
+                                  saveStockEdit={saveStockEdit}
+                                  cancelStockEdit={cancelStockEdit}
+                                  handleStockDecrement={handleStockDecrement}
+                                  handleStockIncrement={handleStockIncrement}
+                                  confirmStockChange={confirmStockChange}
+                                  cancelStockChange={cancelStockChange}
+                                  startEditingStock={startEditingStock}
+                                  handleViewProduct={handleViewProduct}
+                                  handleEditProduct={handleEditProduct}
+                                  handleDeleteProduct={handleDeleteProduct}
+                                />
+                              ))}
+                            </>
                           )
-                        }
-                        className="p-2 rounded-lg bg-orange-50 text-orange-600 hover:bg-orange-100 hover:text-orange-700 transition-colors"
-                        title="Edit Product"
-                      >
-                        <Edit className="w-4 h-4 lg:w-5 lg:h-5" />
-                      </button>
-                      <button
-                        onClick={() =>
-                          handleDeleteProduct(
-                            product.id,
-                            product.nama || "Product"
-                          )
-                        }
-                        className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 transition-colors"
-                        title="Delete Product"
-                      >
-                        <Trash2 className="w-4 h-4 lg:w-5 lg:h-5" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                        ) : (
+                          /* Simple group header for jenis-only or sub_jenis-only mode */
+                          <>
+                            <tr 
+                              className={`cursor-pointer transition-colors ${
+                                group.type === 'jenis' 
+                                  ? 'bg-gradient-to-r from-orange-50 to-amber-50 hover:from-orange-100 hover:to-amber-100' 
+                                  : 'bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100'
+                              }`}
+                              onClick={(e) => toggleGroup(groupKey, e)}
+                            >
+                              <td colSpan={8} className="px-3 lg:px-4 py-3">
+                                <div className="flex items-center gap-3">
+                                  <button 
+                                    className={`p-1 rounded transition-colors ${
+                                      group.type === 'jenis' ? 'hover:bg-orange-200' : 'hover:bg-blue-200'
+                                    }`}
+                                    onClick={(e) => toggleGroup(groupKey, e)}
+                                  >
+                                    {expandedGroups.has(groupKey) ? (
+                                      <ChevronDown className={`w-5 h-5 ${group.type === 'jenis' ? 'text-orange-600' : 'text-blue-600'}`} />
+                                    ) : (
+                                      <ChevronRight className={`w-5 h-5 ${group.type === 'jenis' ? 'text-orange-600' : 'text-blue-600'}`} />
+                                    )}
+                                  </button>
+                                  <div className="flex items-center gap-2">
+                                    {group.type === "jenis" ? (
+                                      <Tag className="w-4 h-4 text-orange-600" />
+                                    ) : (
+                                      <Layers className="w-4 h-4 text-blue-600" />
+                                    )}
+                                    <span className="font-semibold text-gray-800">
+                                      {group.name}
+                                    </span>
+                                    <span className="text-sm text-gray-500">
+                                      ({group.nameEn})
+                                    </span>
+                                  </div>
+                                  <span className="ml-auto px-2.5 py-1 bg-white rounded-full text-xs font-medium text-gray-600 border border-gray-200">
+                                    {group.products.length} produk
+                                  </span>
+                                </div>
+                              </td>
+                            </tr>
+                            {/* Group Products */}
+                            {expandedGroups.has(groupKey) && group.products.map((product) => (
+                              <ProductTableRow
+                                key={product.id}
+                                product={product}
+                                isGrouped={true}
+                                editingStockId={editingStockId}
+                                tempStock={tempStock}
+                                pendingStockChanges={pendingStockChanges}
+                                formatPrice={formatPrice}
+                                handleStockInputChange={handleStockInputChange}
+                                saveStockEdit={saveStockEdit}
+                                cancelStockEdit={cancelStockEdit}
+                                handleStockDecrement={handleStockDecrement}
+                                handleStockIncrement={handleStockIncrement}
+                                confirmStockChange={confirmStockChange}
+                                cancelStockChange={cancelStockChange}
+                                startEditingStock={startEditingStock}
+                                handleViewProduct={handleViewProduct}
+                                handleEditProduct={handleEditProduct}
+                                handleDeleteProduct={handleDeleteProduct}
+                              />
+                            ))}
+                          </>
+                        )}
+                      </React.Fragment>
+                    );
+                  });
+                })()
+              ) : (
+                /* Non-grouped View */
+                filteredProducts.map((product) => (
+                  <ProductTableRow
+                    key={product.id}
+                    product={product}
+                    isGrouped={false}
+                    editingStockId={editingStockId}
+                    tempStock={tempStock}
+                    pendingStockChanges={pendingStockChanges}
+                    formatPrice={formatPrice}
+                    handleStockInputChange={handleStockInputChange}
+                    saveStockEdit={saveStockEdit}
+                    cancelStockEdit={cancelStockEdit}
+                    handleStockDecrement={handleStockDecrement}
+                    handleStockIncrement={handleStockIncrement}
+                    confirmStockChange={confirmStockChange}
+                    cancelStockChange={cancelStockChange}
+                    startEditingStock={startEditingStock}
+                    handleViewProduct={handleViewProduct}
+                    handleEditProduct={handleEditProduct}
+                    handleDeleteProduct={handleDeleteProduct}
+                  />
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -1079,8 +1548,8 @@ export default function ProductsPage() {
         onAddProduct={handleAddProduct}
       />
 
-      {/* Category Manager Modal */}
-      <CategoryManager
+      {/* Jenis/Category Manager Modal */}
+      <JenisManager
         isOpen={showCategoryManager}
         onClose={() => setShowCategoryManager(false)}
       />

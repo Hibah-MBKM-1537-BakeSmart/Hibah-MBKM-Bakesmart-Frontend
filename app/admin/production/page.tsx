@@ -10,8 +10,6 @@ import {
   Eye,
   MessageCircle,
   RefreshCw,
-  Truck,
-  Edit3,
   CheckCircle,
   Clock,
   CreditCard,
@@ -21,7 +19,6 @@ import {
   Lock,
   Package,
   ShoppingBag,
-  Users,
   AlertCircle,
   Wallet,
   PackageCheck,
@@ -29,10 +26,12 @@ import {
   ClipboardList,
   ChefHat,
   Star,
-  StickyNote,
   Flame,
   Search,
   Hourglass,
+  ArrowUpDown,
+  ChevronUp,
+  ChevronDown,
 } from "lucide-react";
 
 interface Addon {
@@ -382,6 +381,9 @@ export default function ProductionPage() {
   >("all");
   const [showAllDates, setShowAllDates] = useState(true); // Default to show all dates for orders tab
   const [showAllProductionDates, setShowAllProductionDates] = useState(true); // Default to show all dates for production tab
+  // Sorting state for orders table
+  const [orderSortField, setOrderSortField] = useState<'id' | 'pelanggan' | 'status' | 'qty' | 'tanggal' | 'total'>('id');
+  const [orderSortDirection, setOrderSortDirection] = useState<'asc' | 'desc'>('desc');
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
   const [isEditingOrder, setIsEditingOrder] = useState(false);
   const [editedOrder, setEditedOrder] = useState<Order | null>(null);
@@ -1089,22 +1091,22 @@ export default function ProductionPage() {
                     <button
                       key={dateStr}
                       onClick={() => handleOrderDateClick(dateStr)}
-                      className={`relative px-2.5 py-1.5 rounded font-medium text-xs transition-colors ${
+                      className={`relative px-3 py-2 rounded font-medium text-sm transition-colors ${
                         isSelected
                           ? "bg-[#9B6D49] text-white"
                           : "bg-gray-50 text-gray-700 border border-gray-200 hover:border-[#9B6D49]"
                       }`}
                     >
                       {/* Checkbox indicator */}
-                      <div className={`absolute -top-1 -right-1 w-3.5 h-3.5 rounded border-2 flex items-center justify-center text-[8px] ${
+                      <div className={`absolute -top-1 -right-1 w-4 h-4 rounded border-2 flex items-center justify-center text-[9px] ${
                         isSelected 
                           ? "bg-[#9B6D49] border-[#9B6D49] text-white" 
                           : "bg-white border-gray-300"
                       }`}>
                         {isSelected && "✓"}
                       </div>
-                      <div className="text-[10px] font-bold">{dayName}</div>
-                      <div className="text-sm">{dayNum}</div>
+                      <div className="text-xs font-bold">{dayName}</div>
+                      <div className="text-base">{dayNum}</div>
                     </button>
                   );
                 })}
@@ -1112,13 +1114,13 @@ export default function ProductionPage() {
             </div>
 
             {/* Quick Range & Date Picker - Inline */}
-            <div className="flex flex-wrap gap-2 items-center text-xs">
+            <div className="flex flex-wrap gap-2 items-center text-sm">
               <button
                 onClick={() => {
                   setShowAllDates(true);
                   setSelectedOrderDates(new Set());
                 }}
-                className={`px-2 py-1 border rounded ${showAllDates ? 'bg-[#9B6D49] text-white border-[#9B6D49]' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'}`}
+                className={`px-3 py-2 border rounded font-medium ${showAllDates ? 'bg-[#9B6D49] text-white border-[#9B6D49]' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'}`}
               >
                 Semua
               </button>
@@ -1128,7 +1130,7 @@ export default function ProductionPage() {
                   setSelectedOrderDates(new Set([today]));
                   setShowAllDates(false);
                 }}
-                className={`px-2 py-1 border rounded ${!showAllDates && selectedOrderDates.size === 1 && selectedOrderDates.has(format(new Date(), "yyyy-MM-dd")) ? 'bg-[#9B6D49] text-white border-[#9B6D49]' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'}`}
+                className={`px-3 py-2 border rounded font-medium ${!showAllDates && selectedOrderDates.size === 1 && selectedOrderDates.has(format(new Date(), "yyyy-MM-dd")) ? 'bg-[#9B6D49] text-white border-[#9B6D49]' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'}`}
               >
                 Hari Ini
               </button>
@@ -1142,14 +1144,14 @@ export default function ProductionPage() {
                   setSelectedOrderDates(dates);
                   setShowAllDates(false);
                 }}
-                className={`px-2 py-1 border rounded ${!showAllDates && selectedOrderDates.size === 7 ? 'bg-[#9B6D49] text-white border-[#9B6D49]' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'}`}
+                className={`px-3 py-2 border rounded font-medium ${!showAllDates && selectedOrderDates.size === 7 ? 'bg-[#9B6D49] text-white border-[#9B6D49]' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'}`}
               >
                 7 Hari
               </button>
               <select
                 value={orderStatusFilter}
                 onChange={(e) => setOrderStatusFilter(e.target.value as any)}
-                className="px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-[#9B6D49] bg-white text-gray-700"
+                className="px-3 py-2 text-sm border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-[#9B6D49] bg-white text-gray-700 font-medium"
               >
                 <option value="all">Semua Status</option>
                 <option value="verifying">Verifikasi</option>
@@ -1165,7 +1167,7 @@ export default function ProductionPage() {
                     setShowAllDates(false);
                   }
                 }}
-                className="px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-[#9B6D49]"
+                className="px-3 py-2 text-sm border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-[#9B6D49] font-medium"
               />
               <span className="text-gray-400 ml-auto">
                 {showAllDates || selectedOrderDates.size === 0 ? (
@@ -1241,28 +1243,130 @@ export default function ProductionPage() {
           {/* ORDERS TABLE */}
           <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full">
                 <thead>
                   <tr className="bg-gray-50 border-b border-gray-200">
-                    <th className="px-3 py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-wider">
-                      ID
+                    <th 
+                      className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                      onClick={() => {
+                        if (orderSortField === 'id') {
+                          setOrderSortDirection(orderSortDirection === 'asc' ? 'desc' : 'asc');
+                        } else {
+                          setOrderSortField('id');
+                          setOrderSortDirection('desc');
+                        }
+                      }}
+                    >
+                      <div className="flex items-center gap-1">
+                        ID
+                        {orderSortField === 'id' ? (
+                          orderSortDirection === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />
+                        ) : (
+                          <ArrowUpDown size={14} className="text-gray-400" />
+                        )}
+                      </div>
                     </th>
-                    <th className="px-3 py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-wider">
-                      Pelanggan
+                    <th 
+                      className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                      onClick={() => {
+                        if (orderSortField === 'pelanggan') {
+                          setOrderSortDirection(orderSortDirection === 'asc' ? 'desc' : 'asc');
+                        } else {
+                          setOrderSortField('pelanggan');
+                          setOrderSortDirection('asc');
+                        }
+                      }}
+                    >
+                      <div className="flex items-center gap-1">
+                        Pelanggan
+                        {orderSortField === 'pelanggan' ? (
+                          orderSortDirection === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />
+                        ) : (
+                          <ArrowUpDown size={14} className="text-gray-400" />
+                        )}
+                      </div>
                     </th>
-                    <th className="px-3 py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-wider">
-                      Status
+                    <th 
+                      className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                      onClick={() => {
+                        if (orderSortField === 'status') {
+                          setOrderSortDirection(orderSortDirection === 'asc' ? 'desc' : 'asc');
+                        } else {
+                          setOrderSortField('status');
+                          setOrderSortDirection('asc');
+                        }
+                      }}
+                    >
+                      <div className="flex items-center gap-1">
+                        Status
+                        {orderSortField === 'status' ? (
+                          orderSortDirection === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />
+                        ) : (
+                          <ArrowUpDown size={14} className="text-gray-400" />
+                        )}
+                      </div>
                     </th>
-                    <th className="px-3 py-3 text-center text-[10px] font-bold text-gray-500 uppercase tracking-wider">
-                      Qty
+                    <th 
+                      className="px-4 py-3 text-center text-xs font-bold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                      onClick={() => {
+                        if (orderSortField === 'qty') {
+                          setOrderSortDirection(orderSortDirection === 'asc' ? 'desc' : 'asc');
+                        } else {
+                          setOrderSortField('qty');
+                          setOrderSortDirection('desc');
+                        }
+                      }}
+                    >
+                      <div className="flex items-center justify-center gap-1">
+                        Qty
+                        {orderSortField === 'qty' ? (
+                          orderSortDirection === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />
+                        ) : (
+                          <ArrowUpDown size={14} className="text-gray-400" />
+                        )}
+                      </div>
                     </th>
-                    <th className="px-3 py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-wider">
-                      Tgl
+                    <th 
+                      className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                      onClick={() => {
+                        if (orderSortField === 'tanggal') {
+                          setOrderSortDirection(orderSortDirection === 'asc' ? 'desc' : 'asc');
+                        } else {
+                          setOrderSortField('tanggal');
+                          setOrderSortDirection('desc');
+                        }
+                      }}
+                    >
+                      <div className="flex items-center gap-1">
+                        Tanggal
+                        {orderSortField === 'tanggal' ? (
+                          orderSortDirection === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />
+                        ) : (
+                          <ArrowUpDown size={14} className="text-gray-400" />
+                        )}
+                      </div>
                     </th>
-                    <th className="px-3 py-3 text-right text-[10px] font-bold text-gray-500 uppercase tracking-wider">
-                      Total
+                    <th 
+                      className="px-4 py-3 text-right text-xs font-bold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                      onClick={() => {
+                        if (orderSortField === 'total') {
+                          setOrderSortDirection(orderSortDirection === 'asc' ? 'desc' : 'asc');
+                        } else {
+                          setOrderSortField('total');
+                          setOrderSortDirection('desc');
+                        }
+                      }}
+                    >
+                      <div className="flex items-center justify-end gap-1">
+                        Total
+                        {orderSortField === 'total' ? (
+                          orderSortDirection === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />
+                        ) : (
+                          <ArrowUpDown size={14} className="text-gray-400" />
+                        )}
+                      </div>
                     </th>
-                    <th className="px-3 py-3 text-center text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-600 uppercase tracking-wider">
                       Aksi
                     </th>
                   </tr>
@@ -1297,7 +1401,7 @@ export default function ProductionPage() {
                         <tr>
                           <td
                             colSpan={7}
-                            className="px-6 py-8 text-center text-gray-500"
+                            className="px-6 py-10 text-center text-gray-500 text-sm"
                           >
                             Tidak ada pesanan pada periode ini
                           </td>
@@ -1305,29 +1409,67 @@ export default function ProductionPage() {
                       );
                     }
 
-                    return allOrdersList.map((order) => {
+                    // Sorting logic
+                    const sortedOrders = [...allOrdersList].sort((a, b) => {
+                      const statusOrder = { verifying: 0, pending: 1, paid: 2, completed: 3 };
+                      let comparison = 0;
+                      
+                      const aTotalItems = a.order_products.reduce((sum, p) => sum + p.jumlah, 0);
+                      const bTotalItems = b.order_products.reduce((sum, p) => sum + p.jumlah, 0);
+                      const aTotalPrice = a.order_products.reduce((sum, p) => sum + p.jumlah * p.harga_beli, 0);
+                      const bTotalPrice = b.order_products.reduce((sum, p) => sum + p.jumlah * p.harga_beli, 0);
+                      
+                      switch (orderSortField) {
+                        case 'id':
+                          comparison = a.id - b.id;
+                          break;
+                        case 'pelanggan':
+                          comparison = a.user.nama.localeCompare(b.user.nama);
+                          break;
+                        case 'status':
+                          comparison = statusOrder[a.type] - statusOrder[b.type];
+                          break;
+                        case 'qty':
+                          comparison = aTotalItems - bTotalItems;
+                          break;
+                        case 'tanggal':
+                          const dateA = new Date(a.scheduled_date || a.created_at).getTime();
+                          const dateB = new Date(b.scheduled_date || b.created_at).getTime();
+                          comparison = dateA - dateB;
+                          break;
+                        case 'total':
+                          comparison = aTotalPrice - bTotalPrice;
+                          break;
+                        default:
+                          comparison = 0;
+                      }
+                      
+                      return orderSortDirection === 'asc' ? comparison : -comparison;
+                    });
+
+                    return sortedOrders.map((order) => {
                       const statusConfig = {
                         verifying: {
                           label: "Verifikasi",
-                          icon: <Search size={12} className="mr-1" />,
+                          icon: <Search size={14} className="mr-1" />,
                           bgColor: "bg-orange-100",
                           textColor: "text-orange-800",
                         },
                         pending: {
                           label: "Menunggu",
-                          icon: <Hourglass size={12} className="mr-1" />,
+                          icon: <Hourglass size={14} className="mr-1" />,
                           bgColor: "bg-yellow-100",
                           textColor: "text-yellow-800",
                         },
                         paid: {
                           label: "Dibayar",
-                          icon: <CreditCard size={12} className="mr-1" />,
+                          icon: <CreditCard size={14} className="mr-1" />,
                           bgColor: "bg-blue-100",
                           textColor: "text-blue-800",
                         },
                         completed: {
                           label: "Selesai",
-                          icon: <CheckCircle size={12} className="mr-1" />,
+                          icon: <CheckCircle size={14} className="mr-1" />,
                           bgColor: "bg-green-100",
                           textColor: "text-green-800",
                         },
@@ -1347,29 +1489,29 @@ export default function ProductionPage() {
                           key={order.id}
                           className="border-b border-gray-100 hover:bg-gray-50/50 transition-colors"
                         >
-                          <td className="px-3 py-2 text-xs font-medium text-gray-900">
+                          <td className="px-4 py-3 text-sm font-semibold text-gray-900">
                             #{order.id}
                           </td>
-                          <td className="px-3 py-2">
-                            <div className="text-xs font-medium text-gray-900">
+                          <td className="px-4 py-3">
+                            <div className="text-sm font-medium text-gray-900">
                               {order.user.nama}
                             </div>
-                            <div className="text-[10px] text-gray-400">
+                            <div className="text-xs text-gray-500">
                               {order.user.no_hp}
                             </div>
                           </td>
-                          <td className="px-3 py-2">
+                          <td className="px-4 py-3">
                             <span
-                              className={`px-2 py-0.5 rounded text-[10px] font-medium flex items-center w-fit ${config.bgColor} ${config.textColor}`}
+                              className={`px-2.5 py-1 rounded text-xs font-semibold flex items-center w-fit ${config.bgColor} ${config.textColor}`}
                             >
                               {config.icon}
                               {config.label}
                             </span>
                           </td>
-                          <td className="px-3 py-2 text-center text-xs text-gray-600">
+                          <td className="px-4 py-3 text-center text-sm font-medium text-gray-700">
                             {totalItems}
                           </td>
-                          <td className="px-3 py-2 text-xs text-gray-600">
+                          <td className="px-4 py-3 text-sm text-gray-700">
                             {format(
                               new Date(
                                 order.scheduled_date || order.created_at
@@ -1378,63 +1520,63 @@ export default function ProductionPage() {
                               { locale: idLocale }
                             )}
                           </td>
-                          <td className="px-3 py-2 text-right text-xs font-medium text-gray-900">
+                          <td className="px-4 py-3 text-right text-sm font-semibold text-gray-900">
                             Rp {totalPrice.toLocaleString("id-ID")}
                           </td>
-                          <td className="px-3 py-2">
-                            <div className="flex gap-1 justify-center">
+                          <td className="px-4 py-3">
+                            <div className="flex gap-1.5 justify-center">
                               <button
                                 onClick={() => {
                                   setSelectedOrderId(order.id);
                                   setEditedOrder(order);
                                   setIsEditingOrder(false);
                                 }}
-                                className="w-7 h-7 flex items-center justify-center bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-md transition-colors"
+                                className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
                                 title={
                                   order.type === "verifying" ? "Edit" : "Lihat"
                                 }
                               >
-                                <Eye size={14} />
+                                <Eye className="w-4 h-4 lg:w-5 lg:h-5" />
                               </button>
                               {order.type === "verifying" && (
                                 <>
                                   <button
                                     onClick={() => handleApproveOrder(order.id)}
-                                    className="w-7 h-7 flex items-center justify-center bg-green-50 text-green-600 hover:bg-green-100 rounded-md transition-colors"
+                                    className="p-2 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition-colors"
                                     title="Terima"
                                   >
-                                    <CheckCircle size={14} />
+                                    <CheckCircle className="w-4 h-4 lg:w-5 lg:h-5" />
                                   </button>
                                   <button
                                     onClick={() => handleRejectOrder(order.id)}
-                                    className="w-7 h-7 flex items-center justify-center bg-red-50 text-red-600 hover:bg-red-100 rounded-md transition-colors"
+                                    className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
                                     title="Tolak"
                                   >
-                                    <XCircle size={14} />
+                                    <XCircle className="w-4 h-4 lg:w-5 lg:h-5" />
                                   </button>
                                 </>
                               )}
                               {order.type === "pending" && (
                                 <button
                                   onClick={() => handleVerifyPayment(order.id)}
-                                  className="w-7 h-7 flex items-center justify-center bg-orange-50 text-orange-600 hover:bg-orange-100 rounded-md transition-colors"
+                                  className="p-2 rounded-lg bg-orange-50 text-orange-600 hover:bg-orange-100 transition-colors"
                                   title="Verifikasi Pembayaran"
                                 >
-                                  <Wallet size={14} />
+                                  <Wallet className="w-4 h-4 lg:w-5 lg:h-5" />
                                 </button>
                               )}
                               {order.type === "paid" && (
                                 <button
                                   onClick={() => handleCompleteOrder(order.id)}
-                                  className="w-7 h-7 flex items-center justify-center bg-purple-50 text-purple-600 hover:bg-purple-100 rounded-md transition-colors"
+                                  className="p-2 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 transition-colors"
                                   title="Selesai / Kirim"
                                 >
-                                  <PackageCheck size={14} />
+                                  <PackageCheck className="w-4 h-4 lg:w-5 lg:h-5" />
                                 </button>
                               )}
                               {order.type === "completed" && (
-                                <span className="w-7 h-7 flex items-center justify-center bg-gray-50 text-gray-400 rounded-md">
-                                  <CheckCircle size={14} />
+                                <span className="p-2 inline-flex items-center justify-center bg-gray-50 text-gray-400 rounded-lg">
+                                  <CheckCircle className="w-4 h-4 lg:w-5 lg:h-5" />
                                 </span>
                               )}
                               <a
@@ -1465,10 +1607,10 @@ export default function ProductionPage() {
                                 )}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="w-7 h-7 flex items-center justify-center bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-md transition-colors"
+                                className="p-2 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors"
                                 title="WhatsApp"
                               >
-                                <MessageCircle size={14} />
+                                <MessageCircle className="w-4 h-4 lg:w-5 lg:h-5" />
                               </a>
                             </div>
                           </td>
@@ -1488,8 +1630,8 @@ export default function ProductionPage() {
         <div className="space-y-3">
           <div className="flex flex-col gap-3">
             {/* 7-Day Calendar View */}
-            <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-4">
-              <div className="mb-3">
+            <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-3">
+              <div className="mb-2">
                 <h3 className="text-sm font-bold text-gray-900 mb-2 flex items-center gap-2">
                   <Calendar size={16} /> Jadwal
                   {selectedProductionDates.size > 0 && !showAllProductionDates && (
@@ -1514,22 +1656,22 @@ export default function ProductionPage() {
                       <button
                         key={dateStr}
                         onClick={() => handleProductionDateClick(dateStr)}
-                        className={`relative px-2.5 py-1.5 rounded font-medium text-xs transition-colors ${
+                        className={`relative px-3 py-2 rounded font-medium text-sm transition-colors ${
                           isSelected
                             ? "bg-[#9B6D49] text-white"
                             : "bg-gray-50 text-gray-700 border border-gray-200 hover:border-[#9B6D49]"
                         }`}
                       >
                         {/* Checkbox indicator */}
-                        <div className={`absolute -top-1 -right-1 w-3.5 h-3.5 rounded border-2 flex items-center justify-center text-[8px] ${
+                        <div className={`absolute -top-1 -right-1 w-4 h-4 rounded border-2 flex items-center justify-center text-[9px] ${
                           isSelected 
                             ? "bg-[#9B6D49] border-[#9B6D49] text-white" 
                             : "bg-white border-gray-300"
                         }`}>
                           {isSelected && "✓"}
                         </div>
-                        <div className="text-[10px] font-bold">{dayName}</div>
-                        <div className="text-sm">{dayNum}</div>
+                        <div className="text-xs font-bold">{dayName}</div>
+                        <div className="text-base">{dayNum}</div>
                       </button>
                     );
                   })}
@@ -1537,13 +1679,13 @@ export default function ProductionPage() {
               </div>
 
               {/* Quick Range & Date Picker - Inline */}
-              <div className="flex flex-wrap gap-2 items-center text-xs">
+              <div className="flex flex-wrap gap-2 items-center text-sm">
                 <button
                   onClick={() => {
                     setShowAllProductionDates(true);
                     setSelectedProductionDates(new Set());
                   }}
-                  className={`px-2 py-1 border rounded ${showAllProductionDates ? 'bg-[#9B6D49] text-white border-[#9B6D49]' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'}`}
+                  className={`px-3 py-2 border rounded font-medium ${showAllProductionDates ? 'bg-[#9B6D49] text-white border-[#9B6D49]' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'}`}
                 >
                   Semua
                 </button>
@@ -1553,7 +1695,7 @@ export default function ProductionPage() {
                     setSelectedProductionDates(new Set([today]));
                     setShowAllProductionDates(false);
                   }}
-                  className={`px-2 py-1 border rounded ${!showAllProductionDates && selectedProductionDates.size === 1 && selectedProductionDates.has(format(new Date(), "yyyy-MM-dd")) ? 'bg-[#9B6D49] text-white border-[#9B6D49]' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'}`}
+                  className={`px-3 py-2 border rounded font-medium ${!showAllProductionDates && selectedProductionDates.size === 1 && selectedProductionDates.has(format(new Date(), "yyyy-MM-dd")) ? 'bg-[#9B6D49] text-white border-[#9B6D49]' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'}`}
                 >
                   Hari Ini
                 </button>
@@ -1567,7 +1709,7 @@ export default function ProductionPage() {
                     setSelectedProductionDates(dates);
                     setShowAllProductionDates(false);
                   }}
-                  className={`px-2 py-1 border rounded ${!showAllProductionDates && selectedProductionDates.size === 7 ? 'bg-[#9B6D49] text-white border-[#9B6D49]' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'}`}
+                  className={`px-3 py-2 border rounded font-medium ${!showAllProductionDates && selectedProductionDates.size === 7 ? 'bg-[#9B6D49] text-white border-[#9B6D49]' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'}`}
                 >
                   7 Hari
                 </button>
@@ -1582,7 +1724,7 @@ export default function ProductionPage() {
                       | "completed"
                     )
                   }
-                  className="px-2 py-1 border border-gray-200 rounded bg-white text-xs text-gray-700 focus:outline-none focus:ring-1 focus:ring-[#9B6D49]"
+                  className="px-3 py-2 text-sm border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-[#9B6D49] bg-white text-gray-700 font-medium"
                 >
                   <option value="all">Semua Status</option>
                   <option value="in_production">Proses Masak</option>
@@ -1596,7 +1738,7 @@ export default function ProductionPage() {
                       setShowAllProductionDates(false);
                     }
                   }}
-                  className="px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-[#9B6D49]"
+                  className="px-3 py-2 text-sm border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-[#9B6D49] font-medium"
                 />
                 <span className="text-gray-400 ml-auto">
                   {showAllProductionDates || selectedProductionDates.size === 0 ? (
@@ -1870,15 +2012,15 @@ export default function ProductionPage() {
                                   setEditedOrder(order);
                                   setIsEditingOrder(false);
                                 }}
-                                className="flex-1 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 border border-blue-200 hover:bg-blue-100 rounded-lg flex items-center justify-center gap-1.5 transition-colors"
+                                className="flex-1 py-2 text-sm font-medium text-blue-600 bg-blue-50 border border-blue-200 hover:bg-blue-100 rounded-lg flex items-center justify-center gap-2 transition-colors"
                               >
-                                <Eye size={12} /> Preview
+                                <Eye className="w-4 h-4" /> Preview
                               </button>
                               <button
                                 onClick={() => handlePrint(order)}
-                                className="flex-1 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-200 hover:bg-gray-50 rounded-lg flex items-center justify-center gap-1.5 transition-colors"
+                                className="flex-1 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 hover:bg-gray-50 rounded-lg flex items-center justify-center gap-2 transition-colors"
                               >
-                                <Printer size={12} /> Cetak
+                                <Printer className="w-4 h-4" /> Cetak
                               </button>
                             </div>
                             <select
@@ -2026,15 +2168,15 @@ export default function ProductionPage() {
                   {editedOrder.status === "verifying" && (
                     <button
                       onClick={() => setIsEditingOrder(!isEditingOrder)}
-                      className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded font-medium transition-colors flex items-center gap-1"
+                      className="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-sm rounded font-medium transition-colors flex items-center gap-1.5"
                     >
-                      {isEditingOrder ? <Save size={14} /> : <Edit size={14} />}
+                      {isEditingOrder ? <Save className="w-4 h-4" /> : <Edit className="w-4 h-4" />}
                       {isEditingOrder ? "Selesai Edit" : "Edit"}
                     </button>
                   )}
                   {editedOrder.status !== "verifying" && (
-                    <span className="text-xs text-gray-500 flex items-center gap-1">
-                      <Lock size={14} /> Tidak Bisa Diubah
+                    <span className="text-sm text-gray-500 flex items-center gap-1.5">
+                      <Lock className="w-4 h-4" /> Tidak Bisa Diubah
                     </span>
                   )}
                 </div>
@@ -2144,9 +2286,9 @@ export default function ProductionPage() {
                         setSelectedOrderId(null);
                         setEditedOrder(null);
                       }}
-                      className="flex-1 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                      className="flex-1 px-4 py-2.5 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
                     >
-                      <Check size={16} /> Terima
+                      <Check className="w-5 h-5" /> Terima
                     </button>
                     <button
                       onClick={() => {
@@ -2154,9 +2296,9 @@ export default function ProductionPage() {
                         setSelectedOrderId(null);
                         setEditedOrder(null);
                       }}
-                      className="flex-1 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                      className="flex-1 px-4 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
                     >
-                      <X size={16} /> Tolak
+                      <X className="w-5 h-5" /> Tolak
                     </button>
                   </>
                 )}
@@ -2303,15 +2445,15 @@ function OrderManagementCard({
           <>
             <button
               onClick={() => onApprove?.(order.id)}
-              className="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-3 rounded text-xs flex items-center justify-center gap-1 transition-colors"
+              className="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-2.5 px-4 rounded text-sm flex items-center justify-center gap-1.5 transition-colors"
             >
-              <Check size={14} /> Terima
+              <Check className="w-4 h-4" /> Terima
             </button>
             <button
               onClick={() => onReject?.(order.id)}
-              className="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-3 rounded text-xs flex items-center justify-center gap-1 transition-colors"
+              className="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold py-2.5 px-4 rounded text-sm flex items-center justify-center gap-1.5 transition-colors"
             >
-              <X size={14} /> Tolak
+              <X className="w-4 h-4" /> Tolak
             </button>
           </>
         )}
