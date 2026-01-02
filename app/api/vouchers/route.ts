@@ -1,14 +1,12 @@
 import { NextResponse } from "next/server";
-const host = process.env.API_HOST || '192.168.1.29';
-const port = process.env.API_PORT || '5000';
-const BACKEND_VOUCHER_URL = `http://${host}:${port}/voucher`;
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
 /**
  * GET /api/vouchers - Get all vouchers
  */
 export async function GET() {
   try {
-    const response = await fetch(BACKEND_VOUCHER_URL, {
+    const response = await fetch(`${BACKEND_URL}/voucher`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -45,7 +43,7 @@ export async function POST(request: Request) {
 
     console.log("[API Vouchers POST] Creating voucher:", payload);
 
-    const response = await fetch(BACKEND_VOUCHER_URL, {
+    const response = await fetch(`${BACKEND_URL}/voucher`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

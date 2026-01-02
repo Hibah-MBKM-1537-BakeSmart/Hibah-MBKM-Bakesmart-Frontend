@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 
-const host = process.env.API_HOST || "localhost";
-const port = process.env.API_PORT || "5000";
-const EXTERNAL_API_URL = `http://${host}:${port}/products/export`;
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const EXTERNAL_API_URL = `${BACKEND_URL}/products/export`;
 
 export async function GET(request: Request) {
   try {

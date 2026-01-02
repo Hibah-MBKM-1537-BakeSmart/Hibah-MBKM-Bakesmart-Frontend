@@ -1,8 +1,5 @@
 import { NextResponse } from "next/server";
-const host = process.env.API_HOST || '192.168.1.29';
-const port = process.env.API_PORT || '5000';
-const BACKEND_VOUCHER_URL = `http://${host}:${port}/voucher`;
-
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 /**
  * GET /api/vouchers/[id] - Get voucher by ID
  */
@@ -13,7 +10,7 @@ export async function GET(
   try {
     const { id } = await params;
 
-    const response = await fetch(`${BACKEND_VOUCHER_URL}/${id}`, {
+    const response = await fetch(`${BACKEND_URL}/voucher/${id}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -54,9 +51,9 @@ export async function PUT(
 
     console.log("[API Vouchers PUT] Updating voucher ID:", id);
     console.log("[API Vouchers PUT] Payload:", JSON.stringify(payload, null, 2));
-    console.log("[API Vouchers PUT] Backend URL:", `${BACKEND_VOUCHER_URL}/${id}`);
+    console.log("[API Vouchers PUT] Backend URL:", `${BACKEND_URL}/voucher/${id}`);
 
-    const response = await fetch(`${BACKEND_VOUCHER_URL}/${id}`, {
+    const response = await fetch(`${BACKEND_URL}/voucher/${id}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -103,7 +100,7 @@ export async function DELETE(
 
     console.log("[API Vouchers DELETE] Deleting voucher:", id);
 
-    const response = await fetch(`${BACKEND_VOUCHER_URL}/${id}`, {
+    const response = await fetch(`${BACKEND_URL}/voucher/${id}`, {
       method: "DELETE",
     });
 

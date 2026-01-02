@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
-const host = process.env.API_HOST || 'localhost';
-const port = process.env.API_PORT || '5000';
-const BACKEND_URL = `http://${host}:${port}/products`;
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const BACKEND_PRODUCTS_URL = `${BACKEND_URL}/products`;
 
 export async function GET(
   request: Request,
@@ -11,7 +10,7 @@ export async function GET(
     const { id } = await params;
     console.log(`[Products API] GET product by ID: ${id}`);
 
-    const response = await fetch(`${BACKEND_URL}/${id}`, {
+    const response = await fetch(`${BACKEND_PRODUCTS_URL}/${id}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -46,7 +45,7 @@ export async function PUT(
     const body = await request.json();
     console.log(`[Products API] PUT product ID: ${id}`, body);
 
-    const response = await fetch(`${BACKEND_URL}/${id}`, {
+    const response = await fetch(`${BACKEND_PRODUCTS_URL}/${id}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -82,7 +81,7 @@ export async function DELETE(
     const { id } = await params;
     console.log(`[Products API] DELETE product ID: ${id}`);
 
-    const response = await fetch(`${BACKEND_URL}/${id}`, {
+    const response = await fetch(`${BACKEND_PRODUCTS_URL}/${id}`, {
       method: "DELETE",
       headers: {
         "Content-Type": "application/json",

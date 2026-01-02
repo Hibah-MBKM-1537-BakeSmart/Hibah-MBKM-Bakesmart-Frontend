@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 
-const host = process.env.API_HOST;
-const port = process.env.API_PORT;
-const BACKEND_QR_URL = `http://${host}:${port}/qr/create`;
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const BACKEND_QR_URL = `${BACKEND_URL}/qr/create`;
 
 export async function POST(request: Request) {
   try {

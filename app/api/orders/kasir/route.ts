@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-const host = process.env.API_HOST;
-const port = process.env.API_PORT;
-const BACKEND_URL = `http://${host}:${port}/orders`;
+
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const BACKEND_URL_ORDERS = `${BACKEND_URL}/orders`;
 
 /**
  * POST /api/orders/kasir
@@ -57,7 +57,7 @@ export async function POST(request: Request) {
 
     console.log("[Kasir Orders API] Sending to backend:", orderPayload);
 
-    const response = await fetch(BACKEND_URL, {
+    const response = await fetch(BACKEND_URL_ORDERS, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
