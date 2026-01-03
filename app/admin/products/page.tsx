@@ -224,13 +224,12 @@ function ProductTableRow({
             </button>
             <button
               onClick={() => startEditingStock(product.id, product.stok || 0)}
-              className={`min-w-[45px] px-3 py-1.5 rounded-lg text-sm font-semibold transition-all shadow-sm ${
-                !product.stok || product.stok === 0
+              className={`min-w-[45px] px-3 py-1.5 rounded-lg text-sm font-semibold transition-all shadow-sm ${!product.stok || product.stok === 0
                   ? "bg-red-100 text-red-800 hover:bg-red-200 border border-red-200"
                   : product.stok < 10
-                  ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-200 border border-yellow-200"
-                  : "bg-green-100 text-green-800 hover:bg-green-200 border border-green-200"
-              }`}
+                    ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-200 border border-yellow-200"
+                    : "bg-green-100 text-green-800 hover:bg-green-200 border border-green-200"
+                }`}
               title="Click to edit stock"
             >
               {product.stok ?? 0}
@@ -522,10 +521,10 @@ export default function ProductsPage() {
       return null;
     }
 
-    const groups: Record<string, { 
-      name: string; 
-      nameEn: string; 
-      products: Product[]; 
+    const groups: Record<string, {
+      name: string;
+      nameEn: string;
+      products: Product[];
       type: 'jenis' | 'sub_jenis';
       parentId?: string;
     }> = {};
@@ -561,31 +560,31 @@ export default function ProductsPage() {
       filteredProducts.forEach((product) => {
         const jenis = product.jenis?.[0];
         const subJenis = product.sub_jenis?.[0];
-        
+
         const jenisKey = `jenis_${jenis?.id?.toString() || "uncategorized"}`;
         const jenisName = jenis?.nama_id || "Tanpa Kategori";
         const jenisNameEn = jenis?.nama_en || "Uncategorized";
-        
+
         // Create jenis group if not exists
         if (!groups[jenisKey]) {
-          groups[jenisKey] = { 
-            name: jenisName, 
-            nameEn: jenisNameEn, 
-            products: [], 
-            type: 'jenis' 
+          groups[jenisKey] = {
+            name: jenisName,
+            nameEn: jenisNameEn,
+            products: [],
+            type: 'jenis'
           };
         }
-        
+
         // Create sub_jenis group under jenis
         const subKey = `${jenisKey}_sub_${subJenis?.id?.toString() || "uncategorized"}`;
         const subName = subJenis?.nama_id || "Tanpa Sub Kategori";
         const subNameEn = subJenis?.nama_en || "Uncategorized";
-        
+
         if (!groups[subKey]) {
-          groups[subKey] = { 
-            name: subName, 
-            nameEn: subNameEn, 
-            products: [], 
+          groups[subKey] = {
+            name: subName,
+            nameEn: subNameEn,
+            products: [],
             type: 'sub_jenis',
             parentId: jenisKey
           };
@@ -758,9 +757,8 @@ export default function ProductsPage() {
       addToast({
         type: "success",
         title: "Product updated successfully!",
-        message: `${
-          productData.nama || selectedProduct.nama
-        } has been updated.`,
+        message: `${productData.nama || selectedProduct.nama
+          } has been updated.`,
       });
     } catch (error) {
       addToast({
@@ -1280,7 +1278,7 @@ export default function ProductsPage() {
                   const sortedEntries = Object.entries(groupedProducts).sort((a, b) => {
                     const [keyA, groupA] = a;
                     const [keyB, groupB] = b;
-                    
+
                     // If both are jenis (no parentId), sort alphabetically
                     if (!groupA.parentId && !groupB.parentId) {
                       return groupA.name.localeCompare(groupB.name);
@@ -1325,17 +1323,17 @@ export default function ProductsPage() {
                               .filter(([, g]) => g.parentId === group.parentId)
                               .map(([k]) => k);
                             const isFirstSibling = siblingKeys[0] === groupKey;
-                            
+
                             if (isFirstSibling) {
                               return (
-                                <tr 
+                                <tr
                                   key={`parent-${group.parentId}`}
                                   className="bg-gradient-to-r from-orange-100 to-amber-100 cursor-pointer transition-colors"
                                   onClick={(e) => toggleGroup(group.parentId!, e)}
                                 >
                                   <td colSpan={8} className="px-3 lg:px-4 py-3">
                                     <div className="flex items-center gap-3">
-                                      <button 
+                                      <button
                                         className="p-1 hover:bg-orange-200 rounded transition-colors"
                                         onClick={(e) => toggleGroup(group.parentId!, e)}
                                       >
@@ -1365,18 +1363,18 @@ export default function ProductsPage() {
                             return null;
                           })()
                         )}
-                        
+
                         {/* Sub-group header (only show if parent is expanded in jenis_sub_jenis mode) */}
                         {groupBy === "jenis_sub_jenis" && isSubGroup ? (
                           expandedGroups.has(group.parentId!) && (
                             <>
-                              <tr 
+                              <tr
                                 className="bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 cursor-pointer transition-colors"
                                 onClick={(e) => toggleGroup(groupKey, e)}
                               >
                                 <td colSpan={8} className="px-3 lg:px-4 py-2.5 pl-10">
                                   <div className="flex items-center gap-3">
-                                    <button 
+                                    <button
                                       className="p-1 hover:bg-blue-200 rounded transition-colors"
                                       onClick={(e) => toggleGroup(groupKey, e)}
                                     >
@@ -1429,20 +1427,18 @@ export default function ProductsPage() {
                         ) : (
                           /* Simple group header for jenis-only or sub_jenis-only mode */
                           <>
-                            <tr 
-                              className={`cursor-pointer transition-colors ${
-                                group.type === 'jenis' 
-                                  ? 'bg-gradient-to-r from-orange-50 to-amber-50 hover:from-orange-100 hover:to-amber-100' 
+                            <tr
+                              className={`cursor-pointer transition-colors ${group.type === 'jenis'
+                                  ? 'bg-gradient-to-r from-orange-50 to-amber-50 hover:from-orange-100 hover:to-amber-100'
                                   : 'bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100'
-                              }`}
+                                }`}
                               onClick={(e) => toggleGroup(groupKey, e)}
                             >
                               <td colSpan={8} className="px-3 lg:px-4 py-3">
                                 <div className="flex items-center gap-3">
-                                  <button 
-                                    className={`p-1 rounded transition-colors ${
-                                      group.type === 'jenis' ? 'hover:bg-orange-200' : 'hover:bg-blue-200'
-                                    }`}
+                                  <button
+                                    className={`p-1 rounded transition-colors ${group.type === 'jenis' ? 'hover:bg-orange-200' : 'hover:bg-blue-200'
+                                      }`}
                                     onClick={(e) => toggleGroup(groupKey, e)}
                                   >
                                     {expandedGroups.has(groupKey) ? (
