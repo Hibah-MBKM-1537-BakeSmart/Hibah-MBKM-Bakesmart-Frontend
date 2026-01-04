@@ -15,6 +15,8 @@ import {
   Loader2,
   Upload,
   Banknote,
+  Building,
+  Smartphone,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';

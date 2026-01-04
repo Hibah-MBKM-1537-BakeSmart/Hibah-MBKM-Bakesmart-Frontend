@@ -14,9 +14,9 @@ export default function KasirPage() {
         {/* Header */}
         <KasirHeader />
         
-        <div className="flex-1 flex overflow-hidden">
+        <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
           {/* Left Side - Product Selection */}
-          <div className="flex-1 flex flex-col p-6 overflow-hidden">
+          <div className="flex-1 flex flex-col p-4 lg:p-6 overflow-hidden min-h-0">
             {/* Category Filter */}
             <CategoryFilter />
             
@@ -27,7 +27,7 @@ export default function KasirPage() {
           </div>
           
           {/* Right Side - Cart */}
-          <div className="w-96 border-l border-gray-200 bg-white">
+          <div className="w-full lg:w-96 xl:w-[420px] border-t lg:border-t-0 lg:border-l border-gray-200 bg-white flex-shrink-0 h-[40vh] lg:h-auto">
             <KasirCart />
           </div>
         </div>
