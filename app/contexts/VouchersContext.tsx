@@ -114,16 +114,26 @@ export function VouchersProvider({ children }: { children: ReactNode }) {
     };
   };
 
-  // Fetch vouchers dari backend
-  const refreshVouchers = async () => {
+  // Fetch vouchers dari backend with retry mechanism
+  const refreshVouchers = async (retryCount = 0): Promise<void> => {
+    const MAX_RETRIES = 3;
+    const TIMEOUT_MS = 30000; // 30 seconds timeout (increased from 5s)
+
     try {
       setLoading(true);
-      setError(null);
+      if (retryCount === 0) {
+        setError(null);
+      }
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
       const response = await fetch(BACKEND_API_URL, {
         cache: "no-store",
-        signal: AbortSignal.timeout(5000), // 5 second timeout
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -168,14 +178,31 @@ export function VouchersProvider({ children }: { children: ReactNode }) {
         "items"
       );
       setVouchers(mappedVouchers);
+      setError(null); // Clear any previous error on success
     } catch (err) {
-      console.error("Error fetching vouchers:", err);
+      console.error(`Error fetching vouchers (attempt ${retryCount + 1}/${MAX_RETRIES}):`, err);
 
-      let errorMessage = "Failed to fetch vouchers";
+      // Check if we should retry
+      const isTimeout = err instanceof Error && (
+        err.name === 'AbortError' ||
+        err.message.includes('timeout') ||
+        err.message.includes('aborted')
+      );
+      const isNetworkError = err instanceof TypeError && err.message.includes("fetch");
 
-      if (err instanceof TypeError && err.message.includes("fetch")) {
-        errorMessage =
-          "Backend server tidak dapat diakses. Pastikan server backend running";
+      if ((isTimeout || isNetworkError) && retryCount < MAX_RETRIES - 1) {
+        console.log(`[VouchersContext] Retrying... (attempt ${retryCount + 2}/${MAX_RETRIES})`);
+        // Wait a bit before retrying (exponential backoff)
+        await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
+        return refreshVouchers(retryCount + 1);
+      }
+
+      let errorMessage = "Gagal mengambil data voucher";
+
+      if (isTimeout) {
+        errorMessage = "Koneksi timeout. Server membutuhkan waktu lebih lama untuk merespons. Silakan coba lagi.";
+      } else if (isNetworkError) {
+        errorMessage = "Backend server tidak dapat diakses. Pastikan server backend running.";
       } else if (err instanceof Error) {
         errorMessage = err.message;
       }
@@ -221,7 +248,7 @@ export function VouchersProvider({ children }: { children: ReactNode }) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(payload),
-        signal: AbortSignal.timeout(5000),
+        signal: AbortSignal.timeout(30000), // 30 second timeout
       });
 
       if (!response.ok) {
@@ -291,7 +318,7 @@ export function VouchersProvider({ children }: { children: ReactNode }) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(payload),
-        signal: AbortSignal.timeout(5000),
+        signal: AbortSignal.timeout(30000), // 30 second timeout
       });
 
       if (!response.ok) {
@@ -332,7 +359,7 @@ export function VouchersProvider({ children }: { children: ReactNode }) {
 
       const response = await fetch(`${BACKEND_API_URL}/${id}`, {
         method: "DELETE",
-        signal: AbortSignal.timeout(5000),
+        signal: AbortSignal.timeout(30000), // 30 second timeout
       });
 
       if (!response.ok) {

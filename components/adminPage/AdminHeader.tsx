@@ -1,22 +1,41 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useAdmin } from "@/app/contexts/AdminContext";
 import { useAuth } from "@/app/contexts/AuthContext";
+import { useAdminTranslation } from "@/app/contexts/AdminTranslationContext";
 import { AdminLanguageSwitcher } from "./AdminLanguageSwitcher";
 import { Bell, User, Settings, LogOut, Shield } from "lucide-react";
 
 export function AdminHeader() {
-  const { state, toggleSidebar, markNotificationAsRead } = useAdmin();
+  const { state, markNotificationAsRead } = useAdmin();
   const { user, logout } = useAuth();
+  const { t } = useAdminTranslation();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const notificationRef = useRef<HTMLDivElement>(null);
+  const userMenuRef = useRef<HTMLDivElement>(null);
 
   const unreadCount = state.notifications.filter((n) => !n.read).length;
 
   const handleNotificationClick = (id: string) => {
     markNotificationAsRead(id);
   };
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
+        setShowNotifications(false);
+      }
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setShowUserMenu(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   return (
     <header
@@ -35,7 +54,7 @@ export function AdminHeader() {
           <AdminLanguageSwitcher />
 
           {/* Notifications */}
-          <div className="relative">
+          <div className="relative" ref={notificationRef}>
             <button
               onClick={() => setShowNotifications(!showNotifications)}
               className="relative p-2 rounded-lg hover:bg-white/50 transition-colors"
@@ -62,7 +81,7 @@ export function AdminHeader() {
                     className="text-lg font-medium font-admin-heading"
                     style={{ color: "#5d4037" }}
                   >
-                    Notifications
+                    {t("header.notifications")}
                   </h3>
                 </div>
                 <div className="max-h-96 overflow-y-auto">
@@ -71,16 +90,15 @@ export function AdminHeader() {
                       className="p-4 text-center"
                       style={{ color: "#8b6f47" }}
                     >
-                      No notifications
+                      {t("header.noNotifications")}
                     </div>
                   ) : (
                     state.notifications.map((notification) => (
                       <div
                         key={notification.id}
                         onClick={() => handleNotificationClick(notification.id)}
-                        className={`p-4 border-b hover:bg-gray-50 cursor-pointer ${
-                          !notification.read ? "bg-blue-50" : ""
-                        }`}
+                        className={`p-4 border-b hover:bg-gray-50 cursor-pointer ${!notification.read ? "bg-blue-50" : ""
+                          }`}
                         style={{ borderColor: "#f0f0f0" }}
                       >
                         <div className="flex justify-between items-start">
@@ -117,7 +135,7 @@ export function AdminHeader() {
           </div>
 
           {/* User Menu */}
-          <div className="relative">
+          <div className="relative" ref={userMenuRef}>
             <button
               onClick={() => setShowUserMenu(!showUserMenu)}
               className="flex items-center space-x-3 p-2 rounded-lg hover:bg-white/50 transition-colors"
@@ -143,7 +161,7 @@ export function AdminHeader() {
                   {user?.username}
                 </p>
                 <p className="text-xs" style={{ color: "#8b6f47" }}>
-                  {user?.role === "super_admin" ? "Super Admin" : "Admin"}
+                  {user?.role === "super_admin" ? t("users.superAdmin") : t("users.admin")}
                 </p>
               </div>
             </button>
@@ -160,14 +178,14 @@ export function AdminHeader() {
                     style={{ color: "#5d4037" }}
                   >
                     <User className="w-4 h-4" />
-                    <span>Profile</span>
+                    <span>{t("header.profile")}</span>
                   </button>
                   <button
                     className="flex items-center space-x-3 px-4 py-2 text-sm hover:bg-gray-50 w-full text-left font-admin-body"
                     style={{ color: "#5d4037" }}
                   >
                     <Settings className="w-4 h-4" />
-                    <span>Settings</span>
+                    <span>{t("header.settings")}</span>
                   </button>
                   <hr className="my-1" style={{ borderColor: "#e0d5c7" }} />
                   <button
@@ -175,7 +193,7 @@ export function AdminHeader() {
                     className="flex items-center space-x-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 w-full text-left font-admin-body"
                   >
                     <LogOut className="w-4 h-4" />
-                    <span>Sign out</span>
+                    <span>{t("header.signOut")}</span>
                   </button>
                 </div>
               </div>

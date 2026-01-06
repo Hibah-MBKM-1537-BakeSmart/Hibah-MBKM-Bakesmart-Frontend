@@ -230,28 +230,27 @@ export function AddProductModal({ isOpen, onClose, onAddProduct }: AddProductMod
     setIsSubmitting(true);
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
+      // Prepare product data for backend
+      // The ProductsContext.addProduct will handle:
+      // 1. Create basic product (POST /products)
+      // 2. Add sub_jenis relations (POST /products/{id}/sub_jenis/{sub_jenis_id})
+      // 3. Add hari relations (POST /products/{id}/hari/{hari_id})
+      // 4. Upload images (POST /products/{id}/gambar)
       const newProduct = {
         nama_id: formData.nama_id,
         nama_en: formData.nama_en,
-        nama: formData.nama_id, // Keep nama for backward compatibility
         deskripsi_id: formData.deskripsi_id,
         deskripsi_en: formData.deskripsi_en,
-        deskripsi: formData.deskripsi_id, // Keep deskripsi for backward compatibility
         harga: parseFloat(formData.harga),
         harga_diskon: formData.harga_diskon ? parseFloat(formData.harga_diskon) : null,
         stok: parseInt(formData.stok),
-        jenis_id: formData.jenis_id, // Send single jenis_id
-        sub_jenis_ids: formData.sub_jenis_ids, // Send sub_jenis_ids array
-        hari_ids: formData.hari_ids, // Send hari_ids array
         isBestSeller: formData.isBestSeller,
         isDaily: formData.isDaily,
-        gambars: formData.images.map((file, index) => ({
-          id: Date.now() + index,
-          file_path: URL.createObjectURL(file),
-          product_id: Date.now()
-        }))
+        // Relations - will be handled separately by ProductsContext
+        sub_jenis_ids: formData.sub_jenis_ids,
+        hari_ids: formData.hari_ids,
+        // Image files - will be uploaded separately
+        imageFiles: formData.images,
       };
 
       onAddProduct(newProduct);

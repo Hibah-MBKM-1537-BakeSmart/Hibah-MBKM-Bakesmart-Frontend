@@ -8,131 +8,70 @@ import {
   useEffect,
   type ReactNode,
 } from "react";
+import { adminTranslations, type AdminTranslationKey } from "@/app/translations/admin";
 
-export type AdminLanguage =
-  | "id"
-  | "en"
-  | "es"
-  | "fr"
-  | "de"
-  | "zh"
-  | "ja"
-  | "ko"
-  | "th";
+export type AdminLanguage = "id" | "en";
 
 interface AdminTranslationContextType {
   language: AdminLanguage;
   setLanguage: (lang: AdminLanguage) => void;
-  tAdmin: (text: string) => Promise<string>;
-  tAdminSync: (text: string) => string;
-  clearCache: () => void;
+  t: (key: AdminTranslationKey | string) => string;
 }
 
 const AdminTranslationContext = createContext<
   AdminTranslationContextType | undefined
 >(undefined);
 
-const translationCache = new Map<string, Map<AdminLanguage, string>>();
-
 export function AdminTranslationProvider({
   children,
 }: {
   children: ReactNode;
 }) {
-  const [language, setLanguage] = useState<AdminLanguage>("id");
-  const [isLoading, setIsLoading] = useState(false);
+  const [language, setLanguageState] = useState<AdminLanguage>("id");
 
+  // Load saved language preference on mount
   useEffect(() => {
-    const savedLanguage = localStorage.getItem(
-      "adminLanguage"
-    ) as AdminLanguage | null;
-    if (savedLanguage) {
-      setLanguage(savedLanguage);
+    const savedLanguage = localStorage.getItem("adminLanguage") as AdminLanguage | null;
+    if (savedLanguage && (savedLanguage === "id" || savedLanguage === "en")) {
+      setLanguageState(savedLanguage);
     }
   }, []);
 
-  const handleSetLanguage = useCallback((lang: AdminLanguage) => {
-    setLanguage(lang);
+  const setLanguage = useCallback((lang: AdminLanguage) => {
+    setLanguageState(lang);
     localStorage.setItem("adminLanguage", lang);
   }, []);
 
-  const tAdmin = useCallback(
-    async (text: string): Promise<string> => {
-      if (language === "id") {
-        return text;
+  // Synchronous translation function using static translation files
+  const t = useCallback(
+    (key: AdminTranslationKey | string): string => {
+      const translations = adminTranslations[language];
+      const translation = translations[key as keyof typeof translations];
+
+      if (translation) {
+        return translation;
       }
 
-      // Check cache dulu
-      if (translationCache.has(text)) {
-        const cached = translationCache.get(text);
-        if (cached?.has(language)) {
-          return cached.get(language)!;
+      // Fallback: try Indonesian if English key not found
+      if (language === "en") {
+        const idTranslation = adminTranslations.id[key as keyof typeof adminTranslations.id];
+        if (idTranslation) {
+          return idTranslation;
         }
       }
 
-      try {
-        setIsLoading(true);
-        const response = await fetch("/api/translate", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text, targetLanguage: language }),
-        });
-
-        if (!response.ok) {
-          console.error("[v0] Translation failed:", response.statusText);
-          return text;
-        }
-
-        const data = await response.json();
-        const translatedText = data.translatedText || text;
-
-        // Simpan ke cache
-        if (!translationCache.has(text)) {
-          translationCache.set(text, new Map());
-        }
-        translationCache.get(text)!.set(language, translatedText);
-
-        return translatedText;
-      } catch (error) {
-        console.error("[v0] Translation error:", error);
-        return text;
-      } finally {
-        setIsLoading(false);
-      }
+      // If key not found, return the key itself (useful for debugging)
+      return key;
     },
     [language]
   );
-
-  const tAdminSync = useCallback(
-    (text: string): string => {
-      if (language === "id") {
-        return text;
-      }
-
-      if (translationCache.has(text)) {
-        const cached = translationCache.get(text);
-        if (cached?.has(language)) {
-          return cached.get(language)!;
-        }
-      }
-
-      return text; // Return original sambil loading di background
-    },
-    [language]
-  );
-
-  const clearCache = useCallback(() => {
-    translationCache.clear();
-  }, []);
 
   return (
     <AdminTranslationContext.Provider
       value={{
         language,
-        setLanguage: handleSetLanguage,
-        tAdmin,
-        tAdminSync,
-        clearCache,
+        setLanguage,
+        t,
       }}
     >
       {children}

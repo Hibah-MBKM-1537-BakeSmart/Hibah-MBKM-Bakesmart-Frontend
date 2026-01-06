@@ -1,10 +1,11 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-// Note: This context now uses localStorage only - no external mock API dependency
 
 export interface Category {
   id: number;
+  nama_id?: string;
+  nama_en?: string;
   nama: string;
   created_at: string;
   updated_at: string;
@@ -33,108 +34,69 @@ interface CategoriesContextType {
 
 const CategoriesContext = createContext<CategoriesContextType | undefined>(undefined);
 
-// Mock initial data based on existing categories in the products
-const mockCategories: Category[] = [
-  {
-    id: 1,
-    nama: 'Cake',
-    created_at: '2024-01-01T00:00:00.000Z',
-    updated_at: '2024-01-01T00:00:00.000Z',
-  },
-  {
-    id: 2,
-    nama: 'Cupcake',
-    created_at: '2024-01-01T00:00:00.000Z',
-    updated_at: '2024-01-01T00:00:00.000Z',
-  },
-  {
-    id: 3,
-    nama: 'Pastry',
-    created_at: '2024-01-01T00:00:00.000Z',
-    updated_at: '2024-01-01T00:00:00.000Z',
-  },
-  {
-    id: 4,
-    nama: 'Donut',
-    created_at: '2024-01-01T00:00:00.000Z',
-    updated_at: '2024-01-01T00:00:00.000Z',
-  },
-  {
-    id: 5,
-    nama: 'Tart',
-    created_at: '2024-01-01T00:00:00.000Z',
-    updated_at: '2024-01-01T00:00:00.000Z',
-  },
-  {
-    id: 6,
-    nama: 'Pie',
-    created_at: '2024-01-01T00:00:00.000Z',
-    updated_at: '2024-01-01T00:00:00.000Z',
-  },
-  {
-    id: 7,
-    nama: 'Bread',
-    created_at: '2024-01-01T00:00:00.000Z',
-    updated_at: '2024-01-01T00:00:00.000Z',
-  },
-];
-
 export function CategoriesProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<CategoriesState>({
     categories: [],
-    loading: false,
+    loading: true,
     error: null,
     isApiConnected: false,
   });
 
-  // Load categories from localStorage on component mount
+  // Load categories from backend API on component mount
   useEffect(() => {
-    const initializeData = async () => {
-      setState(prev => ({ ...prev, loading: true }));
-      
+    const loadCategories = async () => {
       try {
-        // Load from localStorage
-        const savedCategories = localStorage.getItem('bakesmart_categories');
-        if (savedCategories) {
-          const categories = JSON.parse(savedCategories);
-          setState(prev => ({ 
-            ...prev, 
-            categories, 
-            loading: false,
-            error: null 
-          }));
-        } else {
-          // Use mock data as fallback
-          setState(prev => ({ 
-            ...prev, 
-            categories: mockCategories, 
-            loading: false,
-            error: null 
-          }));
-          localStorage.setItem('bakesmart_categories', JSON.stringify(mockCategories));
+        console.log('[Categories] Loading categories from backend...');
+        setState(prev => ({ ...prev, loading: true, isApiConnected: false }));
+
+        const response = await fetch('/api/jenis', {
+          method: 'GET',
+          cache: 'no-store',
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch categories: ${response.status}`);
         }
+
+        const result = await response.json();
+        console.log('[Categories] Backend response:', result);
+
+        const categoriesData = result?.data || [];
+        console.log(`[Categories] Received ${categoriesData.length} categories from backend`);
+
+        // Transform backend data to match Category interface
+        const transformedCategories = categoriesData.map((cat: any) => ({
+          id: cat.id,
+          nama: cat.nama_id || cat.nama_en || cat.nama || '',
+          nama_id: cat.nama_id,
+          nama_en: cat.nama_en,
+          created_at: cat.created_at || new Date().toISOString(),
+          updated_at: cat.updated_at || new Date().toISOString(),
+        }));
+
+        setState(prev => ({
+          ...prev,
+          categories: transformedCategories,
+          loading: false,
+          isApiConnected: true,
+          error: null,
+        }));
+
+        console.log('[Categories] Categories loaded successfully');
       } catch (error) {
-        console.error('Error initializing categories data:', error);
-        setState(prev => ({ 
-          ...prev, 
-          categories: mockCategories,
-          loading: false, 
-          error: 'Gagal memuat data kategori' 
+        console.error('[Categories] Failed to load categories:', error);
+        setState(prev => ({
+          ...prev,
+          categories: [],
+          loading: false,
+          isApiConnected: false,
+          error: error instanceof Error ? error.message : 'Gagal memuat data kategori',
         }));
       }
     };
 
-    initializeData();
+    loadCategories();
   }, []);
-
-  // Helper function to save categories to localStorage
-  const saveCategoriesToStorage = (categories: Category[]) => {
-    try {
-      localStorage.setItem('bakesmart_categories', JSON.stringify(categories));
-    } catch (error) {
-      console.error('Error saving categories to localStorage:', error);
-    }
-  };
 
   const addCategory = async (categoryData: Omit<Category, 'id' | 'created_at' | 'updated_at'>): Promise<void> => {
     try {
@@ -150,23 +112,23 @@ export function CategoriesProvider({ children }: { children: ReactNode }) {
         throw new Error('Kategori dengan nama ini sudah ada');
       }
       
-      // Use localStorage for persistence
-      const newCategory: Category = {
-        id: Date.now(),
-        ...categoryData,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-
-      setState(prev => {
-        const updatedCategories = [...prev.categories, newCategory];
-        localStorage.setItem('bakesmart_categories', JSON.stringify(updatedCategories));
-        return {
-          ...prev,
-          categories: updatedCategories,
-          loading: false,
-        };
+      // Send to backend API
+      const response = await fetch('/api/jenis', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(categoryData),
       });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to create category');
+      }
+
+      const result = await response.json();
+      console.log('[Categories] Category created:', result);
+
+      // Refresh categories after successful creation
+      await refreshCategories();
       
     } catch (error) {
       setState(prev => ({
@@ -182,9 +144,6 @@ export function CategoriesProvider({ children }: { children: ReactNode }) {
     try {
       setState(prev => ({ ...prev, loading: true, error: null }));
       
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
       // Check if new name conflicts with existing categories (excluding current)
       if (categoryData.nama) {
         const existingCategory = state.categories.find(
@@ -197,28 +156,23 @@ export function CategoriesProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      setState(prev => {
-        const updatedCategories = prev.categories.map(cat =>
-          cat.id === id
-            ? { ...cat, ...categoryData, updated_at: new Date().toISOString() }
-            : cat
-        );
-        // Save to localStorage with the most current state
-        saveCategoriesToStorage(updatedCategories);
-        return {
-          ...prev,
-          categories: updatedCategories,
-          loading: false,
-        };
+      // Send to backend API
+      const response = await fetch(`/api/jenis/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(categoryData),
       });
-      
-      // TODO: Replace with actual API call
-      // const response = await fetch(`/api/categories/${id}`, {
-      //   method: 'PUT',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(categoryData),
-      // });
-      // if (!response.ok) throw new Error('Failed to update category');
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to update category');
+      }
+
+      const result = await response.json();
+      console.log('[Categories] Category updated:', result);
+
+      // Refresh categories after successful update
+      await refreshCategories();
       
     } catch (error) {
       setState(prev => ({
@@ -234,29 +188,20 @@ export function CategoriesProvider({ children }: { children: ReactNode }) {
     try {
       setState(prev => ({ ...prev, loading: true, error: null }));
       
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Check if category is being used by products
-      // This would need to be checked against actual product data
-      // For now, we'll skip this check in mock implementation
-      
-      setState(prev => {
-        const updatedCategories = prev.categories.filter(cat => cat.id !== id);
-        // Save to localStorage with the most current state
-        saveCategoriesToStorage(updatedCategories);
-        return {
-          ...prev,
-          categories: updatedCategories,
-          loading: false,
-        };
+      // Send to backend API
+      const response = await fetch(`/api/jenis/${id}`, {
+        method: 'DELETE',
       });
-      
-      // TODO: Replace with actual API call
-      // const response = await fetch(`/api/categories/${id}`, {
-      //   method: 'DELETE',
-      // });
-      // if (!response.ok) throw new Error('Failed to delete category');
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to delete category');
+      }
+
+      console.log('[Categories] Category deleted:', id);
+
+      // Refresh categories after successful deletion
+      await refreshCategories();
       
     } catch (error) {
       setState(prev => ({
@@ -272,20 +217,34 @@ export function CategoriesProvider({ children }: { children: ReactNode }) {
     try {
       setState(prev => ({ ...prev, loading: true, error: null }));
       
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // In real implementation, this would fetch from API
+      const response = await fetch('/api/jenis', {
+        method: 'GET',
+        cache: 'no-store',
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch categories: ${response.status}`);
+      }
+
+      const result = await response.json();
+      const categoriesData = result?.data || [];
+
+      // Transform backend data to match Category interface
+      const transformedCategories = categoriesData.map((cat: any) => ({
+        id: cat.id,
+        nama: cat.nama_id || cat.nama_en || cat.nama || '',
+        nama_id: cat.nama_id,
+        nama_en: cat.nama_en,
+        created_at: cat.created_at || new Date().toISOString(),
+        updated_at: cat.updated_at || new Date().toISOString(),
+      }));
+
       setState(prev => ({
         ...prev,
+        categories: transformedCategories,
         loading: false,
+        error: null,
       }));
-      
-      // TODO: Replace with actual API call
-      // const response = await fetch('/api/categories');
-      // if (!response.ok) throw new Error('Failed to fetch categories');
-      // const categories = await response.json();
-      // setState(prev => ({ ...prev, categories, loading: false }));
       
     } catch (error) {
       setState(prev => ({

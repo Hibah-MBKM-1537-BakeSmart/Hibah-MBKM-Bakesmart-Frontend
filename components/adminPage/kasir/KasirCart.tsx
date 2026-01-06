@@ -44,6 +44,8 @@ export function KasirCart() {
     setCustomerAddress,
     setVoucherCode,
     setVoucherDiscount,
+    setVoucherId,
+    setVoucherMinPurchase,
     setOrderDate,
     setOrderDay,
     setDeliveryMode,
@@ -61,8 +63,13 @@ export function KasirCart() {
   const [voucherError, setVoucherError] = useState('');
   const [processingPayment, setProcessingPayment] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [cashReceived, setCashReceived] = useState<string>('');
+  const [changeAmount, setChangeAmount] = useState<number>(0);
+  const [lastTotal, setLastTotal] = useState<number>(0);
 
-  const formatPrice = (price: number) => {
+  const formatPrice = (price: number | null | undefined) => {
+    if (price === null || price === undefined) return 'Rp 0';
     return `Rp ${price.toLocaleString('id-ID')}`;
   };
 
@@ -84,6 +91,7 @@ export function KasirCart() {
       setSelectedDate(date);
       setOrderDay(getIndonesianDayName(date));
       setOrderDate(format(date, 'yyyy-MM-dd'));
+      setIsCalendarOpen(false); // Close calendar after selection
     }
   };
 
@@ -97,10 +105,16 @@ export function KasirCart() {
     setVoucherError('');
 
     try {
+      // Calculate current subtotal to send to backend for min purchase validation
+      const currentSubtotal = calculateSubtotal();
+
       const response = await fetch('/api/vouchers/validate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ voucherCode: voucherInput.trim() }),
+        body: JSON.stringify({
+          voucherCode: voucherInput.trim(),
+          amount: currentSubtotal, // Send subtotal for minimum purchase check
+        }),
       });
 
       const result = await response.json();
@@ -111,6 +125,8 @@ export function KasirCart() {
 
       setVoucherCode(result.code);
       setVoucherDiscount(result.discount);
+      setVoucherId(result.voucherId || null);
+      setVoucherMinPurchase(result.minPurchase || 0);
       setVoucherInput('');
       setVoucherError('');
     } catch (err) {
@@ -119,6 +135,8 @@ export function KasirCart() {
       setVoucherError(errorMessage);
       setVoucherCode('');
       setVoucherDiscount(0);
+      setVoucherId(null);
+      setVoucherMinPurchase(0);
     } finally {
       setIsValidatingVoucher(false);
     }
@@ -127,6 +145,8 @@ export function KasirCart() {
   const handleRemoveVoucher = () => {
     setVoucherCode('');
     setVoucherDiscount(0);
+    setVoucherId(null);
+    setVoucherMinPurchase(0);
     setVoucherError('');
   };
 
@@ -140,20 +160,53 @@ export function KasirCart() {
       return;
     }
 
+    // Calculate change for cash payment
+    const currentTotal = calculateTotal();
+    const receivedAmount = parseInt(cashReceived.replace(/\D/g, '')) || 0;
+
+    if (state.paymentMethod === 'cash' && receivedAmount > 0) {
+      if (receivedAmount < currentTotal) {
+        alert('Uang yang diterima kurang dari total pembayaran!');
+        return;
+      }
+      setChangeAmount(receivedAmount - currentTotal);
+    } else {
+      setChangeAmount(0);
+    }
+
+    setLastTotal(currentTotal);
     setProcessingPayment(true);
+
     try {
       const success = await processPayment();
       if (success) {
         setPaymentSuccess(true);
-        setTimeout(() => {
-          setPaymentSuccess(false);
-          setProcessingPayment(false);
-        }, 3000);
+        // Reset cash received after successful payment
+        setCashReceived('');
+      } else {
+        setProcessingPayment(false);
       }
     } catch (error) {
       console.error('Payment failed:', error);
       setProcessingPayment(false);
     }
+  };
+
+  const handleCloseSuccessModal = () => {
+    setPaymentSuccess(false);
+    setProcessingPayment(false);
+    setChangeAmount(0);
+    setLastTotal(0);
+  };
+
+  const formatCashInput = (value: string) => {
+    // Remove non-numeric characters
+    const numericValue = value.replace(/\D/g, '');
+    // Format with thousand separators
+    if (numericValue) {
+      return parseInt(numericValue).toLocaleString('id-ID');
+    }
+    return '';
   };
 
   const subtotal = calculateSubtotal();
@@ -314,7 +367,7 @@ export function KasirCart() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <Popover>
+                <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
@@ -558,38 +611,34 @@ export function KasirCart() {
                     return (
                       <div
                         key={method.id}
-                        className={`p-3 border rounded-lg cursor-pointer transition-colors ${
-                          state.paymentMethod === method.id
-                            ? 'border-orange-500 bg-orange-50'
-                            : 'border-gray-200 hover:border-gray-300'
-                        }`}
+                        className={`p-3 border rounded-lg cursor-pointer transition-colors ${state.paymentMethod === method.id
+                          ? 'border-orange-500 bg-orange-50'
+                          : 'border-gray-200 hover:border-gray-300'
+                          }`}
                         onClick={() => setPaymentMethod(method.id as any)}
                       >
                         <div className="flex items-center space-x-3">
                           <RadioGroupItem value={method.id} id={method.id} />
                           <div
-                            className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                              state.paymentMethod === method.id
-                                ? 'bg-orange-100'
-                                : 'bg-gray-100'
-                            }`}
+                            className={`w-8 h-8 rounded-full flex items-center justify-center ${state.paymentMethod === method.id
+                              ? 'bg-orange-100'
+                              : 'bg-gray-100'
+                              }`}
                           >
                             <Icon
-                              className={`w-4 h-4 ${
-                                state.paymentMethod === method.id
-                                  ? 'text-orange-600'
-                                  : 'text-gray-600'
-                              }`}
+                              className={`w-4 h-4 ${state.paymentMethod === method.id
+                                ? 'text-orange-600'
+                                : 'text-gray-600'
+                                }`}
                             />
                           </div>
                           <div className="flex-1">
                             <Label
                               htmlFor={method.id}
-                              className={`cursor-pointer font-medium text-sm ${
-                                state.paymentMethod === method.id
-                                  ? 'text-orange-700'
-                                  : 'text-gray-700'
-                              }`}
+                              className={`cursor-pointer font-medium text-sm ${state.paymentMethod === method.id
+                                ? 'text-orange-700'
+                                : 'text-gray-700'
+                                }`}
                             >
                               {method.label}
                             </Label>
@@ -633,6 +682,66 @@ export function KasirCart() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Cash Received Input (only for cash payment) */}
+            {state.paymentMethod === 'cash' && (
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                    <Banknote className="h-4 w-4" />
+                    Uang Diterima
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">Rp</span>
+                      <Input
+                        type="text"
+                        value={cashReceived}
+                        onChange={(e) => setCashReceived(formatCashInput(e.target.value))}
+                        placeholder="0"
+                        className="pl-10 text-lg font-semibold text-right"
+                      />
+                    </div>
+                    {cashReceived && (
+                      <div className="bg-blue-50 rounded-lg p-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-600">Kembalian:</span>
+                          <span className={`text-lg font-bold ${(parseInt(cashReceived.replace(/\D/g, '')) || 0) >= total
+                              ? 'text-green-600'
+                              : 'text-red-600'
+                            }`}>
+                            {formatPrice(Math.max(0, (parseInt(cashReceived.replace(/\D/g, '')) || 0) - total))}
+                          </span>
+                        </div>
+                        {(parseInt(cashReceived.replace(/\D/g, '')) || 0) < total && (
+                          <p className="text-xs text-red-500 mt-1">Uang kurang Rp {((total - (parseInt(cashReceived.replace(/\D/g, '')) || 0))).toLocaleString('id-ID')}</p>
+                        )}
+                      </div>
+                    )}
+                    {/* Quick amount buttons */}
+                    <div className="grid grid-cols-3 gap-2">
+                      {[50000, 100000, 200000].map((amount) => (
+                        <button
+                          key={amount}
+                          onClick={() => setCashReceived(amount.toLocaleString('id-ID'))}
+                          className="py-2 px-3 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                        >
+                          {formatPrice(amount)}
+                        </button>
+                      ))}
+                    </div>
+                    <button
+                      onClick={() => setCashReceived(total.toLocaleString('id-ID'))}
+                      className="w-full py-2 text-sm bg-orange-100 text-orange-700 hover:bg-orange-200 rounded-lg transition-colors"
+                    >
+                      Uang Pas ({formatPrice(total)})
+                    </button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </>
         )}
       </div>
@@ -643,11 +752,10 @@ export function KasirCart() {
           <button
             onClick={handlePayment}
             disabled={state.isLoading || processingPayment}
-            className={`w-full py-3 rounded-lg font-semibold transition-colors flex items-center justify-center space-x-2 ${
-              state.isLoading || processingPayment
-                ? 'bg-gray-400 cursor-not-allowed'
-                : 'bg-orange-500 text-white hover:bg-orange-600'
-            }`}
+            className={`w-full py-3 rounded-lg font-semibold transition-colors flex items-center justify-center space-x-2 ${state.isLoading || processingPayment
+              ? 'bg-gray-400 cursor-not-allowed'
+              : 'bg-orange-500 text-white hover:bg-orange-600'
+              }`}
           >
             {state.isLoading || processingPayment ? (
               <>
@@ -665,16 +773,41 @@ export function KasirCart() {
 
       {/* Payment Success Modal */}
       {paymentSuccess && (
-        <div className="fixed inset-0 flex items-center justify-center p-4 z-50 bg-black bg-opacity-20">
-          <div className="bg-white rounded-lg shadow-xl p-6 text-center max-w-sm">
+        <div className="fixed inset-0 flex items-center justify-center p-4 z-50 bg-black bg-opacity-30">
+          <div className="bg-white rounded-xl shadow-2xl p-6 text-center max-w-sm w-full">
             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <Check className="w-8 h-8 text-green-600" />
             </div>
-            <h3 className="text-lg font-semibold text-green-700 mb-2">
+            <h3 className="text-xl font-bold text-green-700 mb-2">
               Pembayaran Berhasil!
             </h3>
             <p className="text-gray-600 mb-4">Transaksi telah diproses dengan sukses</p>
-            <div className="text-2xl font-bold text-green-600">{formatPrice(total)}</div>
+
+            <div className="bg-gray-50 rounded-lg p-4 mb-4 space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">Total Bayar:</span>
+                <span className="font-semibold text-gray-900">{formatPrice(lastTotal)}</span>
+              </div>
+              {changeAmount > 0 && (
+                <>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Uang Diterima:</span>
+                    <span className="font-semibold text-gray-900">{formatPrice(lastTotal + changeAmount)}</span>
+                  </div>
+                  <div className="border-t pt-2 flex justify-between">
+                    <span className="text-gray-700 font-medium">Kembalian:</span>
+                    <span className="text-xl font-bold text-green-600">{formatPrice(changeAmount)}</span>
+                  </div>
+                </>
+              )}
+            </div>
+
+            <button
+              onClick={handleCloseSuccessModal}
+              className="w-full py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors"
+            >
+              Selesai
+            </button>
           </div>
         </div>
       )}

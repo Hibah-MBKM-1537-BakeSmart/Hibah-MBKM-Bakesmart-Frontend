@@ -97,6 +97,8 @@ interface KasirState {
   customerAddress: string;
   voucherCode: string;
   voucherDiscount: number;
+  voucherId: number | null;
+  voucherMinPurchase: number;
   orderDate: string;
   orderDay: string;
   deliveryMode: string;
@@ -109,7 +111,7 @@ interface KasirState {
 
 interface KasirContextType {
   state: KasirState;
-  addToCart: (product: Product, quantity?: number, note?: string, customizations?: Array<{id: number; nama: string; harga_tambahan: number}>, finalPrice?: number) => void;
+  addToCart: (product: Product, quantity?: number, note?: string, customizations?: Array<{ id: number; nama: string; harga_tambahan: number }>, finalPrice?: number) => void;
   removeFromCart: (productId: number) => void;
   updateCartItemQuantity: (productId: number, quantity: number) => void;
   updateCartItemNote: (productId: number, note: string) => void;
@@ -122,6 +124,8 @@ interface KasirContextType {
   setCustomerAddress: (address: string) => void;
   setVoucherCode: (code: string) => void;
   setVoucherDiscount: (discount: number) => void;
+  setVoucherId: (id: number | null) => void;
+  setVoucherMinPurchase: (minPurchase: number) => void;
   setOrderDate: (date: string) => void;
   setOrderDay: (day: string) => void;
   setDeliveryMode: (mode: string) => void;
@@ -148,6 +152,8 @@ export function KasirProvider({ children }: { children: React.ReactNode }) {
     customerAddress: '',
     voucherCode: '',
     voucherDiscount: 0,
+    voucherId: null,
+    voucherMinPurchase: 0,
     orderDate: '',
     orderDay: '',
     deliveryMode: '',
@@ -164,7 +170,7 @@ export function KasirProvider({ children }: { children: React.ReactNode }) {
       try {
         console.log('[Kasir] Loading products from backend...');
         setState(prev => ({ ...prev, isLoadingProducts: true, isApiConnected: false }));
-        
+
         // Fetch products from backend via Next.js API proxy
         const response = await fetch('/api/products', {
           method: 'GET',
@@ -242,7 +248,7 @@ export function KasirProvider({ children }: { children: React.ReactNode }) {
         const result = await response.json();
         const productsData = result?.data || [];
         const availableProducts = productsData.filter((p: Product) => p.stok > 0);
-        
+
         setState(prev => {
           // Only update if data has changed
           const hasChanges = JSON.stringify(prev.products) !== JSON.stringify(availableProducts);
@@ -261,15 +267,15 @@ export function KasirProvider({ children }: { children: React.ReactNode }) {
     return () => clearInterval(syncInterval);
   }, [state.isApiConnected]);
 
-  const addToCart = (product: Product, quantity: number = 1, note?: string, customizations?: Array<{id: number; nama: string; harga_tambahan: number}>, finalPrice?: number) => {
+  const addToCart = (product: Product, quantity: number = 1, note?: string, customizations?: Array<{ id: number; nama: string; harga_tambahan: number }>, finalPrice?: number) => {
     setState(prev => {
       // Check stock availability
       const currentCartQuantity = prev.cart
         .filter(item => item.product.id === product.id)
         .reduce((sum, item) => sum + item.quantity, 0);
-      
+
       const totalQuantity = currentCartQuantity + quantity;
-      
+
       if (totalQuantity > product.stok) {
         console.warn(`Insufficient stock for ${product.nama_id}. Available: ${product.stok}, Requested: ${totalQuantity}`);
         alert(`Stok tidak cukup! Tersedia: ${product.stok}, Di keranjang: ${currentCartQuantity}`);
@@ -280,22 +286,22 @@ export function KasirProvider({ children }: { children: React.ReactNode }) {
       if (customizations && customizations.length > 0) {
         return {
           ...prev,
-          cart: [...prev.cart, { 
-            product, 
-            quantity, 
+          cart: [...prev.cart, {
+            product,
+            quantity,
             note,
             customizations,
-            finalPrice 
+            finalPrice
           }]
         };
       }
 
       // For regular products, check if item exists and update quantity
-      const existingItem = prev.cart.find(item => 
-        item.product.id === product.id && 
+      const existingItem = prev.cart.find(item =>
+        item.product.id === product.id &&
         !item.customizations?.length
       );
-      
+
       if (existingItem) {
         return {
           ...prev,
@@ -306,7 +312,7 @@ export function KasirProvider({ children }: { children: React.ReactNode }) {
           )
         };
       }
-      
+
       return {
         ...prev,
         cart: [...prev.cart, { product, quantity, note }]
@@ -358,7 +364,7 @@ export function KasirProvider({ children }: { children: React.ReactNode }) {
           : item
       )
     }));
-  };  const clearCart = () => {
+  }; const clearCart = () => {
     setState(prev => ({
       ...prev,
       cart: [],
@@ -367,6 +373,8 @@ export function KasirProvider({ children }: { children: React.ReactNode }) {
       customerAddress: '',
       voucherCode: '',
       voucherDiscount: 0,
+      voucherId: null,
+      voucherMinPurchase: 0,
       catatan: ''
     }));
   };
@@ -401,6 +409,14 @@ export function KasirProvider({ children }: { children: React.ReactNode }) {
 
   const setVoucherDiscount = (discount: number) => {
     setState(prev => ({ ...prev, voucherDiscount: discount }));
+  };
+
+  const setVoucherId = (id: number | null) => {
+    setState(prev => ({ ...prev, voucherId: id }));
+  };
+
+  const setVoucherMinPurchase = (minPurchase: number) => {
+    setState(prev => ({ ...prev, voucherMinPurchase: minPurchase }));
   };
 
   const setOrderDate = (date: string) => {
@@ -457,19 +473,44 @@ export function KasirProvider({ children }: { children: React.ReactNode }) {
       // Create order via backend API
       if (state.isApiConnected) {
         try {
-          // Prepare order data
+          // Format waktu_ambil - use orderDate if set, otherwise use today
+          let waktuAmbil = state.orderDate;
+          if (!waktuAmbil) {
+            waktuAmbil = new Date().toISOString().split('T')[0];
+          }
+
+          // Prepare order data for kasir endpoint
+          // Note: POST /orders/kasir is a simplified endpoint that:
+          // - Does NOT require shipping coordinates or courier data
+          // - Does NOT register with external logistics providers
+          // - Automatically sets Production Status to "completed"
+          // - Automatically sets Order Status to "paid"
+          // - Still handles auto-user creation based on phone number
           const orderData = {
-            user_id: 1, // Default kasir user (or you can add customer selection)
+            // Customer info (for auto-user creation based on phone)
+            customerName: state.customerName,
+            customerPhone: state.customerWhatsApp,
+
+            // Cart items with pricing
             items: state.cart.map(item => ({
               product_id: item.product.id,
               jumlah: item.quantity,
               harga_beli: item.finalPrice || item.product.harga,
-              note: item.note || ''
+              note: item.note || null
             })),
+
+            // Pricing
             total_harga: calculateTotal(),
+
+            // Payment provider
             provider_pembayaran: state.paymentMethod,
-            waktu_ambil: new Date().toISOString(),
-            catatan: `Kasir order - Customer: ${state.customerName}${state.customerWhatsApp ? `, Phone: ${state.customerWhatsApp}` : ''}${state.customerAddress ? `, Address: ${state.customerAddress}` : ''}`
+            
+            // Timing
+            waktu_ambil: waktuAmbil,
+
+            // Optional fields
+            catatan: state.catatan || '',
+            voucher_id: state.voucherId, // Voucher ID from validation
           };
 
           console.log('[Kasir] Sending order to backend:', orderData);
@@ -504,15 +545,15 @@ export function KasirProvider({ children }: { children: React.ReactNode }) {
             status: 'completed'
           };
 
-          setState(prev => ({ 
-            ...prev, 
+          setState(prev => ({
+            ...prev,
             currentTransaction: transaction,
-            isLoading: false 
+            isLoading: false
           }));
 
           // Clear cart after successful order
           clearCart();
-          
+
           alert('✅ Pembayaran berhasil! Order telah dibuat.');
           return true;
 
@@ -525,7 +566,7 @@ export function KasirProvider({ children }: { children: React.ReactNode }) {
       } else {
         // Fallback: Local transaction without backend
         console.warn('[Kasir] API not connected, creating local transaction only');
-        
+
         const transaction: Transaction = {
           id: `TXN${Date.now()}`,
           items: [...state.cart],
@@ -539,10 +580,10 @@ export function KasirProvider({ children }: { children: React.ReactNode }) {
           status: 'completed'
         };
 
-        setState(prev => ({ 
-          ...prev, 
+        setState(prev => ({
+          ...prev,
           currentTransaction: transaction,
-          isLoading: false 
+          isLoading: false
         }));
 
         clearCart();
@@ -572,6 +613,8 @@ export function KasirProvider({ children }: { children: React.ReactNode }) {
     setCustomerAddress,
     setVoucherCode,
     setVoucherDiscount,
+    setVoucherId,
+    setVoucherMinPurchase,
     setOrderDate,
     setOrderDay,
     setDeliveryMode,

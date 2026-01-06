@@ -278,14 +278,43 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
     refreshProducts();
   }, []);
 
-  // Create product
-  const addProduct = async (productData: Partial<Product>): Promise<void> => {
+  // Create product - follows backend documentation flow:
+  // 1. POST /products - create basic product (without relations)
+  // 2. POST /products/{id}/gambar - upload images
+  // 3. POST /products/{id}/sub_jenis/{sub_jenis_id} - add sub_jenis relations
+  // 4. POST /products/{id}/hari/{hari_id} - add hari relations
+  const addProduct = async (productData: Partial<Product> & {
+    sub_jenis_ids?: number[];
+    hari_ids?: number[];
+    jenis_id?: number;
+    imageFiles?: File[];
+  }): Promise<void> => {
     try {
       console.log("[ProductsContext] Creating product:", productData);
       setState((prev) => ({ ...prev, error: null }));
 
+      // Extract relation data from productData
+      const { sub_jenis_ids, hari_ids, jenis_id, imageFiles, gambars, ...basicProductData } = productData;
+
+      // Step 1: Create basic product (without relations)
+      // Backend expects: nama_id, nama_en, deskripsi_id, deskripsi_en, harga, harga_diskon, stok, isBestSeller, isDaily, daily_stock
+      const createPayload = {
+        nama_id: basicProductData.nama_id || basicProductData.nama,
+        nama_en: basicProductData.nama_en || basicProductData.nama,
+        deskripsi_id: basicProductData.deskripsi_id || basicProductData.deskripsi || '',
+        deskripsi_en: basicProductData.deskripsi_en || basicProductData.deskripsi || '',
+        harga: basicProductData.harga || 0,
+        harga_diskon: basicProductData.harga_diskon || null,
+        stok: basicProductData.stok || 0,
+        isBestSeller: basicProductData.isBestSeller || false,
+        isDaily: basicProductData.isDaily || false,
+        daily_stock: basicProductData.daily_stock || null,
+      };
+
+      console.log("[ProductsContext] Step 1: Creating basic product:", createPayload);
+
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
 
       const response = await fetch(BACKEND_URL, {
         method: "POST",
@@ -293,7 +322,7 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(productData),
+        body: JSON.stringify(createPayload),
       });
 
       clearTimeout(timeoutId);
@@ -301,31 +330,81 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(
-          errorData.message || `HTTP error! status: ${response.status}`
+          errorData.error || errorData.message || `HTTP error! status: ${response.status}`
         );
       }
 
       const data = await response.json();
       console.log("[ProductsContext] Product created successfully:", data);
 
-      // Parse new product and add to state
-      if (data.data) {
-        const parsed = parseBackendResponse(data);
-        const newProduct = parsed[0];
-        if (newProduct) {
-          setState((prev) => ({
-            ...prev,
-            products: [...prev.products, newProduct],
-            loading: false,
-          }));
-        } else {
-          // Fallback: refresh from backend if parsing failed
-          await refreshProducts();
-        }
-      } else {
-        // Fallback: refresh from backend
-        await refreshProducts();
+      // Get the created product ID
+      const productId = data.data?.id || data.id;
+      if (!productId) {
+        throw new Error("Product created but no ID returned");
       }
+
+      // Step 2: Add sub_jenis relations
+      if (sub_jenis_ids && sub_jenis_ids.length > 0) {
+        console.log("[ProductsContext] Step 2: Adding sub_jenis relations:", sub_jenis_ids);
+        for (const subJenisId of sub_jenis_ids) {
+          try {
+            const subJenisResponse = await fetch(`${BACKEND_URL}/${productId}/sub_jenis/${subJenisId}`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+            });
+            if (!subJenisResponse.ok) {
+              console.warn(`[ProductsContext] Failed to add sub_jenis ${subJenisId}`);
+            }
+          } catch (err) {
+            console.warn(`[ProductsContext] Error adding sub_jenis ${subJenisId}:`, err);
+          }
+        }
+      }
+
+      // Step 3: Add hari relations
+      if (hari_ids && hari_ids.length > 0) {
+        console.log("[ProductsContext] Step 3: Adding hari relations:", hari_ids);
+        for (const hariId of hari_ids) {
+          try {
+            const hariResponse = await fetch(`${BACKEND_URL}/${productId}/hari/${hariId}`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+            });
+            if (!hariResponse.ok) {
+              console.warn(`[ProductsContext] Failed to add hari ${hariId}`);
+            }
+          } catch (err) {
+            console.warn(`[ProductsContext] Error adding hari ${hariId}:`, err);
+          }
+        }
+      }
+
+      // Step 4: Upload images (if imageFiles provided)
+      if (imageFiles && imageFiles.length > 0) {
+        console.log("[ProductsContext] Step 4: Uploading images:", imageFiles.length);
+        for (const file of imageFiles) {
+          try {
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            const imageResponse = await fetch(`${BACKEND_URL}/${productId}/gambar`, {
+              method: "POST",
+              body: formData,
+            });
+            if (!imageResponse.ok) {
+              console.warn(`[ProductsContext] Failed to upload image ${file.name}`);
+            }
+          } catch (err) {
+            console.warn(`[ProductsContext] Error uploading image:`, err);
+          }
+        }
+      }
+
+      console.log("[ProductsContext] Product creation completed with all relations");
+
+      // Refresh products to get the complete data with relations
+      await refreshProducts();
+
     } catch (error: any) {
       console.error("[ProductsContext] Error creating product:", error);
 

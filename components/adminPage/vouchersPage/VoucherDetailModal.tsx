@@ -32,15 +32,15 @@ export function VoucherDetailModal({
 
   return (
     <div
-      className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 bg-black/10 backdrop-blur-[2px] flex items-center justify-center z-50 p-4"
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-lg max-w-md w-full shadow-2xl"
+        className="bg-white rounded-lg max-w-md w-full shadow-2xl max-h-[90vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex justify-between items-center p-6 border-b border-gray-200">
+        <div className="flex justify-between items-center p-6 border-b border-gray-200 flex-shrink-0">
           <h2 className="text-xl font-bold text-gray-900">Detail Voucher</h2>
           <button
             onClick={onClose}
@@ -50,8 +50,8 @@ export function VoucherDetailModal({
           </button>
         </div>
 
-        {/* Content */}
-        <div className="p-6 space-y-6">
+        {/* Content - Scrollable */}
+        <div className="p-6 space-y-6 overflow-y-auto flex-1">
           {/* Voucher Name */}
           {voucher.nama && voucher.nama !== voucher.code && (
             <div>
@@ -133,9 +133,8 @@ export function VoucherDetailModal({
                     <div
                       className="bg-blue-500 h-2 rounded-full"
                       style={{
-                        width: `${
-                          (voucher.usageCount / voucher.maxUsage) * 100
-                        }%`,
+                        width: `${(voucher.usageCount / voucher.maxUsage) * 100
+                          }%`,
                       }}
                     />
                   </div>
@@ -148,19 +147,18 @@ export function VoucherDetailModal({
           <div className="flex items-center justify-between">
             <p className="text-sm text-gray-600">Status</p>
             <span
-              className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                voucher.status === "active"
-                  ? "bg-green-100 text-green-800"
-                  : voucher.status === "inactive"
+              className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${voucher.status === "active"
+                ? "bg-green-100 text-green-800"
+                : voucher.status === "inactive"
                   ? "bg-gray-100 text-gray-800"
                   : "bg-red-100 text-red-800"
-              }`}
+                }`}
             >
               {voucher.status === "active"
                 ? "Aktif"
                 : voucher.status === "inactive"
-                ? "Tidak Aktif"
-                : "Kadaluarsa"}
+                  ? "Tidak Aktif"
+                  : "Kadaluarsa"}
             </span>
           </div>
 
@@ -174,7 +172,7 @@ export function VoucherDetailModal({
         </div>
 
         {/* Close Button */}
-        <div className="border-t p-6">
+        <div className="border-t p-6 flex-shrink-0">
           <button
             onClick={onClose}
             className="w-full px-4 py-2 bg-gray-100 text-gray-900 rounded-lg hover:bg-gray-200 transition-colors font-medium"

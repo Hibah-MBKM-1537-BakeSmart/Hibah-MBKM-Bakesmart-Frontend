@@ -90,6 +90,8 @@ export async function POST(request: Request) {
       valid: true,
       code: voucherData.kode || voucherData.code,
       discount: discountAmount,
+      voucherId: voucherData.id, // Include voucher ID for order creation
+      minPurchase: voucherData.minimal__pembelian || 0, // Include min purchase
       message: result.message,
       details: voucherData, // Kirim data lengkap jika perlu
     });

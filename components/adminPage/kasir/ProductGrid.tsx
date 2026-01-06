@@ -70,7 +70,7 @@ export function ProductGrid() {
   };
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 gap-3 md:gap-4 2xl:gap-2">
       {filteredProducts.map((product) => {
         const cartQuantity = getCartQuantity(product.id);
         const isOutOfStock = product.stok === 0;
@@ -78,7 +78,7 @@ export function ProductGrid() {
         return (
           <div
             key={product.id}
-            className={`bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden transition-all duration-200 hover:shadow-md hover:scale-105 ${
+            className={`bg-white rounded-xl 2xl:rounded-lg shadow-sm border border-gray-200 overflow-hidden transition-all duration-200 hover:shadow-md hover:scale-[1.02] ${
               isOutOfStock ? 'opacity-50' : ''
             }`}
           >
@@ -93,18 +93,21 @@ export function ProductGrid() {
                 }}
               />
               
-              {/* Stock Badge */}
-              <div className="absolute top-2 right-2 bg-white rounded-full px-2 py-1 text-xs font-medium">
-                {isOutOfStock ? (
-                  <span className="text-red-600">Habis</span>
-                ) : (
-                  <span className="text-green-600">{product.stok} stok</span>
-                )}
-              </div>
-
-              {/* Category Badge */}
-              <div className="absolute top-2 left-2 bg-orange-500 text-white rounded-full px-2 py-1 text-xs font-medium">
-                {product.jenis?.[0]?.nama_id || 'Umum'}
+              {/* Badges Container - Top Row */}
+              <div className="absolute top-2 2xl:top-1.5 left-2 2xl:left-1.5 right-2 2xl:right-1.5 flex justify-between items-start gap-1">
+                {/* Category Badge - More compact on large screens */}
+                <div className="bg-orange-500 text-white rounded-full px-2.5 2xl:px-2 py-1 2xl:py-0.5 text-xs 2xl:text-[10px] font-medium whitespace-nowrap overflow-hidden text-ellipsis max-w-[calc(100%-70px)] 2xl:max-w-[calc(100%-55px)]">
+                  {product.jenis?.[0]?.nama_id || 'Umum'}
+                </div>
+                
+                {/* Stock Badge - More compact on large screens */}
+                <div className="bg-white rounded-full px-2.5 2xl:px-1.5 py-1 2xl:py-0.5 text-xs 2xl:text-[10px] font-medium whitespace-nowrap flex-shrink-0 shadow-sm">
+                  {isOutOfStock ? (
+                    <span className="text-red-600">0 stok</span>
+                  ) : (
+                    <span className="text-green-600">{product.stok} stok</span>
+                  )}
+                </div>
               </div>
 
               {/* Cart Quantity Indicator */}
@@ -115,45 +118,45 @@ export function ProductGrid() {
               )}
             </div>
 
-            {/* Product Info */}
-            <div className="p-4">
-              <h3 className="font-semibold text-gray-900 text-sm mb-1 line-clamp-2">
+            {/* Product Info - More compact on large screens */}
+            <div className="p-3 md:p-4 2xl:p-2.5">
+              <h3 className="font-semibold text-gray-900 text-sm md:text-base 2xl:text-sm mb-1 line-clamp-2 min-h-[2.5rem] 2xl:min-h-[2rem]">
                 {product.nama_id}
               </h3>
               
               {product.deskripsi_id && (
-                <p className="text-xs text-gray-600 mb-2 line-clamp-2">
+                <p className="text-xs text-gray-600 mb-2 2xl:mb-1 line-clamp-1 2xl:hidden">
                   {product.deskripsi_id}
                 </p>
               )}
               
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-lg font-bold text-orange-600">
+              <div className="flex items-center justify-between mb-2 md:mb-3 2xl:mb-2">
+                <span className="text-base md:text-lg 2xl:text-base font-bold text-orange-600">
                   {formatPrice(product.harga)}
                 </span>
               </div>
 
-              {/* Action Buttons */}
-              <div className="space-y-2">
+              {/* Action Buttons - More compact on large screens */}
+              <div className="space-y-2 2xl:space-y-1.5">
                 {/* Customize Button */}
                 <button
                   onClick={() => handleCustomize(product)}
                   disabled={isOutOfStock}
-                  className={`w-full flex items-center justify-center space-x-2 py-2 px-3 rounded-lg font-medium transition-all duration-200 ${
+                  className={`w-full flex items-center justify-center space-x-2 2xl:space-x-1 py-2 2xl:py-1.5 px-3 2xl:px-2 rounded-lg font-medium transition-all duration-200 ${
                     isOutOfStock
                       ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                       : 'bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100'
                   }`}
                 >
-                  <Settings className="w-4 h-4" />
-                  <span className="text-sm">Kustomisasi</span>
+                  <Settings className="w-4 h-4 2xl:w-3.5 2xl:h-3.5" />
+                  <span className="text-sm 2xl:text-xs">Kustomisasi</span>
                 </button>
 
                 {/* Add to Cart Button */}
                 <button
                   onClick={() => handleAddToCart(product)}
                   disabled={isOutOfStock}
-                  className={`w-full flex items-center justify-center space-x-2 py-2 px-3 rounded-lg font-medium transition-all duration-200 ${
+                  className={`w-full flex items-center justify-center space-x-2 2xl:space-x-1 py-2 2xl:py-1.5 px-3 2xl:px-2 rounded-lg font-medium transition-all duration-200 ${
                     isOutOfStock
                       ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                       : cartQuantity > 0
@@ -163,18 +166,18 @@ export function ProductGrid() {
                 >
                   {isOutOfStock ? (
                     <>
-                      <Package className="w-4 h-4" />
-                      <span className="text-sm">Stok Habis</span>
+                      <Package className="w-4 h-4 2xl:w-3.5 2xl:h-3.5" />
+                      <span className="text-sm 2xl:text-xs">Stok Habis</span>
                     </>
                   ) : cartQuantity > 0 ? (
                     <>
-                      <Plus className="w-4 h-4" />
-                      <span className="text-sm">Tambah Lagi</span>
+                      <Plus className="w-4 h-4 2xl:w-3.5 2xl:h-3.5" />
+                      <span className="text-sm 2xl:text-xs">Tambah Lagi</span>
                     </>
                   ) : (
                     <>
-                      <ShoppingCart className="w-4 h-4" />
-                      <span className="text-sm">Tambah</span>
+                      <ShoppingCart className="w-4 h-4 2xl:w-3.5 2xl:h-3.5" />
+                      <span className="text-sm 2xl:text-xs">Tambah</span>
                     </>
                   )}
                 </button>

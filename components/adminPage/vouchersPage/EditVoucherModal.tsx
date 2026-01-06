@@ -90,14 +90,15 @@ export function EditVoucherModal({
 
   return (
     <div
-      className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 bg-black/10 backdrop-blur-[2px] flex items-center justify-center z-50 p-4"
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto shadow-2xl"
+        className="bg-white rounded-lg max-w-md w-full max-h-[90vh] flex flex-col shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex justify-between items-center p-6 border-b border-gray-200">
+        {/* Header - Fixed */}
+        <div className="flex justify-between items-center p-6 border-b border-gray-200 flex-shrink-0">
           <h2 className="text-xl font-bold text-gray-900">Edit Voucher</h2>
           <button
             onClick={onClose}
@@ -107,100 +108,104 @@ export function EditVoucherModal({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Nama Voucher
-            </label>
-            <input
-              type="text"
-              value={formData.nama}
-              onChange={(e) =>
-                setFormData({ ...formData, nama: e.target.value })
-              }
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500"
-            />
+        {/* Form - Scrollable */}
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+          <div className="p-6 space-y-4 overflow-y-auto flex-1">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Nama Voucher
+              </label>
+              <input
+                type="text"
+                value={formData.nama}
+                onChange={(e) =>
+                  setFormData({ ...formData, nama: e.target.value })
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Kode Voucher <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={formData.code}
+                onChange={(e) =>
+                  setFormData({ ...formData, code: e.target.value })
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Jumlah Diskon (%) <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="number"
+                value={formData.discount}
+                onChange={(e) =>
+                  setFormData({ ...formData, discount: e.target.value })
+                }
+                min="0"
+                max="100"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Tanggal Kadaluarsa
+              </label>
+              <input
+                type="date"
+                value={formData.expiryDate}
+                onChange={(e) =>
+                  setFormData({ ...formData, expiryDate: e.target.value })
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Minimal Pembelian (Rp)
+              </label>
+              <input
+                type="number"
+                value={formData.minPurchase}
+                onChange={(e) =>
+                  setFormData({ ...formData, minPurchase: e.target.value })
+                }
+                placeholder="0 jika tidak ada minimal"
+                min="0"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Penggunaan Maksimal <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="number"
+                value={formData.maxUsage}
+                onChange={(e) =>
+                  setFormData({ ...formData, maxUsage: e.target.value })
+                }
+                min="1"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500"
+                required
+              />
+            </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Kode Voucher <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              value={formData.code}
-              onChange={(e) =>
-                setFormData({ ...formData, code: e.target.value })
-              }
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Jumlah Diskon (%) <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="number"
-              value={formData.discount}
-              onChange={(e) =>
-                setFormData({ ...formData, discount: e.target.value })
-              }
-              min="0"
-              max="100"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Tanggal Kadaluarsa
-            </label>
-            <input
-              type="date"
-              value={formData.expiryDate}
-              onChange={(e) =>
-                setFormData({ ...formData, expiryDate: e.target.value })
-              }
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Minimal Pembelian (Rp)
-            </label>
-            <input
-              type="number"
-              value={formData.minPurchase}
-              onChange={(e) =>
-                setFormData({ ...formData, minPurchase: e.target.value })
-              }
-              placeholder="0 jika tidak ada minimal"
-              min="0"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Penggunaan Maksimal <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="number"
-              value={formData.maxUsage}
-              onChange={(e) =>
-                setFormData({ ...formData, maxUsage: e.target.value })
-              }
-              min="1"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500"
-              required
-            />
-          </div>
-
-          <div className="flex gap-3 pt-4">
+          {/* Footer Buttons - Fixed */}
+          <div className="flex gap-3 p-6 border-t border-gray-200 flex-shrink-0">
             <button
               type="button"
               onClick={onClose}

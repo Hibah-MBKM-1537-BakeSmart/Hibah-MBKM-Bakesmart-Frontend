@@ -16,6 +16,7 @@ import {
   ArrowDown,
 } from "lucide-react";
 import { useVouchers } from "@/app/contexts/VouchersContext";
+import { useAdminTranslation } from "@/app/contexts/AdminTranslationContext";
 import { AddVoucherModal } from "@/components/adminPage/vouchersPage/AddVoucherModal";
 import { EditVoucherModal } from "@/components/adminPage/vouchersPage/EditVoucherModal";
 import { VoucherDetailModal } from "@/components/adminPage/vouchersPage/VoucherDetailModal";
@@ -29,6 +30,7 @@ type SortDirection = "asc" | "desc" | null;
 export default function VouchersPage() {
   const { vouchers, loading, error, refreshVouchers, deleteVoucher } =
     useVouchers();
+  const { t } = useAdminTranslation();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [sortField, setSortField] = useState<SortField | null>(null);
@@ -262,15 +264,15 @@ export default function VouchersPage() {
       {/* Page Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Kelola Voucher</h1>
-          <p className="text-gray-600">Kelola voucher diskon dan promosi</p>
+          <h1 className="text-2xl font-bold text-gray-900">{t("vouchers.title")}</h1>
+          <p className="text-gray-600">{t("vouchers.subtitle")}</p>
         </div>
         <button
           onClick={() => setShowAddModal(true)}
           className="flex items-center space-x-2 bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition-colors"
         >
           <Plus className="w-4 h-4" />
-          <span>Tambah Voucher</span>
+          <span>{t("vouchers.addVoucher")}</span>
         </button>
       </div>
 
@@ -286,7 +288,7 @@ export default function VouchersPage() {
                 </div>
                 <input
                   type="text"
-                  placeholder="Cari kode voucher..."
+                  placeholder={t("vouchers.searchVouchers")}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500 sm:text-sm"
@@ -299,15 +301,15 @@ export default function VouchersPage() {
                 onChange={(e) => setFilterStatus(e.target.value)}
                 className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500"
               >
-                <option value="all">Semua Status</option>
-                <option value="active">Aktif</option>
-                <option value="inactive">Tidak Aktif</option>
-                <option value="expired">Kadaluarsa</option>
+                <option value="all">{t("vouchers.allStatus")}</option>
+                <option value="active">{t("common.active")}</option>
+                <option value="inactive">{t("common.inactive")}</option>
+                <option value="expired">{t("common.expired")}</option>
               </select>
             </div>
 
             <div className="text-sm text-gray-600">
-              {filteredAndSortedVouchers.length} dari {vouchers.length} voucher
+              {filteredAndSortedVouchers.length} {t("vouchers.of")} {vouchers.length} voucher
             </div>
           </div>
 
@@ -321,7 +323,7 @@ export default function VouchersPage() {
                 className="w-4 h-4 text-orange-500 border-gray-300 rounded focus:ring-orange-500"
               />
               <span className="ml-2 text-sm text-gray-700">
-                Kelompokkan berdasarkan abjad
+                {t("vouchers.groupByAlphabet")}
               </span>
             </label>
           </div>
@@ -333,20 +335,20 @@ export default function VouchersPage() {
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
-            <span className="ml-3 text-gray-600">Memuat voucher...</span>
+            <span className="ml-3 text-gray-600">{t("vouchers.loadingVouchers")}</span>
           </div>
         ) : error ? (
           <div className="flex flex-col items-center justify-center py-12">
             <AlertCircle className="w-12 h-12 text-red-500 mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">
-              Gagal Memuat Data
+              {t("vouchers.failedToLoad")}
             </h3>
             <p className="text-gray-600 mb-4">{error}</p>
             <button
               onClick={refreshVouchers}
               className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
             >
-              Coba Lagi
+              {t("common.retry")}
             </button>
           </div>
         ) : (
@@ -356,14 +358,14 @@ export default function VouchersPage() {
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      <span>Nama Voucher</span>
+                      <span>{t("vouchers.voucherName")}</span>
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       <button
                         onClick={() => handleSort("code")}
                         className="flex items-center space-x-1 hover:text-gray-700 transition-colors"
                       >
-                        <span>Kode Voucher</span>
+                        <span>{t("vouchers.voucherCode")}</span>
                         {getSortIcon("code")}
                       </button>
                     </th>
@@ -372,19 +374,19 @@ export default function VouchersPage() {
                         onClick={() => handleSort("discount")}
                         className="flex items-center space-x-1 hover:text-gray-700 transition-colors"
                       >
-                        <span>Diskon</span>
+                        <span>{t("vouchers.discount")}</span>
                         {getSortIcon("discount")}
                       </button>
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      <span>Min. Pembelian</span>
+                      <span>{t("vouchers.minPurchase")}</span>
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       <button
                         onClick={() => handleSort("expiryDate")}
                         className="flex items-center space-x-1 hover:text-gray-700 transition-colors"
                       >
-                        <span>Tanggal Kadaluarsa</span>
+                        <span>{t("vouchers.expiryDate")}</span>
                         {getSortIcon("expiryDate")}
                       </button>
                     </th>
@@ -393,12 +395,12 @@ export default function VouchersPage() {
                         onClick={() => handleSort("usage")}
                         className="flex items-center space-x-1 hover:text-gray-700 transition-colors"
                       >
-                        <span>Penggunaan</span>
+                        <span>{t("vouchers.usageCount")}</span>
                         {getSortIcon("usage")}
                       </button>
                     </th>
                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Aksi
+                      {t("common.actions")}
                     </th>
                   </tr>
                 </thead>
@@ -443,22 +445,22 @@ export default function VouchersPage() {
                                   {voucher.discountType === "percentage"
                                     ? `${voucher.discount}%`
                                     : `Rp ${voucher.discount.toLocaleString(
-                                        "id-ID"
-                                      )}`}
+                                      "id-ID"
+                                    )}`}
                                 </span>
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                 {voucher.minimal__pembelian
                                   ? `Rp ${voucher.minimal__pembelian.toLocaleString(
-                                      "id-ID"
-                                    )}`
+                                    "id-ID"
+                                  )}`
                                   : "-"}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                 {voucher.expiryDate
                                   ? new Date(
-                                      voucher.expiryDate
-                                    ).toLocaleDateString("id-ID")
+                                    voucher.expiryDate
+                                  ).toLocaleDateString("id-ID")
                                   : "-"}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap">
@@ -467,13 +469,12 @@ export default function VouchersPage() {
                                     <div
                                       className="bg-orange-500 h-2 rounded-full"
                                       style={{
-                                        width: `${
-                                          voucher.maxUsage
-                                            ? (voucher.usageCount /
-                                                voucher.maxUsage) *
-                                              100
-                                            : 0
-                                        }%`,
+                                        width: `${voucher.maxUsage
+                                          ? (voucher.usageCount /
+                                            voucher.maxUsage) *
+                                          100
+                                          : 0
+                                          }%`,
                                       }}
                                     />
                                   </div>
@@ -536,12 +537,12 @@ export default function VouchersPage() {
               <div className="text-center py-12">
                 <Ticket className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  Voucher tidak ditemukan
+                  {t("vouchers.noVouchers")}
                 </h3>
                 <p className="text-gray-600">
                   {searchTerm || filterStatus !== "all"
-                    ? "Coba sesuaikan pencarian atau filter Anda"
-                    : "Belum ada voucher. Klik tombol Tambah Voucher untuk membuat voucher baru."}
+                    ? t("vouchers.adjustSearchFilter")
+                    : t("vouchers.noVouchersDesc")}
                 </p>
               </div>
             )}
@@ -554,7 +555,7 @@ export default function VouchersPage() {
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Total Voucher</p>
+              <p className="text-sm font-medium text-gray-600">{t("vouchers.totalVoucher")}</p>
               <p className="text-2xl font-bold text-gray-900">
                 {vouchers.length}
               </p>
@@ -568,7 +569,7 @@ export default function VouchersPage() {
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Voucher Aktif</p>
+              <p className="text-sm font-medium text-gray-600">{t("vouchers.activeVoucher")}</p>
               <p className="text-2xl font-bold text-gray-900">
                 {vouchers.filter((v) => v.status === "active").length}
               </p>
@@ -583,7 +584,7 @@ export default function VouchersPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">
-                Total Penggunaan
+                {t("vouchers.totalUsage")}
               </p>
               <p className="text-2xl font-bold text-gray-900">
                 {vouchers.reduce((sum, v) => sum + v.usageCount, 0)}

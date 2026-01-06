@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAdmin } from "@/app/contexts/AdminContext";
 import { useAuth } from "@/app/contexts/AuthContext";
+import { useAdminTranslation } from "@/app/contexts/AdminTranslationContext";
 import { usePageTransition } from "@/hooks/usePageTransition";
 import {
   LayoutDashboard,
@@ -25,7 +26,7 @@ import {
 
 interface MenuItem {
   id: string;
-  label: string;
+  labelKey: string;
   href: string;
   icon: React.ComponentType<{ className?: string }>;
 }
@@ -33,61 +34,61 @@ interface MenuItem {
 const menuItems: MenuItem[] = [
   {
     id: "dashboard",
-    label: "Dashboard",
+    labelKey: "sidebar.dashboard",
     href: "/admin/dashboard",
     icon: LayoutDashboard,
   },
   {
     id: "statistics",
-    label: "Statistics",
+    labelKey: "sidebar.statistics",
     href: "/admin/statistics",
     icon: TrendingUp,
   },
   {
     id: "products",
-    label: "Products",
+    labelKey: "sidebar.products",
     href: "/admin/products",
     icon: Package,
   },
   {
     id: "production",
-    label: "Production",
+    labelKey: "sidebar.production",
     href: "/admin/production",
     icon: Factory,
   },
   {
     id: "kasir",
-    label: "Kasir",
+    labelKey: "sidebar.kasir",
     href: "/admin/kasir",
     icon: Calculator,
   },
   {
     id: "history",
-    label: "History",
+    labelKey: "sidebar.history",
     href: "/admin/history",
     icon: History,
   },
   {
     id: "customers",
-    label: "Customers",
+    labelKey: "sidebar.customers",
     href: "/admin/customers",
     icon: UserCheck,
   },
   {
     id: "vouchers",
-    label: "Vouchers",
+    labelKey: "sidebar.vouchers",
     href: "/admin/vouchers",
     icon: Ticket,
   },
   {
     id: "users",
-    label: "Users",
+    labelKey: "sidebar.users",
     href: "/admin/users",
     icon: Users,
   },
   {
     id: "settings",
-    label: "Settings",
+    labelKey: "sidebar.settings",
     href: "/admin/settings",
     icon: Settings,
   },
@@ -96,6 +97,7 @@ const menuItems: MenuItem[] = [
 export function AdminSidebar() {
   const { state, toggleSidebar } = useAdmin();
   const { user, logout } = useAuth();
+  const { t } = useAdminTranslation();
   const { startTransition } = usePageTransition();
   const pathname = usePathname();
 
@@ -104,6 +106,7 @@ export function AdminSidebar() {
     return menuItems.map((item) => {
       const Icon = item.icon;
       const isActive = pathname === item.href;
+      const label = t(item.labelKey);
 
       return (
         <Link
@@ -111,30 +114,25 @@ export function AdminSidebar() {
           href={item.href}
           prefetch={true}
           onClick={startTransition}
-          className={`flex items-center ${
-            state.sidebarCollapsed ? "justify-center" : "space-x-3"
-          } px-3 ${
-            state.sidebarCollapsed ? "py-3" : "py-2"
-          } rounded-lg transition-all duration-200 group ${
-            isActive
+          className={`flex items-center ${state.sidebarCollapsed ? "justify-center" : "space-x-3"
+            } px-3 ${state.sidebarCollapsed ? "py-3" : "py-2"
+            } rounded-lg transition-all duration-200 group ${isActive
               ? "text-white font-medium shadow-md"
               : "text-gray-200 hover:bg-white/10 hover:text-white hover:shadow-sm"
-          }`}
+            }`}
           style={isActive ? { backgroundColor: "#8b6f47" } : {}}
-          title={state.sidebarCollapsed ? item.label : ""}
+          title={state.sidebarCollapsed ? label : ""}
         >
           <Icon
-            className={`${
-              state.sidebarCollapsed ? "w-8 h-8" : "w-5 h-5"
-            } transition-transform duration-200 ${
-              isActive
+            className={`${state.sidebarCollapsed ? "w-8 h-8" : "w-5 h-5"
+              } transition-transform duration-200 ${isActive
                 ? "text-white scale-110"
                 : "text-gray-200 group-hover:scale-105"
-            }`}
+              }`}
           />
           {!state.sidebarCollapsed && (
             <span className="font-medium font-admin-body transition-all duration-200">
-              {item.label}
+              {label}
             </span>
           )}
           {isActive && !state.sidebarCollapsed && (
@@ -143,13 +141,12 @@ export function AdminSidebar() {
         </Link>
       );
     });
-  }, [pathname, state.sidebarCollapsed, startTransition]);
+  }, [pathname, state.sidebarCollapsed, startTransition, t]);
 
   return (
     <div
-      className={`shadow-lg transition-all duration-300 flex flex-col h-full ${
-        state.sidebarCollapsed ? "w-20" : "w-64"
-      }`}
+      className={`shadow-lg transition-all duration-300 flex flex-col h-full ${state.sidebarCollapsed ? "w-20" : "w-64"
+        }`}
       style={{ backgroundColor: "#9B6D49" }}
     >
       {/* Logo Section */}
@@ -244,7 +241,7 @@ export function AdminSidebar() {
                     {user.username}
                   </p>
                   <p className="text-xs text-gray-200 truncate font-admin-body">
-                    {user.role === "super_admin" ? "Super Admin" : "Admin"}
+                    {user.role === "super_admin" ? t("users.superAdmin") : t("users.admin")}
                   </p>
                 </div>
               </div>
@@ -256,20 +253,17 @@ export function AdminSidebar() {
         <div className="p-4">
           <button
             onClick={logout}
-            className={`flex items-center space-x-3 px-3 ${
-              state.sidebarCollapsed ? "py-3" : "py-2"
-            } rounded-lg transition-colors text-red-300 hover:bg-red-500/20 hover:text-red-200 w-full font-admin-body ${
-              state.sidebarCollapsed ? "justify-center" : ""
-            }`}
-            title={state.sidebarCollapsed ? "Logout" : ""}
+            className={`flex items-center space-x-3 px-3 ${state.sidebarCollapsed ? "py-3" : "py-2"
+              } rounded-lg transition-colors text-red-300 hover:bg-red-500/20 hover:text-red-200 w-full font-admin-body ${state.sidebarCollapsed ? "justify-center" : ""
+              }`}
+            title={state.sidebarCollapsed ? t("header.signOut") : ""}
           >
             <LogOut
-              className={`${
-                state.sidebarCollapsed ? "w-8 h-8" : "w-5 h-5"
-              } transition-all duration-200`}
+              className={`${state.sidebarCollapsed ? "w-8 h-8" : "w-5 h-5"
+                } transition-all duration-200`}
             />
             {!state.sidebarCollapsed && (
-              <span className="font-medium">Logout</span>
+              <span className="font-medium">{t("header.signOut")}</span>
             )}
           </button>
         </div>
