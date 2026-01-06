@@ -17,6 +17,7 @@ import type { MenuItem } from "@/lib/types";
 import { useMenuData } from "@/app/hooks/useMenuData";
 import Link from "next/link";
 import { useState } from "react";
+import { getImageUrl } from "@/lib/utils";
 
 export interface OrderSummaryProps {
   deliveryMode?: string;
@@ -268,7 +269,7 @@ export function OrderSummary({
                 }`}
               >
                 <img
-                  src={item.image || "/placeholder.svg"}
+                  src={getImageUrl(item.image)}
                   alt={item.name}
                   className="w-12 h-12 object-cover rounded-md flex-shrink-0"
                 />

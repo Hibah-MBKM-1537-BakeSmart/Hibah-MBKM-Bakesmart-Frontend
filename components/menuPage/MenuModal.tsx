@@ -7,6 +7,7 @@ import { useTranslation } from "@/app/contexts/TranslationContext";
 import { useStoreClosure } from "@/app/contexts/StoreClosureContext";
 import { ImagePopup } from "./ImagePopup";
 import type { MenuItem, ProductAttribute } from "@/lib/types";
+import { getImageUrl } from "@/lib/utils";
 
 interface MenuModalProps {
   item: MenuItem | null;
@@ -16,7 +17,12 @@ interface MenuModalProps {
   viewMode?: "order" | "allMenu";
 }
 
-export function MenuModal({ item, isOpen, onClose, viewMode = "order" }: MenuModalProps) {
+export function MenuModal({
+  item,
+  isOpen,
+  onClose,
+  viewMode = "order",
+}: MenuModalProps) {
   const { t, language } = useTranslation();
   const { addToCart, cartItems, selectedOrderDay } = useCart();
   const { isStoreClosed } = useStoreClosure();
@@ -120,7 +126,7 @@ export function MenuModal({ item, isOpen, onClose, viewMode = "order" }: MenuMod
         discountPrice,
         originalPrice,
         isDiscount: !!item.harga_diskon && item.harga_diskon < item.harga,
-        image: item.gambars?.[0]?.file_path || "/placeholder.svg",
+        image: getImageUrl(item.gambars?.[0]?.file_path),
         category: item.jenis?.[0]
           ? language === "id"
             ? item.jenis[0].nama_id
@@ -171,13 +177,17 @@ export function MenuModal({ item, isOpen, onClose, viewMode = "order" }: MenuMod
     selectedAttributes.length > 0 || tempOrderDay !== availableDays[0];
 
   const itemName = language === "en" ? item.nama_en : item.nama_id;
-  const itemImage = item.gambars?.[0]?.file_path || "/placeholder.svg";
+  const itemImage = getImageUrl(item.gambars?.[0]?.file_path);
   const itemDescription =
     language === "en" ? item.deskripsi_en : item.deskripsi_id;
   const itemIngredients =
     item.bahans
       ?.map((bahan) => (language === "en" ? bahan.nama_en : bahan.nama_id))
       .join(", ") || "Tidak ada informasi bahan";
+
+  const validAttributes = (item.attributes || []).filter(
+    (attr) => attr && attr.id !== null && attr.harga !== null
+  );
 
   return (
     <>
@@ -260,7 +270,9 @@ export function MenuModal({ item, isOpen, onClose, viewMode = "order" }: MenuMod
                               ? "bg-[#5D4037] text-white shadow-md"
                               : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 hover:border-[#8B6F47]"
                           } ${
-                            isStoreClosed() ? "opacity-50 cursor-not-allowed" : ""
+                            isStoreClosed()
+                              ? "opacity-50 cursor-not-allowed"
+                              : ""
                           }`}
                           data-day={day}
                         >
@@ -277,7 +289,7 @@ export function MenuModal({ item, isOpen, onClose, viewMode = "order" }: MenuMod
                 )}
 
                 {/* Attributes Selection - Only in order mode and if available */}
-                {viewMode === "order" && item.attributes && item.attributes.length > 0 && (
+                {viewMode === "order" && validAttributes.length > 0 && (
                   <div>
                     <h3 className="font-semibold text-[#5D4037] mb-2 text-sm md:text-base">
                       Pilihan Tambahan
@@ -286,7 +298,7 @@ export function MenuModal({ item, isOpen, onClose, viewMode = "order" }: MenuMod
                       </span>
                     </h3>
                     <div className="space-y-2">
-                      {item.attributes.map((attribute) => {
+                      {validAttributes.map((attribute) => {
                         const attributeName =
                           language === "en"
                             ? attribute.nama_en
@@ -317,7 +329,8 @@ export function MenuModal({ item, isOpen, onClose, viewMode = "order" }: MenuMod
                               </span>
                             </div>
                             <span className="text-[#5D4037] font-semibold text-sm ml-2 flex-shrink-0">
-                              +Rp{attribute.harga.toLocaleString("id-ID")}
+                              +Rp
+                              {(attribute.harga || 0).toLocaleString("id-ID")}
                             </span>
                           </label>
                         );
@@ -327,13 +340,13 @@ export function MenuModal({ item, isOpen, onClose, viewMode = "order" }: MenuMod
                 )}
 
                 {/* Attributes Display - Only in allMenu mode for viewing */}
-                {viewMode === "allMenu" && item.attributes && item.attributes.length > 0 && (
+                {viewMode === "allMenu" && validAttributes.length > 0 && (
                   <div>
                     <h3 className="font-semibold text-[#5D4037] mb-2 text-sm md:text-base">
                       Pilihan Tambahan Tersedia
                     </h3>
                     <div className="space-y-2">
-                      {item.attributes.map((attribute) => {
+                      {validAttributes.map((attribute) => {
                         const attributeName =
                           language === "en"
                             ? attribute.nama_en
@@ -350,7 +363,8 @@ export function MenuModal({ item, isOpen, onClose, viewMode = "order" }: MenuMod
                               </span>
                             </div>
                             <span className="text-[#5D4037] font-semibold text-sm ml-2 flex-shrink-0">
-                              +Rp{attribute.harga.toLocaleString("id-ID")}
+                              +Rp
+                              {(attribute.harga || 0).toLocaleString("id-ID")}
                             </span>
                           </div>
                         );
@@ -454,7 +468,9 @@ export function MenuModal({ item, isOpen, onClose, viewMode = "order" }: MenuMod
                           : "bg-[#5D4037] text-white hover:bg-[#8B6F47] shadow-md hover:shadow-lg"
                       }`}
                       onClick={handleAddToCart}
-                      disabled={isOutOfStock || !tempOrderDay || isStoreClosed()}
+                      disabled={
+                        isOutOfStock || !tempOrderDay || isStoreClosed()
+                      }
                     >
                       {isStoreClosed()
                         ? t("menu.storeIsClosed")
@@ -505,7 +521,8 @@ export function MenuModal({ item, isOpen, onClose, viewMode = "order" }: MenuMod
                     )}
                   </div>
                   <p className="text-sm text-gray-600 text-center">
-                    Untuk memesan produk ini, silakan klik tombol "Pesan" di menu utama
+                    Untuk memesan produk ini, silakan klik tombol "Pesan" di
+                    menu utama
                   </p>
                 </div>
               )}

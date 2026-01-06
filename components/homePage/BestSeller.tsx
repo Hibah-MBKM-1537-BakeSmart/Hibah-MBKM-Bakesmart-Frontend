@@ -14,6 +14,7 @@ import { useTranslation } from "@/app/contexts/TranslationContext";
 import type { MenuItem, ApiProduct } from "@/lib/types";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useStoreClosure } from "@/app/contexts/StoreClosureContext";
+import { getImageUrl } from "@/lib/utils";
 
 // [PERUBAHAN] Tipe untuk respons API (sama seperti di MenuGrid)
 interface ApiResponse {
@@ -37,10 +38,7 @@ function ProductCard(item: MenuItem) {
     ? `Rp ${item.harga.toLocaleString("id-ID")}`
     : undefined;
 
-  const image: string =
-    item.gambars && item.gambars.length > 0
-      ? item.gambars[0].file_path
-      : "/placeholder.svg";
+  const image: string = getImageUrl(item.gambars?.[0]?.file_path);
 
   const availableDays = item.hari.map((day) => day.nama_id);
   const category =
@@ -58,91 +56,91 @@ function ProductCard(item: MenuItem) {
       <Link href="/menu">
         <Card className="overflow-hidden bg-white shadow-lg transition-shadow hover:shadow-xl">
           <div className="aspect-square overflow-hidden relative cursor-pointer">
-          <Image
-            src={image || "/placeholder.svg"}
-            alt={name}
-            width={200}
-            height={200}
-            className="h-full w-full object-cover transition-transform hover:scale-105"
-          />
-          {isDiscount && originalPrice && (
-            <div className="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">
-              {t("menu.discount")}
-            </div>
-          )}
-        </div>
-        <CardContent className="p-4">
-          <div className="mb-3">
-            <h3
-              className="font-serif text-lg font-bold cursor-pointer hover:text-[#8B6F47] transition-colors line-clamp-1"
-              style={{ color: "#5D4037" }}
-            >
-              {name}
-            </h3>
-            <p className="text-xs text-gray-500 mt-1 capitalize line-clamp-1">
-              {t("menu.availableOn")}:{" "}
-              {availableDays
-                .map((day) => {
-                  const dayLabels: { [key: string]: string } = {
-                    senin: t("day.monday"),
-                    selasa: t("day.tuesday"),
-                    rabu: t("day.wednesday"),
-                    kamis: t("day.thursday"),
-                    jumat: t("day.friday"),
-                    sabtu: t("day.saturday"),
-                    minggu: t("day.sunday"),
-                  };
-                  return dayLabels[day.toLowerCase()] || day;
-                })
-                .join(", ")}
-            </p>
-            <p className="text-sm text-gray-600 mt-2 line-clamp-2">
-              {description}
-            </p>
-            {item.attributes && item.attributes.length > 0 && (
-              <p className="text-xs text-[#8B6F47] mt-1 font-medium">
-                +{item.attributes.length} pilihan tambahan
-              </p>
+            <Image
+              src={image || "/placeholder.svg"}
+              alt={name}
+              width={200}
+              height={200}
+              className="h-full w-full object-cover transition-transform hover:scale-105"
+            />
+            {isDiscount && originalPrice && (
+              <div className="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">
+                {t("menu.discount")}
+              </div>
             )}
           </div>
-          <div className="flex items-center justify-between">
-            <div className="flex flex-col">
-              <span
-                className="font-semibold text-base"
+          <CardContent className="p-4">
+            <div className="mb-3">
+              <h3
+                className="font-serif text-lg font-bold cursor-pointer hover:text-[#8B6F47] transition-colors line-clamp-1"
                 style={{ color: "#5D4037" }}
               >
-                {discountPrice}
-              </span>
-              {isDiscount && originalPrice && (
-                <span className="text-xs text-gray-400 line-through">
-                  {originalPrice}
-                </span>
+                {name}
+              </h3>
+              <p className="text-xs text-gray-500 mt-1 capitalize line-clamp-1">
+                {t("menu.availableOn")}:{" "}
+                {availableDays
+                  .map((day) => {
+                    const dayLabels: { [key: string]: string } = {
+                      senin: t("day.monday"),
+                      selasa: t("day.tuesday"),
+                      rabu: t("day.wednesday"),
+                      kamis: t("day.thursday"),
+                      jumat: t("day.friday"),
+                      sabtu: t("day.saturday"),
+                      minggu: t("day.sunday"),
+                    };
+                    return dayLabels[day.toLowerCase()] || day;
+                  })
+                  .join(", ")}
+              </p>
+              <p className="text-sm text-gray-600 mt-2 line-clamp-2">
+                {description}
+              </p>
+              {item.attributes && item.attributes.length > 0 && (
+                <p className="text-xs text-[#8B6F47] mt-1 font-medium">
+                  +{item.attributes.length} pilihan tambahan
+                </p>
               )}
             </div>
-            <Button
-              size="sm"
-              className={`px-3 py-1 text-xs font-medium text-white hover:opacity-90 ${
-                isOutOfStock || storeIsClosed
-                  ? "opacity-50 cursor-not-allowed"
-                  : ""
-              }`}
-              style={{
-                backgroundColor:
-                  isOutOfStock || storeIsClosed ? "#9CA3AF" : "#8B6F47",
-              }}
-              disabled={isOutOfStock || storeIsClosed}
-              title={
-                isOutOfStock
-                  ? t("menu.outOfStock")
-                  : storeIsClosed
-                  ? "Toko sedang tutup"
-                  : t("menu.addToCart")
-              }
-            >
-              {t("menu.order")}
-            </Button>
-          </div>
-        </CardContent>
+            <div className="flex items-center justify-between">
+              <div className="flex flex-col">
+                <span
+                  className="font-semibold text-base"
+                  style={{ color: "#5D4037" }}
+                >
+                  {discountPrice}
+                </span>
+                {isDiscount && originalPrice && (
+                  <span className="text-xs text-gray-400 line-through">
+                    {originalPrice}
+                  </span>
+                )}
+              </div>
+              <Button
+                size="sm"
+                className={`px-3 py-1 text-xs font-medium text-white hover:opacity-90 ${
+                  isOutOfStock || storeIsClosed
+                    ? "opacity-50 cursor-not-allowed"
+                    : ""
+                }`}
+                style={{
+                  backgroundColor:
+                    isOutOfStock || storeIsClosed ? "#9CA3AF" : "#8B6F47",
+                }}
+                disabled={isOutOfStock || storeIsClosed}
+                title={
+                  isOutOfStock
+                    ? t("menu.outOfStock")
+                    : storeIsClosed
+                    ? "Toko sedang tutup"
+                    : t("menu.addToCart")
+                }
+              >
+                {t("menu.order")}
+              </Button>
+            </div>
+          </CardContent>
         </Card>
       </Link>
     </>

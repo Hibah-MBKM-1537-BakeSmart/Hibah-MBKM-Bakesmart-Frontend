@@ -1,11 +1,13 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { X, Upload, Settings, Trash2, Tag, Layers } from 'lucide-react';
-import { Product } from '@/app/contexts/ProductsContext';
-import { useJenis } from '@/app/contexts/JenisContext';
-import { useSubJenis } from '@/app/contexts/SubJenisContext';
-import { ProductAddonsManager, ProductAddon } from './ProductAddonsManager';
+import React, { useState, useEffect } from "react";
+import { X, Upload, Settings, Trash2, Tag, Layers } from "lucide-react";
+import { Product } from "@/app/contexts/ProductsContext";
+import { useJenis } from "@/app/contexts/JenisContext";
+import { useSubJenis } from "@/app/contexts/SubJenisContext";
+import { ProductAddonsManager, ProductAddon } from "./ProductAddonsManager";
+
+import { getImageUrl, BACKEND_URL } from "@/lib/utils";
 
 interface EditProductModalProps {
   isOpen: boolean;
@@ -14,14 +16,19 @@ interface EditProductModalProps {
   product: Product | null;
 }
 
-export function EditProductModal({ isOpen, onClose, onEditProduct, product }: EditProductModalProps) {
+export function EditProductModal({
+  isOpen,
+  onClose,
+  onEditProduct,
+  product,
+}: EditProductModalProps) {
   const { jenisList } = useJenis();
   const { subJenisList, getSubJenisByJenisId } = useSubJenis();
   const [formData, setFormData] = useState({
-    nama_id: '',
-    nama_en: '',
-    deskripsi_id: '',
-    deskripsi_en: '',
+    nama_id: "",
+    nama_en: "",
+    deskripsi_id: "",
+    deskripsi_en: "",
     harga: 0,
     harga_diskon: null as number | null,
     stok: 0,
@@ -36,35 +43,51 @@ export function EditProductModal({ isOpen, onClose, onEditProduct, product }: Ed
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAddonsManager, setShowAddonsManager] = useState(false);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
-  const [existingImages, setExistingImages] = useState<Array<{ id: number; file_path: string }>>([]);
-  const [availableHari, setAvailableHari] = useState<Array<{id: number, nama_id: string, nama_en: string}>>([]);
+  const [existingImages, setExistingImages] = useState<
+    Array<{ id: number; file_path: string }>
+  >([]);
+  const [availableHari, setAvailableHari] = useState<
+    Array<{ id: number; nama_id: string; nama_en: string }>
+  >([]);
 
   // Fetch available hari from backend (jenis/sub_jenis now from context)
   useEffect(() => {
     const fetchHari = async () => {
       try {
-        const response = await fetch('/api/products');
+        const response = await fetch("/api/products");
         const data = await response.json();
-        
+
         if (data.data && Array.isArray(data.data)) {
-          const hariMap = new Map<number, {id: number, nama_id: string, nama_en: string}>();
-          
+          const hariMap = new Map<
+            number,
+            { id: number; nama_id: string; nama_en: string }
+          >();
+
           data.data.forEach((prod: any) => {
             prod.hari?.forEach((h: any) => {
               if (h.id && h.nama_id) {
-                hariMap.set(h.id, {id: h.id, nama_id: h.nama_id, nama_en: h.nama_en || h.nama_id});
+                hariMap.set(h.id, {
+                  id: h.id,
+                  nama_id: h.nama_id,
+                  nama_en: h.nama_en || h.nama_id,
+                });
               }
             });
           });
-          
-          setAvailableHari(Array.from(hariMap.values()).sort((a, b) => a.id - b.id));
-          console.log('📅 Available Hari loaded:', Array.from(hariMap.values()).sort((a, b) => a.id - b.id));
+
+          setAvailableHari(
+            Array.from(hariMap.values()).sort((a, b) => a.id - b.id)
+          );
+          console.log(
+            "📅 Available Hari loaded:",
+            Array.from(hariMap.values()).sort((a, b) => a.id - b.id)
+          );
         }
       } catch (error) {
-        console.error('Error fetching hari:', error);
+        console.error("Error fetching hari:", error);
       }
     };
-    
+
     if (isOpen) {
       fetchHari();
     }
@@ -74,10 +97,14 @@ export function EditProductModal({ isOpen, onClose, onEditProduct, product }: Ed
   useEffect(() => {
     if (formData.jenis_id) {
       // Keep only sub_jenis that belong to selected jenis
-      const validSubJenisIds = getSubJenisByJenisId(formData.jenis_id).map(sj => sj.id);
-      setFormData(prev => ({
+      const validSubJenisIds = getSubJenisByJenisId(formData.jenis_id).map(
+        (sj) => sj.id
+      );
+      setFormData((prev) => ({
         ...prev,
-        sub_jenis_ids: prev.sub_jenis_ids.filter(id => validSubJenisIds.includes(id))
+        sub_jenis_ids: prev.sub_jenis_ids.filter((id) =>
+          validSubJenisIds.includes(id)
+        ),
       }));
     }
   }, [formData.jenis_id, getSubJenisByJenisId]);
@@ -86,25 +113,27 @@ export function EditProductModal({ isOpen, onClose, onEditProduct, product }: Ed
   useEffect(() => {
     if (product) {
       // Map attributes to ProductAddon format
-      const mappedAddons: ProductAddon[] = (product.attributes || []).map(attr => ({
-        id: attr.id,
-        nama_id: attr.nama_id || attr.nama || '',
-        nama_en: attr.nama_en || attr.nama || '',
-        nama: attr.nama,
-        harga: attr.harga || 0,
-      }));
+      const mappedAddons: ProductAddon[] = (product.attributes || []).map(
+        (attr) => ({
+          id: attr.id,
+          nama_id: attr.nama_id || attr.nama || "",
+          nama_en: attr.nama_en || attr.nama || "",
+          nama: attr.nama,
+          harga: attr.harga || 0,
+        })
+      );
 
       setFormData({
-        nama_id: product.nama_id || product.nama || '',
-        nama_en: product.nama_en || product.nama || '',
-        deskripsi_id: product.deskripsi_id || product.deskripsi || '',
-        deskripsi_en: product.deskripsi_en || product.deskripsi || '',
+        nama_id: product.nama_id || product.nama || "",
+        nama_en: product.nama_en || product.nama || "",
+        deskripsi_id: product.deskripsi_id || product.deskripsi || "",
+        deskripsi_en: product.deskripsi_en || product.deskripsi || "",
         harga: product.harga,
         harga_diskon: product.harga_diskon || null,
         stok: product.stok,
         jenis_id: product.jenis?.[0]?.id || null,
-        sub_jenis_ids: product.sub_jenis?.map(sj => sj.id) || [],
-        hari_ids: product.hari?.map(h => h.id) || [],
+        sub_jenis_ids: product.sub_jenis?.map((sj) => sj.id) || [],
+        hari_ids: product.hari?.map((h) => h.id) || [],
         addons: mappedAddons,
         images: [],
         isBestSeller: product.isBestSeller || false,
@@ -112,6 +141,38 @@ export function EditProductModal({ isOpen, onClose, onEditProduct, product }: Ed
       });
       setExistingImages(product.gambars || []);
       setImagePreviews([]);
+
+      // Fetch fresh details from API to ensure we have complete data (especially many-to-many arrays like hari)
+      const fetchProductDetails = async () => {
+        try {
+          const response = await fetch(`/api/products/${product.id}`);
+          if (response.ok) {
+            const result = await response.json();
+            const detail = result.data || result;
+
+            // If we got valid detail data, update the form
+            if (detail) {
+              console.log("📦 Fetched fresh product detail:", detail);
+              setFormData((prev) => ({
+                ...prev,
+                // Update arrays that might be truncated in list view
+                sub_jenis_ids:
+                  detail.sub_jenis?.map((sj: any) => sj.id) ||
+                  prev.sub_jenis_ids,
+                hari_ids: detail.hari?.map((h: any) => h.id) || prev.hari_ids,
+              }));
+              // Also update images if needed
+              if (detail.gambars) {
+                setExistingImages(detail.gambars);
+              }
+            }
+          }
+        } catch (error) {
+          console.error("Failed to fetch product details:", error);
+        }
+      };
+
+      fetchProductDetails();
     }
   }, [product]);
 
@@ -119,32 +180,32 @@ export function EditProductModal({ isOpen, onClose, onEditProduct, product }: Ed
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!formData.nama_id.trim() || !formData.nama_en.trim() || !formData.deskripsi_id.trim() || !formData.deskripsi_en.trim() || formData.harga <= 0) {
-      alert('Harap isi semua field yang wajib');
+
+    if (
+      !formData.nama_id.trim() ||
+      !formData.nama_en.trim() ||
+      !formData.deskripsi_id.trim() ||
+      !formData.deskripsi_en.trim() ||
+      formData.harga <= 0
+    ) {
+      alert("Harap isi semua field yang wajib");
       return;
     }
 
     setIsSubmitting(true);
-    
+
     try {
-      // Combine existing images with new images
-      const allImages = [
-        ...existingImages.map(img => ({
-          id: img.id,
-          file_path: img.file_path,
-          product_id: product?.id || 0
-        })),
-        ...formData.images.map((file, index) => ({
-          id: Date.now() + index,
-          file_path: URL.createObjectURL(file),
-          product_id: product?.id || 0
-        }))
-      ];
-      
+      // 1. Prepare JSON Payload (Without new blob images)
+      // Only send existing images to maintain state (deletions are handled by omitting removed images)
+      const cleanImages = existingImages.map((img) => ({
+        id: img.id,
+        file_path: img.file_path,
+        product_id: product?.id || 0,
+      }));
+
       // Exclude addons from spread since we send attribute_ids instead
       const { addons, ...restFormData } = formData;
-      
+
       const productData = {
         ...restFormData,
         nama: formData.nama_id, // Keep nama for backward compatibility
@@ -155,17 +216,46 @@ export function EditProductModal({ isOpen, onClose, onEditProduct, product }: Ed
         harga_diskon: formData.harga_diskon,
         isBestSeller: formData.isBestSeller,
         isDaily: formData.isDaily,
-        attribute_ids: addons.map(a => a.id), // Send attribute IDs to backend
-        gambars: allImages,
+        attribute_ids: addons.map((a) => a.id), // Send attribute IDs to backend
+        gambars: cleanImages, // Only existing images
       };
 
-      console.log('🚀 Sending product data to backend:', productData);
-      console.log('🚀 Selected hari_ids:', productData.hari_ids);
-
+      console.log("🚀 Sending product text data to backend:", productData);
+      
+      // Step 1: Update Text Data
       await onEditProduct(productData);
+
+      // Step 2: Upload New Images
+      if (formData.images.length > 0 && product?.id) {
+        console.log("🚀 Uploading new images...", formData.images);
+        // Upload each file individually
+        for (const file of formData.images) {
+          const imageFormData = new FormData();
+          imageFormData.append('file', file);
+
+          try {
+            const response = await fetch(`${BACKEND_URL}/products/${product.id}/gambar`, {
+              method: 'POST',
+              body: imageFormData,
+              // Content-Type header is automatically set by browser with boundary
+            });
+
+            if (!response.ok) {
+              const errorData = await response.json().catch(() => ({}));
+              console.error("Failed to upload image:", errorData);
+              throw new Error(errorData.message || "Failed to upload image");
+            }
+            console.log("✅ Image uploaded successfully");
+          } catch (uploadError) {
+             console.error("Error uploading specific image:", uploadError);
+          }
+        }
+      }
+
       handleClose();
     } catch (error) {
-      console.error('Error updating product:', error);
+      console.error("Error updating product:", error);
+      alert("Gagal mengupdate produk. Silakan coba lagi.");
     } finally {
       setIsSubmitting(false);
     }
@@ -173,10 +263,10 @@ export function EditProductModal({ isOpen, onClose, onEditProduct, product }: Ed
 
   const handleClose = () => {
     setFormData({
-      nama_id: '',
-      nama_en: '',
-      deskripsi_id: '',
-      deskripsi_en: '',
+      nama_id: "",
+      nama_en: "",
+      deskripsi_id: "",
+      deskripsi_en: "",
       harga: 0,
       harga_diskon: null,
       stok: 0,
@@ -195,81 +285,82 @@ export function EditProductModal({ isOpen, onClose, onEditProduct, product }: Ed
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    
-    const totalImages = existingImages.length + formData.images.length + files.length;
+
+    const totalImages =
+      existingImages.length + formData.images.length + files.length;
     if (totalImages > 5) {
-      alert('Maksimal 5 gambar total');
+      alert("Maksimal 5 gambar total");
       return;
     }
 
     const newPreviews: string[] = [];
-    files.forEach(file => {
+    files.forEach((file) => {
       const reader = new FileReader();
       reader.onload = (event) => {
         if (event.target?.result) {
           newPreviews.push(event.target.result as string);
           if (newPreviews.length === files.length) {
-            setImagePreviews(prev => [...prev, ...newPreviews]);
+            setImagePreviews((prev) => [...prev, ...newPreviews]);
           }
         }
       };
       reader.readAsDataURL(file);
     });
 
-    setFormData(prev => ({ ...prev, images: [...prev.images, ...files] }));
+    setFormData((prev) => ({ ...prev, images: [...prev.images, ...files] }));
   };
 
   const removeNewImage = (index: number) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      images: prev.images.filter((_, i) => i !== index)
+      images: prev.images.filter((_, i) => i !== index),
     }));
-    setImagePreviews(prev => prev.filter((_, i) => i !== index));
+    setImagePreviews((prev) => prev.filter((_, i) => i !== index));
   };
 
   const removeExistingImage = (index: number) => {
-    setExistingImages(prev => prev.filter((_, i) => i !== index));
+    setExistingImages((prev) => prev.filter((_, i) => i !== index));
   };
 
   const toggleHari = (hariId: number) => {
-    console.log('🔵 toggleHari called with ID:', hariId);
-    console.log('🔵 Current hari_ids:', formData.hari_ids);
-    
-    setFormData(prev => {
+    console.log("🔵 toggleHari called with ID:", hariId);
+    console.log("🔵 Current hari_ids:", formData.hari_ids);
+
+    setFormData((prev) => {
       const newHariIds = prev.hari_ids.includes(hariId)
-        ? prev.hari_ids.filter(id => id !== hariId)
+        ? prev.hari_ids.filter((id) => id !== hariId)
         : [...prev.hari_ids, hariId];
-      
-      console.log('🔵 New hari_ids:', newHariIds);
-      
+
+      console.log("🔵 New hari_ids:", newHariIds);
+
       return {
         ...prev,
-        hari_ids: newHariIds
+        hari_ids: newHariIds,
       };
     });
   };
 
   const selectJenis = (jenisId: number) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      jenis_id: prev.jenis_id === jenisId ? null : jenisId
+      jenis_id: prev.jenis_id === jenisId ? null : jenisId,
     }));
   };
 
   const toggleSubJenis = (subJenisId: number) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       sub_jenis_ids: prev.sub_jenis_ids.includes(subJenisId)
-        ? prev.sub_jenis_ids.filter(id => id !== subJenisId)
-        : [...prev.sub_jenis_ids, subJenisId]
+        ? prev.sub_jenis_ids.filter((id) => id !== subJenisId)
+        : [...prev.sub_jenis_ids, subJenisId],
     }));
   };
 
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0
+    return new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+      minimumFractionDigits: 0,
     }).format(price);
   };
 
@@ -277,7 +368,7 @@ export function EditProductModal({ isOpen, onClose, onEditProduct, product }: Ed
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/40" onClick={handleClose} />
-      
+
       {/* Modal */}
       <div className="relative z-10 w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-xl bg-white shadow-xl border border-gray-200">
         {/* Header */}
@@ -299,16 +390,19 @@ export function EditProductModal({ isOpen, onClose, onEditProduct, product }: Ed
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Gambar Produk (Max 5 gambar total)
             </label>
-            
+
             {/* Existing Images */}
             {existingImages.length > 0 && (
               <div className="mb-4">
                 <p className="text-xs text-gray-600 mb-2">Gambar saat ini:</p>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   {existingImages.map((image, index) => (
-                    <div key={`existing-${image.id}`} className="relative group">
+                    <div
+                      key={`existing-${image.id}`}
+                      className="relative group"
+                    >
                       <img
-                        src={image.file_path}
+                        src={getImageUrl(image.file_path)}
                         alt={`Product ${index + 1}`}
                         className="w-full h-24 object-cover rounded-lg border border-gray-200"
                       />
@@ -335,17 +429,27 @@ export function EditProductModal({ isOpen, onClose, onEditProduct, product }: Ed
                 onChange={handleImageUpload}
                 className="hidden"
                 id="image-upload-edit"
-                disabled={isSubmitting || (existingImages.length + formData.images.length) >= 5}
+                disabled={
+                  isSubmitting ||
+                  existingImages.length + formData.images.length >= 5
+                }
               />
               <label
                 htmlFor="image-upload-edit"
                 className={`cursor-pointer ${
-                  isSubmitting || (existingImages.length + formData.images.length) >= 5 ? 'cursor-not-allowed opacity-50' : ''
+                  isSubmitting ||
+                  existingImages.length + formData.images.length >= 5
+                    ? "cursor-not-allowed opacity-50"
+                    : ""
                 }`}
               >
                 <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                <p className="text-sm text-gray-600">Klik untuk upload gambar baru atau drag & drop</p>
-                <p className="text-xs text-gray-500 mt-1">PNG, JPG, JPEG up to 10MB</p>
+                <p className="text-sm text-gray-600">
+                  Klik untuk upload gambar baru atau drag & drop
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  PNG, JPG, JPEG up to 10MB
+                </p>
                 <p className="text-xs text-orange-600 mt-1">
                   {existingImages.length + formData.images.length} / 5 gambar
                 </p>
@@ -355,7 +459,9 @@ export function EditProductModal({ isOpen, onClose, onEditProduct, product }: Ed
             {/* New Images Preview */}
             {imagePreviews.length > 0 && (
               <div className="mt-4">
-                <p className="text-xs text-gray-600 mb-2">Gambar baru yang akan ditambahkan:</p>
+                <p className="text-xs text-gray-600 mb-2">
+                  Gambar baru yang akan ditambahkan:
+                </p>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   {imagePreviews.map((preview, index) => (
                     <div key={`new-${index}`} className="relative group">
@@ -381,14 +487,19 @@ export function EditProductModal({ isOpen, onClose, onEditProduct, product }: Ed
 
           {/* Product Name - Indonesian */}
           <div>
-            <label htmlFor="nama_id" className="block text-sm font-medium text-gray-700 mb-2">
+            <label
+              htmlFor="nama_id"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
               Nama Produk (Bahasa Indonesia) *
             </label>
             <input
               type="text"
               id="nama_id"
               value={formData.nama_id}
-              onChange={(e) => setFormData(prev => ({ ...prev, nama_id: e.target.value }))}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, nama_id: e.target.value }))
+              }
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
               placeholder="Contoh: Roti Cokelat"
               required
@@ -397,14 +508,19 @@ export function EditProductModal({ isOpen, onClose, onEditProduct, product }: Ed
 
           {/* Product Name - English */}
           <div>
-            <label htmlFor="nama_en" className="block text-sm font-medium text-gray-700 mb-2">
+            <label
+              htmlFor="nama_en"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
               Nama Produk (English) *
             </label>
             <input
               type="text"
               id="nama_en"
               value={formData.nama_en}
-              onChange={(e) => setFormData(prev => ({ ...prev, nama_en: e.target.value }))}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, nama_en: e.target.value }))
+              }
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
               placeholder="Example: Chocolate Bread"
               required
@@ -413,13 +529,21 @@ export function EditProductModal({ isOpen, onClose, onEditProduct, product }: Ed
 
           {/* Description - Indonesian */}
           <div>
-            <label htmlFor="deskripsi_id" className="block text-sm font-medium text-gray-700 mb-2">
+            <label
+              htmlFor="deskripsi_id"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
               Deskripsi Produk (Bahasa Indonesia) *
             </label>
             <textarea
               id="deskripsi_id"
               value={formData.deskripsi_id}
-              onChange={(e) => setFormData(prev => ({ ...prev, deskripsi_id: e.target.value }))}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  deskripsi_id: e.target.value,
+                }))
+              }
               rows={3}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
               placeholder="Masukkan deskripsi produk dalam Bahasa Indonesia"
@@ -429,13 +553,21 @@ export function EditProductModal({ isOpen, onClose, onEditProduct, product }: Ed
 
           {/* Description - English */}
           <div>
-            <label htmlFor="deskripsi_en" className="block text-sm font-medium text-gray-700 mb-2">
+            <label
+              htmlFor="deskripsi_en"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
               Deskripsi Produk (English) *
             </label>
             <textarea
               id="deskripsi_en"
               value={formData.deskripsi_en}
-              onChange={(e) => setFormData(prev => ({ ...prev, deskripsi_en: e.target.value }))}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  deskripsi_en: e.target.value,
+                }))
+              }
               rows={3}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
               placeholder="Enter product description in English"
@@ -457,8 +589,8 @@ export function EditProductModal({ isOpen, onClose, onEditProduct, product }: Ed
                   onClick={() => selectJenis(jenis.id)}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors border ${
                     formData.jenis_id === jenis.id
-                      ? 'bg-orange-500 text-white border-orange-500'
-                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                      ? "bg-orange-500 text-white border-orange-500"
+                      : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
                   }`}
                 >
                   {jenis.nama_id}
@@ -467,9 +599,8 @@ export function EditProductModal({ isOpen, onClose, onEditProduct, product }: Ed
             </div>
             <p className="text-xs text-gray-500 mt-2">
               {!formData.jenis_id
-                ? 'Belum ada jenis dipilih'
-                : `1 jenis terpilih`
-              }
+                ? "Belum ada jenis dipilih"
+                : `1 jenis terpilih`}
             </p>
           </div>
 
@@ -481,7 +612,9 @@ export function EditProductModal({ isOpen, onClose, onEditProduct, product }: Ed
                 Sub Jenis (Opsional)
               </label>
               {getSubJenisByJenisId(formData.jenis_id).length === 0 ? (
-                <p className="text-sm text-gray-500 italic">Tidak ada sub jenis untuk kategori ini</p>
+                <p className="text-sm text-gray-500 italic">
+                  Tidak ada sub jenis untuk kategori ini
+                </p>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {getSubJenisByJenisId(formData.jenis_id).map((subJenis) => (
@@ -491,8 +624,8 @@ export function EditProductModal({ isOpen, onClose, onEditProduct, product }: Ed
                       onClick={() => toggleSubJenis(subJenis.id)}
                       className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors border ${
                         formData.sub_jenis_ids.includes(subJenis.id)
-                          ? 'bg-blue-500 text-white border-blue-500'
-                          : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                          ? "bg-blue-500 text-white border-blue-500"
+                          : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
                       }`}
                     >
                       {subJenis.nama_id}
@@ -502,9 +635,8 @@ export function EditProductModal({ isOpen, onClose, onEditProduct, product }: Ed
               )}
               <p className="text-xs text-gray-500 mt-2">
                 {formData.sub_jenis_ids.length === 0
-                  ? 'Tidak ada sub jenis dipilih'
-                  : `${formData.sub_jenis_ids.length} sub jenis terpilih`
-                }
+                  ? "Tidak ada sub jenis dipilih"
+                  : `${formData.sub_jenis_ids.length} sub jenis terpilih`}
               </p>
             </div>
           )}
@@ -515,7 +647,12 @@ export function EditProductModal({ isOpen, onClose, onEditProduct, product }: Ed
               <input
                 type="checkbox"
                 checked={formData.isBestSeller}
-                onChange={(e) => setFormData(prev => ({ ...prev, isBestSeller: e.target.checked }))}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    isBestSeller: e.target.checked,
+                  }))
+                }
                 className="w-4 h-4 text-orange-500 border-gray-300 rounded focus:ring-orange-500"
               />
               <span className="ml-2 text-sm text-gray-700">Best Seller</span>
@@ -524,7 +661,12 @@ export function EditProductModal({ isOpen, onClose, onEditProduct, product }: Ed
               <input
                 type="checkbox"
                 checked={formData.isDaily}
-                onChange={(e) => setFormData(prev => ({ ...prev, isDaily: e.target.checked }))}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    isDaily: e.target.checked,
+                  }))
+                }
                 className="w-4 h-4 text-orange-500 border-gray-300 rounded focus:ring-orange-500"
               />
               <span className="ml-2 text-sm text-gray-700">Produk Harian</span>
@@ -533,42 +675,59 @@ export function EditProductModal({ isOpen, onClose, onEditProduct, product }: Ed
 
           {/* Harga Diskon */}
           <div>
-            <label htmlFor="harga_diskon" className="block text-sm font-medium text-gray-700 mb-2">
+            <label
+              htmlFor="harga_diskon"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
               Harga Diskon (Opsional)
             </label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">Rp</span>
+              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
+                Rp
+              </span>
               <input
                 type="number"
                 id="harga_diskon"
-                value={formData.harga_diskon || ''}
+                value={formData.harga_diskon || ""}
                 onChange={(e) => {
-                  const value = e.target.value === '' ? null : parseInt(e.target.value, 10);
-                  setFormData(prev => ({ ...prev, harga_diskon: value }));
+                  const value =
+                    e.target.value === "" ? null : parseInt(e.target.value, 10);
+                  setFormData((prev) => ({ ...prev, harga_diskon: value }));
                 }}
                 className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                 placeholder="0"
                 min="0"
               />
             </div>
-            <p className="text-xs text-gray-500 mt-1">Kosongkan jika tidak ada diskon</p>
+            <p className="text-xs text-gray-500 mt-1">
+              Kosongkan jika tidak ada diskon
+            </p>
           </div>
 
           {/* Price and Stock */}
           <div className="grid grid-cols-1 gap-4">
             <div>
-              <label htmlFor="harga" className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="harga"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 Harga *
               </label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">Rp</span>
+                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
+                  Rp
+                </span>
                 <input
                   type="number"
                   id="harga"
-                  value={formData.harga || ''}
+                  value={formData.harga || ""}
                   onChange={(e) => {
-                    const value = e.target.value === '' ? 0 : parseInt(e.target.value, 10);
-                    setFormData(prev => ({ ...prev, harga: isNaN(value) ? 0 : value }));
+                    const value =
+                      e.target.value === "" ? 0 : parseInt(e.target.value, 10);
+                    setFormData((prev) => ({
+                      ...prev,
+                      harga: isNaN(value) ? 0 : value,
+                    }));
                   }}
                   className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                   placeholder="0"
@@ -597,8 +756,8 @@ export function EditProductModal({ isOpen, onClose, onEditProduct, product }: Ed
                   onClick={() => toggleHari(hari.id)}
                   className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors border ${
                     formData.hari_ids.includes(hari.id)
-                      ? 'bg-orange-500 text-white border-orange-500'
-                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                      ? "bg-orange-500 text-white border-orange-500"
+                      : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
                   }`}
                 >
                   {hari.nama_id}
@@ -606,10 +765,9 @@ export function EditProductModal({ isOpen, onClose, onEditProduct, product }: Ed
               ))}
             </div>
             <p className="text-xs text-gray-500 mt-2">
-              {formData.hari_ids.length === 0 
-                ? 'Tidak ada hari dipilih (produk tidak tersedia)'
-                : `Tersedia di ${formData.hari_ids.length} hari`
-              }
+              {formData.hari_ids.length === 0
+                ? "Tidak ada hari dipilih (produk tidak tersedia)"
+                : `Tersedia di ${formData.hari_ids.length} hari`}
             </p>
           </div>
 
@@ -623,10 +781,9 @@ export function EditProductModal({ isOpen, onClose, onEditProduct, product }: Ed
                 <div className="flex items-center gap-2">
                   <Settings className="w-5 h-5 text-gray-600" />
                   <span className="text-sm text-gray-700">
-                    {formData.addons.length === 0 
-                      ? 'No addons configured' 
-                      : `${formData.addons.length} addon(s)`
-                    }
+                    {formData.addons.length === 0
+                      ? "No addons configured"
+                      : `${formData.addons.length} addon(s)`}
                   </span>
                 </div>
                 <button
@@ -641,10 +798,15 @@ export function EditProductModal({ isOpen, onClose, onEditProduct, product }: Ed
               {formData.addons.length > 0 && (
                 <div className="space-y-1 max-h-24 overflow-y-auto">
                   {formData.addons.slice(0, 3).map((addon) => (
-                    <div key={addon.id} className="text-xs text-gray-600 flex items-center justify-between bg-white px-2 py-1 rounded">
-                      <span>{addon.nama_id || addon.nama || 'Unnamed'}</span>
+                    <div
+                      key={addon.id}
+                      className="text-xs text-gray-600 flex items-center justify-between bg-white px-2 py-1 rounded"
+                    >
+                      <span>{addon.nama_id || addon.nama || "Unnamed"}</span>
                       <span className="text-gray-500">
-                        {addon.harga > 0 ? `+Rp ${addon.harga.toLocaleString('id-ID')}` : 'Gratis'}
+                        {addon.harga > 0
+                          ? `+Rp ${addon.harga.toLocaleString("id-ID")}`
+                          : "Gratis"}
                       </span>
                     </div>
                   ))}
@@ -672,7 +834,7 @@ export function EditProductModal({ isOpen, onClose, onEditProduct, product }: Ed
               disabled={isSubmitting}
               className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isSubmitting ? 'Menyimpan...' : 'Simpan Perubahan'}
+              {isSubmitting ? "Menyimpan..." : "Simpan Perubahan"}
             </button>
           </div>
         </form>
@@ -681,10 +843,10 @@ export function EditProductModal({ isOpen, onClose, onEditProduct, product }: Ed
         <ProductAddonsManager
           isOpen={showAddonsManager}
           onClose={() => setShowAddonsManager(false)}
-          productName={product?.nama || ''}
+          productName={product?.nama || ""}
           addons={formData.addons}
           onSave={(updatedAddons) => {
-            setFormData(prev => ({ ...prev, addons: updatedAddons }));
+            setFormData((prev) => ({ ...prev, addons: updatedAddons }));
           }}
         />
       </div>

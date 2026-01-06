@@ -29,6 +29,7 @@ import { useToast } from "@/components/adminPage/Toast";
 import { useJenis } from "@/app/contexts/JenisContext";
 import { useSubJenis } from "@/app/contexts/SubJenisContext";
 import { useProducts, Product } from "@/app/contexts/ProductsContext";
+import { getImageUrl } from "@/lib/utils";
 
 // ProductTableRow Component for reusability
 interface ProductTableRowProps {
@@ -71,7 +72,7 @@ function ProductTableRow({
   handleDeleteProduct,
 }: ProductTableRowProps) {
   return (
-    <tr className={`hover:bg-gray-50 ${isGrouped ? 'bg-white' : ''}`}>
+    <tr className={`hover:bg-gray-50 ${isGrouped ? "bg-white" : ""}`}>
       {isGrouped && <td className="w-[40px]"></td>}
       <td className="px-3 lg:px-6 py-4 w-[280px]">
         <div className="flex items-center">
@@ -79,7 +80,7 @@ function ProductTableRow({
             {product.gambars && product.gambars.length > 0 ? (
               <>
                 <img
-                  src={product.gambars[0].file_path}
+                  src={getImageUrl(product.gambars[0].file_path)}
                   alt={product.nama}
                   className="w-10 h-10 rounded-lg object-cover border border-gray-200"
                   onError={(e) => {
@@ -224,12 +225,13 @@ function ProductTableRow({
             </button>
             <button
               onClick={() => startEditingStock(product.id, product.stok || 0)}
-              className={`min-w-[45px] px-3 py-1.5 rounded-lg text-sm font-semibold transition-all shadow-sm ${!product.stok || product.stok === 0
+              className={`min-w-[45px] px-3 py-1.5 rounded-lg text-sm font-semibold transition-all shadow-sm ${
+                !product.stok || product.stok === 0
                   ? "bg-red-100 text-red-800 hover:bg-red-200 border border-red-200"
                   : product.stok < 10
-                    ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-200 border border-yellow-200"
-                    : "bg-green-100 text-green-800 hover:bg-green-200 border border-green-200"
-                }`}
+                  ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-200 border border-yellow-200"
+                  : "bg-green-100 text-green-800 hover:bg-green-200 border border-green-200"
+              }`}
               title="Click to edit stock"
             >
               {product.stok ?? 0}
@@ -257,14 +259,18 @@ function ProductTableRow({
             <Eye className="w-4 h-4 lg:w-5 lg:h-5" />
           </button>
           <button
-            onClick={() => handleEditProduct(product.id, product.nama || "Product")}
+            onClick={() =>
+              handleEditProduct(product.id, product.nama || "Product")
+            }
             className="p-2 rounded-lg bg-orange-50 text-orange-600 hover:bg-orange-100 hover:text-orange-700 transition-colors"
             title="Edit Product"
           >
             <Edit className="w-4 h-4 lg:w-5 lg:h-5" />
           </button>
           <button
-            onClick={() => handleDeleteProduct(product.id, product.nama || "Product")}
+            onClick={() =>
+              handleDeleteProduct(product.id, product.nama || "Product")
+            }
             className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 transition-colors"
             title="Delete Product"
           >
@@ -282,7 +288,9 @@ export default function ProductsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedDay, setSelectedDay] = useState("all");
-  const [groupBy, setGroupBy] = useState<"none" | "jenis" | "sub_jenis" | "jenis_sub_jenis">("none");
+  const [groupBy, setGroupBy] = useState<
+    "none" | "jenis" | "sub_jenis" | "jenis_sub_jenis"
+  >("none");
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [sortField, setSortField] = useState<
     "nama" | "category" | "day" | "harga" | "stok" | "sales"
@@ -521,13 +529,16 @@ export default function ProductsPage() {
       return null;
     }
 
-    const groups: Record<string, {
-      name: string;
-      nameEn: string;
-      products: Product[];
-      type: 'jenis' | 'sub_jenis';
-      parentId?: string;
-    }> = {};
+    const groups: Record<
+      string,
+      {
+        name: string;
+        nameEn: string;
+        products: Product[];
+        type: "jenis" | "sub_jenis";
+        parentId?: string;
+      }
+    > = {};
 
     if (groupBy === "jenis") {
       // Group by Jenis only
@@ -538,7 +549,7 @@ export default function ProductsPage() {
         const nameEn = jenis?.nama_en || "Uncategorized";
 
         if (!groups[key]) {
-          groups[key] = { name, nameEn, products: [], type: 'jenis' };
+          groups[key] = { name, nameEn, products: [], type: "jenis" };
         }
         groups[key].products.push(product);
       });
@@ -551,7 +562,7 @@ export default function ProductsPage() {
         const nameEn = subJenis?.nama_en || "Uncategorized";
 
         if (!groups[key]) {
-          groups[key] = { name, nameEn, products: [], type: 'sub_jenis' };
+          groups[key] = { name, nameEn, products: [], type: "sub_jenis" };
         }
         groups[key].products.push(product);
       });
@@ -571,12 +582,14 @@ export default function ProductsPage() {
             name: jenisName,
             nameEn: jenisNameEn,
             products: [],
-            type: 'jenis'
+            type: "jenis",
           };
         }
 
         // Create sub_jenis group under jenis
-        const subKey = `${jenisKey}_sub_${subJenis?.id?.toString() || "uncategorized"}`;
+        const subKey = `${jenisKey}_sub_${
+          subJenis?.id?.toString() || "uncategorized"
+        }`;
         const subName = subJenis?.nama_id || "Tanpa Sub Kategori";
         const subNameEn = subJenis?.nama_en || "Uncategorized";
 
@@ -585,8 +598,8 @@ export default function ProductsPage() {
             name: subName,
             nameEn: subNameEn,
             products: [],
-            type: 'sub_jenis',
-            parentId: jenisKey
+            type: "sub_jenis",
+            parentId: jenisKey,
           };
         }
         groups[subKey].products.push(product);
@@ -634,8 +647,8 @@ export default function ProductsPage() {
 
   // Get all group keys (for dependency tracking)
   const groupKeys = React.useMemo(() => {
-    if (!groupedProducts) return '';
-    return Object.keys(groupedProducts).sort().join(',');
+    if (!groupedProducts) return "";
+    return Object.keys(groupedProducts).sort().join(",");
   }, [groupedProducts]);
 
   // Auto-expand all groups when groupBy changes or groups change
@@ -757,8 +770,9 @@ export default function ProductsPage() {
       addToast({
         type: "success",
         title: "Product updated successfully!",
-        message: `${productData.nama || selectedProduct.nama
-          } has been updated.`,
+        message: `${
+          productData.nama || selectedProduct.nama
+        } has been updated.`,
       });
     } catch (error) {
       addToast({
@@ -985,13 +999,23 @@ export default function ProductsPage() {
                 <Layers className="w-4 h-4 text-gray-400 flex-shrink-0" />
                 <select
                   value={groupBy}
-                  onChange={(e) => setGroupBy(e.target.value as "none" | "jenis" | "sub_jenis" | "jenis_sub_jenis")}
+                  onChange={(e) =>
+                    setGroupBy(
+                      e.target.value as
+                        | "none"
+                        | "jenis"
+                        | "sub_jenis"
+                        | "jenis_sub_jenis"
+                    )
+                  }
                   className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500 text-sm w-full sm:w-auto"
                 >
                   <option value="none">Group By ....</option>
                   <option value="jenis">Group by Jenis</option>
                   <option value="sub_jenis">Group by Sub Jenis</option>
-                  <option value="jenis_sub_jenis">Group by Jenis & Sub Jenis</option>
+                  <option value="jenis_sub_jenis">
+                    Group by Jenis & Sub Jenis
+                  </option>
                 </select>
               </div>
             </div>
@@ -1272,254 +1296,312 @@ export default function ProductsPage() {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {/* Grouped View */}
-              {groupBy !== "none" && groupedProducts ? (
-                (() => {
-                  // Sort groups: jenis groups first (without parentId), then sub_jenis groups (with parentId) after their parent
-                  const sortedEntries = Object.entries(groupedProducts).sort((a, b) => {
-                    const [keyA, groupA] = a;
-                    const [keyB, groupB] = b;
+              {groupBy !== "none" && groupedProducts
+                ? (() => {
+                    // Sort groups: jenis groups first (without parentId), then sub_jenis groups (with parentId) after their parent
+                    const sortedEntries = Object.entries(groupedProducts).sort(
+                      (a, b) => {
+                        const [keyA, groupA] = a;
+                        const [keyB, groupB] = b;
 
-                    // If both are jenis (no parentId), sort alphabetically
-                    if (!groupA.parentId && !groupB.parentId) {
-                      return groupA.name.localeCompare(groupB.name);
-                    }
-                    // If A is jenis and B is sub_jenis
-                    if (!groupA.parentId && groupB.parentId) {
-                      // If B's parent is A, B comes after A
-                      if (groupB.parentId === keyA) return -1;
-                      // Otherwise compare by parent
-                      return keyA.localeCompare(groupB.parentId);
-                    }
-                    // If A is sub_jenis and B is jenis
-                    if (groupA.parentId && !groupB.parentId) {
-                      // If A's parent is B, A comes after B
-                      if (groupA.parentId === keyB) return 1;
-                      // Otherwise compare by parent
-                      return groupA.parentId.localeCompare(keyB);
-                    }
-                    // Both are sub_jenis
-                    if (groupA.parentId === groupB.parentId) {
-                      return groupA.name.localeCompare(groupB.name);
-                    }
-                    return groupA.parentId!.localeCompare(groupB.parentId!);
-                  });
+                        // If both are jenis (no parentId), sort alphabetically
+                        if (!groupA.parentId && !groupB.parentId) {
+                          return groupA.name.localeCompare(groupB.name);
+                        }
+                        // If A is jenis and B is sub_jenis
+                        if (!groupA.parentId && groupB.parentId) {
+                          // If B's parent is A, B comes after A
+                          if (groupB.parentId === keyA) return -1;
+                          // Otherwise compare by parent
+                          return keyA.localeCompare(groupB.parentId);
+                        }
+                        // If A is sub_jenis and B is jenis
+                        if (groupA.parentId && !groupB.parentId) {
+                          // If A's parent is B, A comes after B
+                          if (groupA.parentId === keyB) return 1;
+                          // Otherwise compare by parent
+                          return groupA.parentId.localeCompare(keyB);
+                        }
+                        // Both are sub_jenis
+                        if (groupA.parentId === groupB.parentId) {
+                          return groupA.name.localeCompare(groupB.name);
+                        }
+                        return groupA.parentId!.localeCompare(groupB.parentId!);
+                      }
+                    );
 
-                  return sortedEntries.map(([groupKey, group]) => {
-                    // Skip jenis-only groups in jenis_sub_jenis mode (they're just parents)
-                    if (groupBy === "jenis_sub_jenis" && group.type === "jenis" && group.products.length === 0) {
-                      return null;
-                    }
+                    return sortedEntries.map(([groupKey, group]) => {
+                      // Skip jenis-only groups in jenis_sub_jenis mode (they're just parents)
+                      if (
+                        groupBy === "jenis_sub_jenis" &&
+                        group.type === "jenis" &&
+                        group.products.length === 0
+                      ) {
+                        return null;
+                      }
 
-                    const isSubGroup = group.type === "sub_jenis" && group.parentId;
-                    const parentGroup = isSubGroup ? groupedProducts[group.parentId!] : null;
+                      const isSubGroup =
+                        group.type === "sub_jenis" && group.parentId;
+                      const parentGroup = isSubGroup
+                        ? groupedProducts[group.parentId!]
+                        : null;
 
-                    return (
-                      <React.Fragment key={groupKey}>
-                        {/* Show parent header for first sub_jenis of each jenis */}
-                        {groupBy === "jenis_sub_jenis" && isSubGroup && parentGroup && (
-                          (() => {
-                            // Check if this is the first sub_jenis for this parent
-                            const siblingKeys = sortedEntries
-                              .filter(([, g]) => g.parentId === group.parentId)
-                              .map(([k]) => k);
-                            const isFirstSibling = siblingKeys[0] === groupKey;
+                      return (
+                        <React.Fragment key={groupKey}>
+                          {/* Show parent header for first sub_jenis of each jenis */}
+                          {groupBy === "jenis_sub_jenis" &&
+                            isSubGroup &&
+                            parentGroup &&
+                            (() => {
+                              // Check if this is the first sub_jenis for this parent
+                              const siblingKeys = sortedEntries
+                                .filter(
+                                  ([, g]) => g.parentId === group.parentId
+                                )
+                                .map(([k]) => k);
+                              const isFirstSibling =
+                                siblingKeys[0] === groupKey;
 
-                            if (isFirstSibling) {
-                              return (
+                              if (isFirstSibling) {
+                                return (
+                                  <tr
+                                    key={`parent-${group.parentId}`}
+                                    className="bg-gradient-to-r from-orange-100 to-amber-100 cursor-pointer transition-colors"
+                                    onClick={(e) =>
+                                      toggleGroup(group.parentId!, e)
+                                    }
+                                  >
+                                    <td
+                                      colSpan={8}
+                                      className="px-3 lg:px-4 py-3"
+                                    >
+                                      <div className="flex items-center gap-3">
+                                        <button
+                                          className="p-1 hover:bg-orange-200 rounded transition-colors"
+                                          onClick={(e) =>
+                                            toggleGroup(group.parentId!, e)
+                                          }
+                                        >
+                                          {expandedGroups.has(
+                                            group.parentId!
+                                          ) ? (
+                                            <ChevronDown className="w-5 h-5 text-orange-700" />
+                                          ) : (
+                                            <ChevronRight className="w-5 h-5 text-orange-700" />
+                                          )}
+                                        </button>
+                                        <div className="flex items-center gap-2">
+                                          <Tag className="w-4 h-4 text-orange-700" />
+                                          <span className="font-bold text-gray-900">
+                                            {parentGroup.name}
+                                          </span>
+                                          <span className="text-sm text-gray-600">
+                                            ({parentGroup.nameEn})
+                                          </span>
+                                        </div>
+                                        <span className="ml-auto px-2.5 py-1 bg-white rounded-full text-xs font-medium text-gray-700 border border-gray-300">
+                                          {siblingKeys.reduce(
+                                            (total, key) =>
+                                              total +
+                                              (groupedProducts[key]?.products
+                                                .length || 0),
+                                            0
+                                          )}{" "}
+                                          produk
+                                        </span>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                );
+                              }
+                              return null;
+                            })()}
+
+                          {/* Sub-group header (only show if parent is expanded in jenis_sub_jenis mode) */}
+                          {groupBy === "jenis_sub_jenis" && isSubGroup ? (
+                            expandedGroups.has(group.parentId!) && (
+                              <>
                                 <tr
-                                  key={`parent-${group.parentId}`}
-                                  className="bg-gradient-to-r from-orange-100 to-amber-100 cursor-pointer transition-colors"
-                                  onClick={(e) => toggleGroup(group.parentId!, e)}
+                                  className="bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 cursor-pointer transition-colors"
+                                  onClick={(e) => toggleGroup(groupKey, e)}
                                 >
-                                  <td colSpan={8} className="px-3 lg:px-4 py-3">
+                                  <td
+                                    colSpan={8}
+                                    className="px-3 lg:px-4 py-2.5 pl-10"
+                                  >
                                     <div className="flex items-center gap-3">
                                       <button
-                                        className="p-1 hover:bg-orange-200 rounded transition-colors"
-                                        onClick={(e) => toggleGroup(group.parentId!, e)}
+                                        className="p-1 hover:bg-blue-200 rounded transition-colors"
+                                        onClick={(e) =>
+                                          toggleGroup(groupKey, e)
+                                        }
                                       >
-                                        {expandedGroups.has(group.parentId!) ? (
-                                          <ChevronDown className="w-5 h-5 text-orange-700" />
+                                        {expandedGroups.has(groupKey) ? (
+                                          <ChevronDown className="w-4 h-4 text-blue-600" />
                                         ) : (
-                                          <ChevronRight className="w-5 h-5 text-orange-700" />
+                                          <ChevronRight className="w-4 h-4 text-blue-600" />
                                         )}
                                       </button>
                                       <div className="flex items-center gap-2">
-                                        <Tag className="w-4 h-4 text-orange-700" />
-                                        <span className="font-bold text-gray-900">
-                                          {parentGroup.name}
+                                        <Layers className="w-3.5 h-3.5 text-blue-600" />
+                                        <span className="font-medium text-gray-700 text-sm">
+                                          {group.name}
                                         </span>
-                                        <span className="text-sm text-gray-600">
-                                          ({parentGroup.nameEn})
+                                        <span className="text-xs text-gray-500">
+                                          ({group.nameEn})
                                         </span>
                                       </div>
-                                      <span className="ml-auto px-2.5 py-1 bg-white rounded-full text-xs font-medium text-gray-700 border border-gray-300">
-                                        {siblingKeys.reduce((total, key) => total + (groupedProducts[key]?.products.length || 0), 0)} produk
+                                      <span className="ml-auto px-2 py-0.5 bg-white rounded-full text-xs font-medium text-gray-600 border border-gray-200">
+                                        {group.products.length} produk
                                       </span>
                                     </div>
                                   </td>
                                 </tr>
-                              );
-                            }
-                            return null;
-                          })()
-                        )}
-
-                        {/* Sub-group header (only show if parent is expanded in jenis_sub_jenis mode) */}
-                        {groupBy === "jenis_sub_jenis" && isSubGroup ? (
-                          expandedGroups.has(group.parentId!) && (
+                                {/* Products in sub-group */}
+                                {expandedGroups.has(groupKey) &&
+                                  group.products.map((product) => (
+                                    <ProductTableRow
+                                      key={product.id}
+                                      product={product}
+                                      isGrouped={true}
+                                      editingStockId={editingStockId}
+                                      tempStock={tempStock}
+                                      pendingStockChanges={pendingStockChanges}
+                                      formatPrice={formatPrice}
+                                      handleStockInputChange={
+                                        handleStockInputChange
+                                      }
+                                      saveStockEdit={saveStockEdit}
+                                      cancelStockEdit={cancelStockEdit}
+                                      handleStockDecrement={
+                                        handleStockDecrement
+                                      }
+                                      handleStockIncrement={
+                                        handleStockIncrement
+                                      }
+                                      confirmStockChange={confirmStockChange}
+                                      cancelStockChange={cancelStockChange}
+                                      startEditingStock={startEditingStock}
+                                      handleViewProduct={handleViewProduct}
+                                      handleEditProduct={handleEditProduct}
+                                      handleDeleteProduct={handleDeleteProduct}
+                                    />
+                                  ))}
+                              </>
+                            )
+                          ) : (
+                            /* Simple group header for jenis-only or sub_jenis-only mode */
                             <>
                               <tr
-                                className="bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 cursor-pointer transition-colors"
+                                className={`cursor-pointer transition-colors ${
+                                  group.type === "jenis"
+                                    ? "bg-gradient-to-r from-orange-50 to-amber-50 hover:from-orange-100 hover:to-amber-100"
+                                    : "bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100"
+                                }`}
                                 onClick={(e) => toggleGroup(groupKey, e)}
                               >
-                                <td colSpan={8} className="px-3 lg:px-4 py-2.5 pl-10">
+                                <td colSpan={8} className="px-3 lg:px-4 py-3">
                                   <div className="flex items-center gap-3">
                                     <button
-                                      className="p-1 hover:bg-blue-200 rounded transition-colors"
+                                      className={`p-1 rounded transition-colors ${
+                                        group.type === "jenis"
+                                          ? "hover:bg-orange-200"
+                                          : "hover:bg-blue-200"
+                                      }`}
                                       onClick={(e) => toggleGroup(groupKey, e)}
                                     >
                                       {expandedGroups.has(groupKey) ? (
-                                        <ChevronDown className="w-4 h-4 text-blue-600" />
+                                        <ChevronDown
+                                          className={`w-5 h-5 ${
+                                            group.type === "jenis"
+                                              ? "text-orange-600"
+                                              : "text-blue-600"
+                                          }`}
+                                        />
                                       ) : (
-                                        <ChevronRight className="w-4 h-4 text-blue-600" />
+                                        <ChevronRight
+                                          className={`w-5 h-5 ${
+                                            group.type === "jenis"
+                                              ? "text-orange-600"
+                                              : "text-blue-600"
+                                          }`}
+                                        />
                                       )}
                                     </button>
                                     <div className="flex items-center gap-2">
-                                      <Layers className="w-3.5 h-3.5 text-blue-600" />
-                                      <span className="font-medium text-gray-700 text-sm">
+                                      {group.type === "jenis" ? (
+                                        <Tag className="w-4 h-4 text-orange-600" />
+                                      ) : (
+                                        <Layers className="w-4 h-4 text-blue-600" />
+                                      )}
+                                      <span className="font-semibold text-gray-800">
                                         {group.name}
                                       </span>
-                                      <span className="text-xs text-gray-500">
+                                      <span className="text-sm text-gray-500">
                                         ({group.nameEn})
                                       </span>
                                     </div>
-                                    <span className="ml-auto px-2 py-0.5 bg-white rounded-full text-xs font-medium text-gray-600 border border-gray-200">
+                                    <span className="ml-auto px-2.5 py-1 bg-white rounded-full text-xs font-medium text-gray-600 border border-gray-200">
                                       {group.products.length} produk
                                     </span>
                                   </div>
                                 </td>
                               </tr>
-                              {/* Products in sub-group */}
-                              {expandedGroups.has(groupKey) && group.products.map((product) => (
-                                <ProductTableRow
-                                  key={product.id}
-                                  product={product}
-                                  isGrouped={true}
-                                  editingStockId={editingStockId}
-                                  tempStock={tempStock}
-                                  pendingStockChanges={pendingStockChanges}
-                                  formatPrice={formatPrice}
-                                  handleStockInputChange={handleStockInputChange}
-                                  saveStockEdit={saveStockEdit}
-                                  cancelStockEdit={cancelStockEdit}
-                                  handleStockDecrement={handleStockDecrement}
-                                  handleStockIncrement={handleStockIncrement}
-                                  confirmStockChange={confirmStockChange}
-                                  cancelStockChange={cancelStockChange}
-                                  startEditingStock={startEditingStock}
-                                  handleViewProduct={handleViewProduct}
-                                  handleEditProduct={handleEditProduct}
-                                  handleDeleteProduct={handleDeleteProduct}
-                                />
-                              ))}
+                              {/* Group Products */}
+                              {expandedGroups.has(groupKey) &&
+                                group.products.map((product) => (
+                                  <ProductTableRow
+                                    key={product.id}
+                                    product={product}
+                                    isGrouped={true}
+                                    editingStockId={editingStockId}
+                                    tempStock={tempStock}
+                                    pendingStockChanges={pendingStockChanges}
+                                    formatPrice={formatPrice}
+                                    handleStockInputChange={
+                                      handleStockInputChange
+                                    }
+                                    saveStockEdit={saveStockEdit}
+                                    cancelStockEdit={cancelStockEdit}
+                                    handleStockDecrement={handleStockDecrement}
+                                    handleStockIncrement={handleStockIncrement}
+                                    confirmStockChange={confirmStockChange}
+                                    cancelStockChange={cancelStockChange}
+                                    startEditingStock={startEditingStock}
+                                    handleViewProduct={handleViewProduct}
+                                    handleEditProduct={handleEditProduct}
+                                    handleDeleteProduct={handleDeleteProduct}
+                                  />
+                                ))}
                             </>
-                          )
-                        ) : (
-                          /* Simple group header for jenis-only or sub_jenis-only mode */
-                          <>
-                            <tr
-                              className={`cursor-pointer transition-colors ${group.type === 'jenis'
-                                  ? 'bg-gradient-to-r from-orange-50 to-amber-50 hover:from-orange-100 hover:to-amber-100'
-                                  : 'bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100'
-                                }`}
-                              onClick={(e) => toggleGroup(groupKey, e)}
-                            >
-                              <td colSpan={8} className="px-3 lg:px-4 py-3">
-                                <div className="flex items-center gap-3">
-                                  <button
-                                    className={`p-1 rounded transition-colors ${group.type === 'jenis' ? 'hover:bg-orange-200' : 'hover:bg-blue-200'
-                                      }`}
-                                    onClick={(e) => toggleGroup(groupKey, e)}
-                                  >
-                                    {expandedGroups.has(groupKey) ? (
-                                      <ChevronDown className={`w-5 h-5 ${group.type === 'jenis' ? 'text-orange-600' : 'text-blue-600'}`} />
-                                    ) : (
-                                      <ChevronRight className={`w-5 h-5 ${group.type === 'jenis' ? 'text-orange-600' : 'text-blue-600'}`} />
-                                    )}
-                                  </button>
-                                  <div className="flex items-center gap-2">
-                                    {group.type === "jenis" ? (
-                                      <Tag className="w-4 h-4 text-orange-600" />
-                                    ) : (
-                                      <Layers className="w-4 h-4 text-blue-600" />
-                                    )}
-                                    <span className="font-semibold text-gray-800">
-                                      {group.name}
-                                    </span>
-                                    <span className="text-sm text-gray-500">
-                                      ({group.nameEn})
-                                    </span>
-                                  </div>
-                                  <span className="ml-auto px-2.5 py-1 bg-white rounded-full text-xs font-medium text-gray-600 border border-gray-200">
-                                    {group.products.length} produk
-                                  </span>
-                                </div>
-                              </td>
-                            </tr>
-                            {/* Group Products */}
-                            {expandedGroups.has(groupKey) && group.products.map((product) => (
-                              <ProductTableRow
-                                key={product.id}
-                                product={product}
-                                isGrouped={true}
-                                editingStockId={editingStockId}
-                                tempStock={tempStock}
-                                pendingStockChanges={pendingStockChanges}
-                                formatPrice={formatPrice}
-                                handleStockInputChange={handleStockInputChange}
-                                saveStockEdit={saveStockEdit}
-                                cancelStockEdit={cancelStockEdit}
-                                handleStockDecrement={handleStockDecrement}
-                                handleStockIncrement={handleStockIncrement}
-                                confirmStockChange={confirmStockChange}
-                                cancelStockChange={cancelStockChange}
-                                startEditingStock={startEditingStock}
-                                handleViewProduct={handleViewProduct}
-                                handleEditProduct={handleEditProduct}
-                                handleDeleteProduct={handleDeleteProduct}
-                              />
-                            ))}
-                          </>
-                        )}
-                      </React.Fragment>
-                    );
-                  });
-                })()
-              ) : (
-                /* Non-grouped View */
-                filteredProducts.map((product) => (
-                  <ProductTableRow
-                    key={product.id}
-                    product={product}
-                    isGrouped={false}
-                    editingStockId={editingStockId}
-                    tempStock={tempStock}
-                    pendingStockChanges={pendingStockChanges}
-                    formatPrice={formatPrice}
-                    handleStockInputChange={handleStockInputChange}
-                    saveStockEdit={saveStockEdit}
-                    cancelStockEdit={cancelStockEdit}
-                    handleStockDecrement={handleStockDecrement}
-                    handleStockIncrement={handleStockIncrement}
-                    confirmStockChange={confirmStockChange}
-                    cancelStockChange={cancelStockChange}
-                    startEditingStock={startEditingStock}
-                    handleViewProduct={handleViewProduct}
-                    handleEditProduct={handleEditProduct}
-                    handleDeleteProduct={handleDeleteProduct}
-                  />
-                ))
-              )}
+                          )}
+                        </React.Fragment>
+                      );
+                    });
+                  })()
+                : /* Non-grouped View */
+                  filteredProducts.map((product) => (
+                    <ProductTableRow
+                      key={product.id}
+                      product={product}
+                      isGrouped={false}
+                      editingStockId={editingStockId}
+                      tempStock={tempStock}
+                      pendingStockChanges={pendingStockChanges}
+                      formatPrice={formatPrice}
+                      handleStockInputChange={handleStockInputChange}
+                      saveStockEdit={saveStockEdit}
+                      cancelStockEdit={cancelStockEdit}
+                      handleStockDecrement={handleStockDecrement}
+                      handleStockIncrement={handleStockIncrement}
+                      confirmStockChange={confirmStockChange}
+                      cancelStockChange={cancelStockChange}
+                      startEditingStock={startEditingStock}
+                      handleViewProduct={handleViewProduct}
+                      handleEditProduct={handleEditProduct}
+                      handleDeleteProduct={handleDeleteProduct}
+                    />
+                  ))}
             </tbody>
           </table>
         </div>

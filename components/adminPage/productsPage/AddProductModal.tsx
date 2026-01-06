@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { X, Upload, Plus, Trash2, Tag, Layers } from 'lucide-react';
-import { useJenis } from '../../../app/contexts/JenisContext';
-import { useSubJenis } from '../../../app/contexts/SubJenisContext';
+import React, { useState, useEffect } from "react";
+import { X, Upload, Plus, Trash2, Tag, Layers } from "lucide-react";
+import { useJenis } from "../../../app/contexts/JenisContext";
+import { useSubJenis } from "../../../app/contexts/SubJenisContext";
 
 interface Product {
   id: number;
@@ -28,7 +28,7 @@ interface Product {
   }>;
   sales?: number;
   rating?: number;
-  status: 'active' | 'inactive';
+  status: "active" | "inactive";
   hari_tersedia?: string[];
 }
 
@@ -54,55 +54,70 @@ interface FormData {
   isDaily: boolean;
 }
 
-export function AddProductModal({ isOpen, onClose, onAddProduct }: AddProductModalProps) {
+export function AddProductModal({
+  isOpen,
+  onClose,
+  onAddProduct,
+}: AddProductModalProps) {
   const { jenisList } = useJenis();
   const { subJenisList, getSubJenisByJenisId } = useSubJenis();
   const [formData, setFormData] = useState<FormData>({
-    nama_id: '',
-    nama_en: '',
-    deskripsi_id: '',
-    deskripsi_en: '',
-    harga: '',
-    harga_diskon: '',
-    stok: '',
+    nama_id: "",
+    nama_en: "",
+    deskripsi_id: "",
+    deskripsi_en: "",
+    harga: "",
+    harga_diskon: "",
+    stok: "",
     jenis_id: null,
     sub_jenis_ids: [],
     images: [],
     hari_ids: [],
     isBestSeller: false,
-    isDaily: false
+    isDaily: false,
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
-  const [availableHari, setAvailableHari] = useState<Array<{id: number, nama_id: string, nama_en: string}>>([]);
+  const [availableHari, setAvailableHari] = useState<
+    Array<{ id: number; nama_id: string; nama_en: string }>
+  >([]);
 
   // Fetch available hari from backend (jenis/sub_jenis now from context)
   useEffect(() => {
     const fetchHari = async () => {
       try {
-        const response = await fetch('/api/products');
+        const response = await fetch("/api/products");
         const data = await response.json();
-        
+
         if (data.data && Array.isArray(data.data)) {
-          const hariMap = new Map<number, {id: number, nama_id: string, nama_en: string}>();
-          
+          const hariMap = new Map<
+            number,
+            { id: number; nama_id: string; nama_en: string }
+          >();
+
           data.data.forEach((product: any) => {
             product.hari?.forEach((h: any) => {
               if (h.id && h.nama_id) {
-                hariMap.set(h.id, {id: h.id, nama_id: h.nama_id, nama_en: h.nama_en || h.nama_id});
+                hariMap.set(h.id, {
+                  id: h.id,
+                  nama_id: h.nama_id,
+                  nama_en: h.nama_en || h.nama_id,
+                });
               }
             });
           });
-          
-          setAvailableHari(Array.from(hariMap.values()).sort((a, b) => a.id - b.id));
+
+          setAvailableHari(
+            Array.from(hariMap.values()).sort((a, b) => a.id - b.id)
+          );
         }
       } catch (error) {
-        console.error('Error fetching hari:', error);
+        console.error("Error fetching hari:", error);
       }
     };
-    
+
     if (isOpen) {
       fetchHari();
     }
@@ -112,81 +127,89 @@ export function AddProductModal({ isOpen, onClose, onAddProduct }: AddProductMod
   useEffect(() => {
     if (formData.jenis_id) {
       // Keep only sub_jenis that belong to selected jenis
-      const validSubJenisIds = getSubJenisByJenisId(formData.jenis_id).map(sj => sj.id);
-      setFormData(prev => ({
+      const validSubJenisIds = getSubJenisByJenisId(formData.jenis_id).map(
+        (sj) => sj.id
+      );
+      setFormData((prev) => ({
         ...prev,
-        sub_jenis_ids: prev.sub_jenis_ids.filter(id => validSubJenisIds.includes(id))
+        sub_jenis_ids: prev.sub_jenis_ids.filter((id) =>
+          validSubJenisIds.includes(id)
+        ),
       }));
     } else {
-      setFormData(prev => ({ ...prev, sub_jenis_ids: [] }));
+      setFormData((prev) => ({ ...prev, sub_jenis_ids: [] }));
     }
   }, [formData.jenis_id, getSubJenisByJenisId]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  const handleInputChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
+  ) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-    
+    setFormData((prev) => ({ ...prev, [name]: value }));
+
     if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: '' }));
+      setErrors((prev) => ({ ...prev, [name]: "" }));
     }
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    
+
     if (files.length + formData.images.length > 5) {
-      setErrors(prev => ({ ...prev, images: 'Maksimal 5 gambar' }));
+      setErrors((prev) => ({ ...prev, images: "Maksimal 5 gambar" }));
       return;
     }
 
     const newPreviews: string[] = [];
-    files.forEach(file => {
+    files.forEach((file) => {
       const reader = new FileReader();
       reader.onload = (event) => {
         if (event.target?.result) {
           newPreviews.push(event.target.result as string);
           if (newPreviews.length === files.length) {
-            setImagePreviews(prev => [...prev, ...newPreviews]);
+            setImagePreviews((prev) => [...prev, ...newPreviews]);
           }
         }
       };
       reader.readAsDataURL(file);
     });
 
-    setFormData(prev => ({ ...prev, images: [...prev.images, ...files] }));
-    setErrors(prev => ({ ...prev, images: '' }));
+    setFormData((prev) => ({ ...prev, images: [...prev.images, ...files] }));
+    setErrors((prev) => ({ ...prev, images: "" }));
   };
 
   const removeImage = (index: number) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      images: prev.images.filter((_, i) => i !== index)
+      images: prev.images.filter((_, i) => i !== index),
     }));
-    setImagePreviews(prev => prev.filter((_, i) => i !== index));
+    setImagePreviews((prev) => prev.filter((_, i) => i !== index));
   };
 
   const toggleHari = (hariId: number) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       hari_ids: prev.hari_ids.includes(hariId)
-        ? prev.hari_ids.filter(id => id !== hariId)
-        : [...prev.hari_ids, hariId]
+        ? prev.hari_ids.filter((id) => id !== hariId)
+        : [...prev.hari_ids, hariId],
     }));
   };
 
   const selectJenis = (jenisId: number) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      jenis_id: prev.jenis_id === jenisId ? null : jenisId // Toggle or select single
+      jenis_id: prev.jenis_id === jenisId ? null : jenisId, // Toggle or select single
     }));
   };
 
   const toggleSubJenis = (subJenisId: number) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       sub_jenis_ids: prev.sub_jenis_ids.includes(subJenisId)
-        ? prev.sub_jenis_ids.filter(id => id !== subJenisId)
-        : [...prev.sub_jenis_ids, subJenisId]
+        ? prev.sub_jenis_ids.filter((id) => id !== subJenisId)
+        : [...prev.sub_jenis_ids, subJenisId],
     }));
   };
 
@@ -194,28 +217,28 @@ export function AddProductModal({ isOpen, onClose, onAddProduct }: AddProductMod
     const newErrors: Record<string, string> = {};
 
     if (!formData.nama_id.trim()) {
-      newErrors.nama_id = 'Nama produk (ID) harus diisi';
+      newErrors.nama_id = "Nama produk (ID) harus diisi";
     }
     if (!formData.nama_en.trim()) {
-      newErrors.nama_en = 'Nama produk (EN) harus diisi';
+      newErrors.nama_en = "Nama produk (EN) harus diisi";
     }
     if (!formData.deskripsi_id.trim()) {
-      newErrors.deskripsi_id = 'Deskripsi (ID) harus diisi';
+      newErrors.deskripsi_id = "Deskripsi (ID) harus diisi";
     }
     if (!formData.deskripsi_en.trim()) {
-      newErrors.deskripsi_en = 'Deskripsi (EN) harus diisi';
+      newErrors.deskripsi_en = "Deskripsi (EN) harus diisi";
     }
     if (!formData.harga || parseFloat(formData.harga) <= 0) {
-      newErrors.harga = 'Harga harus lebih dari 0';
+      newErrors.harga = "Harga harus lebih dari 0";
     }
     if (!formData.stok || parseInt(formData.stok) < 0) {
-      newErrors.stok = 'Stok tidak boleh negatif';
+      newErrors.stok = "Stok tidak boleh negatif";
     }
     if (!formData.jenis_id) {
-      newErrors.jenis_id = 'Kategori roti harus dipilih';
+      newErrors.jenis_id = "Kategori roti harus dipilih";
     }
     if (formData.images.length === 0) {
-      newErrors.images = 'Minimal 1 gambar produk';
+      newErrors.images = "Minimal 1 gambar produk";
     }
 
     setErrors(newErrors);
@@ -224,7 +247,7 @@ export function AddProductModal({ isOpen, onClose, onAddProduct }: AddProductMod
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) return;
 
     setIsSubmitting(true);
@@ -242,7 +265,9 @@ export function AddProductModal({ isOpen, onClose, onAddProduct }: AddProductMod
         deskripsi_id: formData.deskripsi_id,
         deskripsi_en: formData.deskripsi_en,
         harga: parseFloat(formData.harga),
-        harga_diskon: formData.harga_diskon ? parseFloat(formData.harga_diskon) : null,
+        harga_diskon: formData.harga_diskon
+          ? parseFloat(formData.harga_diskon)
+          : null,
         stok: parseInt(formData.stok),
         isBestSeller: formData.isBestSeller,
         isDaily: formData.isDaily,
@@ -255,10 +280,9 @@ export function AddProductModal({ isOpen, onClose, onAddProduct }: AddProductMod
 
       onAddProduct(newProduct);
       resetForm();
-      
     } catch (error) {
-      console.error('Error adding product:', error);
-      setErrors({ submit: 'Gagal menambah produk. Silakan coba lagi.' });
+      console.error("Error adding product:", error);
+      setErrors({ submit: "Gagal menambah produk. Silakan coba lagi." });
     } finally {
       setIsSubmitting(false);
     }
@@ -266,19 +290,19 @@ export function AddProductModal({ isOpen, onClose, onAddProduct }: AddProductMod
 
   const resetForm = () => {
     setFormData({
-      nama_id: '',
-      nama_en: '',
-      deskripsi_id: '',
-      deskripsi_en: '',
-      harga: '',
-      harga_diskon: '',
-      stok: '',
+      nama_id: "",
+      nama_en: "",
+      deskripsi_id: "",
+      deskripsi_en: "",
+      harga: "",
+      harga_diskon: "",
+      stok: "",
       jenis_id: null,
       sub_jenis_ids: [],
       images: [],
       hari_ids: [],
       isBestSeller: false,
-      isDaily: false
+      isDaily: false,
     });
     setImagePreviews([]);
     setErrors({});
@@ -294,16 +318,25 @@ export function AddProductModal({ isOpen, onClose, onAddProduct }: AddProductMod
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50" style={{ backgroundColor: 'rgba(0, 0, 0, 0.3)' }}>
+    <div
+      className="fixed inset-0 z-50"
+      style={{ backgroundColor: "rgba(0, 0, 0, 0.3)" }}
+    >
       {/* Modal positioned in center */}
       <div className="flex items-center justify-center min-h-screen p-4">
-        <div className="bg-white rounded-lg shadow-2xl w-full max-w-2xl border border-gray-300" style={{ maxHeight: '80vh' }}>
-          
+        <div
+          className="bg-white rounded-lg shadow-2xl w-full max-w-2xl border border-gray-300"
+          style={{ maxHeight: "80vh" }}
+        >
           {/* Header */}
           <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-white rounded-t-lg">
             <div>
-              <h2 className="text-xl font-bold text-gray-900">Tambah Produk Baru</h2>
-              <p className="text-sm text-gray-600 mt-1">Lengkapi informasi produk yang ingin ditambahkan</p>
+              <h2 className="text-xl font-bold text-gray-900">
+                Tambah Produk Baru
+              </h2>
+              <p className="text-sm text-gray-600 mt-1">
+                Lengkapi informasi produk yang ingin ditambahkan
+              </p>
             </div>
             <button
               onClick={handleClose}
@@ -318,12 +351,16 @@ export function AddProductModal({ isOpen, onClose, onAddProduct }: AddProductMod
           {/* Form */}
           <form onSubmit={handleSubmit}>
             {/* Scrollable content */}
-            <div className="p-6 overflow-y-auto bg-white" style={{ maxHeight: 'calc(80vh - 160px)' }}>
+            <div
+              className="p-6 overflow-y-auto bg-white"
+              style={{ maxHeight: "calc(80vh - 160px)" }}
+            >
               <div className="space-y-6">
-                
                 {/* Product Name - Indonesian */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Nama Produk (Bahasa Indonesia) *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Nama Produk (Bahasa Indonesia) *
+                  </label>
                   <input
                     type="text"
                     name="nama_id"
@@ -331,16 +368,22 @@ export function AddProductModal({ isOpen, onClose, onAddProduct }: AddProductMod
                     onChange={handleInputChange}
                     placeholder="Contoh: Roti Cokelat"
                     className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 ${
-                      errors.nama_id ? 'border-red-500' : 'border-gray-300'
+                      errors.nama_id ? "border-red-500" : "border-gray-300"
                     }`}
                     disabled={isSubmitting}
                   />
-                  {errors.nama_id && <p className="mt-1 text-sm text-red-600">{errors.nama_id}</p>}
+                  {errors.nama_id && (
+                    <p className="mt-1 text-sm text-red-600">
+                      {errors.nama_id}
+                    </p>
+                  )}
                 </div>
 
                 {/* Product Name - English */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Nama Produk (English) *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Nama Produk (English) *
+                  </label>
                   <input
                     type="text"
                     name="nama_en"
@@ -348,17 +391,23 @@ export function AddProductModal({ isOpen, onClose, onAddProduct }: AddProductMod
                     onChange={handleInputChange}
                     placeholder="Example: Chocolate Bread"
                     className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 ${
-                      errors.nama_en ? 'border-red-500' : 'border-gray-300'
+                      errors.nama_en ? "border-red-500" : "border-gray-300"
                     }`}
                     disabled={isSubmitting}
                   />
-                  {errors.nama_en && <p className="mt-1 text-sm text-red-600">{errors.nama_en}</p>}
+                  {errors.nama_en && (
+                    <p className="mt-1 text-sm text-red-600">
+                      {errors.nama_en}
+                    </p>
+                  )}
                 </div>
 
                 {/* Description */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Deskripsi Produk (Bahasa Indonesia) *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Deskripsi Produk (Bahasa Indonesia) *
+                    </label>
                     <textarea
                       name="deskripsi_id"
                       value={formData.deskripsi_id}
@@ -366,14 +415,22 @@ export function AddProductModal({ isOpen, onClose, onAddProduct }: AddProductMod
                       rows={3}
                       placeholder="Masukkan deskripsi produk dalam Bahasa Indonesia"
                       className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 ${
-                        errors.deskripsi_id ? 'border-red-500' : 'border-gray-300'
+                        errors.deskripsi_id
+                          ? "border-red-500"
+                          : "border-gray-300"
                       }`}
                       disabled={isSubmitting}
                     />
-                    {errors.deskripsi_id && <p className="mt-1 text-sm text-red-600">{errors.deskripsi_id}</p>}
+                    {errors.deskripsi_id && (
+                      <p className="mt-1 text-sm text-red-600">
+                        {errors.deskripsi_id}
+                      </p>
+                    )}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Deskripsi Produk (English) *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Deskripsi Produk (English) *
+                    </label>
                     <textarea
                       name="deskripsi_en"
                       value={formData.deskripsi_en}
@@ -381,18 +438,26 @@ export function AddProductModal({ isOpen, onClose, onAddProduct }: AddProductMod
                       rows={3}
                       placeholder="Enter product description in English"
                       className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 ${
-                        errors.deskripsi_en ? 'border-red-500' : 'border-gray-300'
+                        errors.deskripsi_en
+                          ? "border-red-500"
+                          : "border-gray-300"
                       }`}
                       disabled={isSubmitting}
                     />
-                    {errors.deskripsi_en && <p className="mt-1 text-sm text-red-600">{errors.deskripsi_en}</p>}
+                    {errors.deskripsi_en && (
+                      <p className="mt-1 text-sm text-red-600">
+                        {errors.deskripsi_en}
+                      </p>
+                    )}
                   </div>
                 </div>
 
                 {/* Price and Stock */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Harga (IDR) *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Harga (IDR) *
+                    </label>
                     <input
                       type="number"
                       name="harga"
@@ -400,17 +465,22 @@ export function AddProductModal({ isOpen, onClose, onAddProduct }: AddProductMod
                       onChange={handleInputChange}
                       placeholder="125000"
                       min="0"
-                      step="1000"
                       className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 ${
-                        errors.harga ? 'border-red-500' : 'border-gray-300'
+                        errors.harga ? "border-red-500" : "border-gray-300"
                       }`}
                       disabled={isSubmitting}
                     />
-                    {errors.harga && <p className="mt-1 text-sm text-red-600">{errors.harga}</p>}
+                    {errors.harga && (
+                      <p className="mt-1 text-sm text-red-600">
+                        {errors.harga}
+                      </p>
+                    )}
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Stok *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Stok *
+                    </label>
                     <input
                       type="number"
                       name="stok"
@@ -419,11 +489,13 @@ export function AddProductModal({ isOpen, onClose, onAddProduct }: AddProductMod
                       placeholder="15"
                       min="0"
                       className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 ${
-                        errors.stok ? 'border-red-500' : 'border-gray-300'
+                        errors.stok ? "border-red-500" : "border-gray-300"
                       }`}
                       disabled={isSubmitting}
                     />
-                    {errors.stok && <p className="mt-1 text-sm text-red-600">{errors.stok}</p>}
+                    {errors.stok && (
+                      <p className="mt-1 text-sm text-red-600">{errors.stok}</p>
+                    )}
                   </div>
                 </div>
 
@@ -441,8 +513,8 @@ export function AddProductModal({ isOpen, onClose, onAddProduct }: AddProductMod
                         disabled={isSubmitting}
                         className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors border ${
                           formData.hari_ids.includes(hari.id)
-                            ? 'bg-orange-500 text-white border-orange-500'
-                            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                            ? "bg-orange-500 text-white border-orange-500"
+                            : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
                         } disabled:opacity-50 disabled:cursor-not-allowed`}
                       >
                         {hari.nama_id}
@@ -450,10 +522,9 @@ export function AddProductModal({ isOpen, onClose, onAddProduct }: AddProductMod
                     ))}
                   </div>
                   <p className="text-xs text-gray-500 mt-2">
-                    {formData.hari_ids.length === 0 
-                      ? 'Tidak ada hari dipilih (produk tidak tersedia)'
-                      : `Tersedia di ${formData.hari_ids.length} hari`
-                    }
+                    {formData.hari_ids.length === 0
+                      ? "Tidak ada hari dipilih (produk tidak tersedia)"
+                      : `Tersedia di ${formData.hari_ids.length} hari`}
                   </p>
                 </div>
 
@@ -472,20 +543,23 @@ export function AddProductModal({ isOpen, onClose, onAddProduct }: AddProductMod
                         disabled={isSubmitting}
                         className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors border ${
                           formData.jenis_id === jenis.id
-                            ? 'bg-orange-500 text-white border-orange-500'
-                            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                            ? "bg-orange-500 text-white border-orange-500"
+                            : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
                         } disabled:opacity-50 disabled:cursor-not-allowed`}
                       >
                         {jenis.nama_id}
                       </button>
                     ))}
                   </div>
-                  {errors.jenis_id && <p className="mt-2 text-sm text-red-600">{errors.jenis_id}</p>}
+                  {errors.jenis_id && (
+                    <p className="mt-2 text-sm text-red-600">
+                      {errors.jenis_id}
+                    </p>
+                  )}
                   <p className="text-xs text-gray-500 mt-2">
                     {!formData.jenis_id
-                      ? 'Belum ada jenis dipilih'
-                      : `1 jenis terpilih`
-                    }
+                      ? "Belum ada jenis dipilih"
+                      : `1 jenis terpilih`}
                   </p>
                 </div>
 
@@ -497,31 +571,34 @@ export function AddProductModal({ isOpen, onClose, onAddProduct }: AddProductMod
                       Sub Jenis (Opsional)
                     </label>
                     {getSubJenisByJenisId(formData.jenis_id).length === 0 ? (
-                      <p className="text-sm text-gray-500 italic">Tidak ada sub jenis untuk kategori ini</p>
+                      <p className="text-sm text-gray-500 italic">
+                        Tidak ada sub jenis untuk kategori ini
+                      </p>
                     ) : (
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                        {getSubJenisByJenisId(formData.jenis_id).map((subJenis) => (
-                          <button
-                            key={subJenis.id}
-                            type="button"
-                            onClick={() => toggleSubJenis(subJenis.id)}
-                            disabled={isSubmitting}
-                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors border ${
-                              formData.sub_jenis_ids.includes(subJenis.id)
-                                ? 'bg-blue-500 text-white border-blue-500'
-                                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                            } disabled:opacity-50 disabled:cursor-not-allowed`}
-                          >
-                            {subJenis.nama_id}
-                          </button>
-                        ))}
+                        {getSubJenisByJenisId(formData.jenis_id).map(
+                          (subJenis) => (
+                            <button
+                              key={subJenis.id}
+                              type="button"
+                              onClick={() => toggleSubJenis(subJenis.id)}
+                              disabled={isSubmitting}
+                              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors border ${
+                                formData.sub_jenis_ids.includes(subJenis.id)
+                                  ? "bg-blue-500 text-white border-blue-500"
+                                  : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                              } disabled:opacity-50 disabled:cursor-not-allowed`}
+                            >
+                              {subJenis.nama_id}
+                            </button>
+                          )
+                        )}
                       </div>
                     )}
                     <p className="text-xs text-gray-500 mt-2">
                       {formData.sub_jenis_ids.length === 0
-                        ? 'Tidak ada sub jenis dipilih'
-                        : `${formData.sub_jenis_ids.length} sub jenis terpilih`
-                      }
+                        ? "Tidak ada sub jenis dipilih"
+                        : `${formData.sub_jenis_ids.length} sub jenis terpilih`}
                     </p>
                   </div>
                 )}
@@ -532,27 +609,43 @@ export function AddProductModal({ isOpen, onClose, onAddProduct }: AddProductMod
                     <input
                       type="checkbox"
                       checked={formData.isBestSeller}
-                      onChange={(e) => setFormData(prev => ({ ...prev, isBestSeller: e.target.checked }))}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          isBestSeller: e.target.checked,
+                        }))
+                      }
                       className="w-4 h-4 text-orange-500 border-gray-300 rounded focus:ring-orange-500"
                       disabled={isSubmitting}
                     />
-                    <span className="ml-2 text-sm text-gray-700">Best Seller</span>
+                    <span className="ml-2 text-sm text-gray-700">
+                      Best Seller
+                    </span>
                   </label>
                   <label className="flex items-center cursor-pointer">
                     <input
                       type="checkbox"
                       checked={formData.isDaily}
-                      onChange={(e) => setFormData(prev => ({ ...prev, isDaily: e.target.checked }))}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          isDaily: e.target.checked,
+                        }))
+                      }
                       className="w-4 h-4 text-orange-500 border-gray-300 rounded focus:ring-orange-500"
                       disabled={isSubmitting}
                     />
-                    <span className="ml-2 text-sm text-gray-700">Produk Harian</span>
+                    <span className="ml-2 text-sm text-gray-700">
+                      Produk Harian
+                    </span>
                   </label>
                 </div>
 
                 {/* Harga Diskon */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Harga Diskon (Opsional)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Harga Diskon (Opsional)
+                  </label>
                   <input
                     type="number"
                     name="harga_diskon"
@@ -560,17 +653,20 @@ export function AddProductModal({ isOpen, onClose, onAddProduct }: AddProductMod
                     onChange={handleInputChange}
                     placeholder="100000"
                     min="0"
-                    step="1000"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                     disabled={isSubmitting}
                   />
-                  <p className="text-xs text-gray-500 mt-1">Kosongkan jika tidak ada diskon</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Kosongkan jika tidak ada diskon
+                  </p>
                 </div>
 
                 {/* Images Upload */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Gambar Produk * (Max 5 gambar)</label>
-                  
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Gambar Produk * (Max 5 gambar)
+                  </label>
+
                   <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-orange-500 transition-colors">
                     <input
                       type="file"
@@ -584,12 +680,18 @@ export function AddProductModal({ isOpen, onClose, onAddProduct }: AddProductMod
                     <label
                       htmlFor="image-upload"
                       className={`cursor-pointer ${
-                        isSubmitting || formData.images.length >= 5 ? 'cursor-not-allowed opacity-50' : ''
+                        isSubmitting || formData.images.length >= 5
+                          ? "cursor-not-allowed opacity-50"
+                          : ""
                       }`}
                     >
                       <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                      <p className="text-sm text-gray-600">Klik untuk upload gambar atau drag & drop</p>
-                      <p className="text-xs text-gray-500 mt-1">PNG, JPG, JPEG up to 10MB</p>
+                      <p className="text-sm text-gray-600">
+                        Klik untuk upload gambar atau drag & drop
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        PNG, JPG, JPEG up to 10MB
+                      </p>
                     </label>
                   </div>
 
@@ -615,7 +717,9 @@ export function AddProductModal({ isOpen, onClose, onAddProduct }: AddProductMod
                     </div>
                   )}
 
-                  {errors.images && <p className="mt-1 text-sm text-red-600">{errors.images}</p>}
+                  {errors.images && (
+                    <p className="mt-1 text-sm text-red-600">{errors.images}</p>
+                  )}
                 </div>
 
                 {errors.submit && (

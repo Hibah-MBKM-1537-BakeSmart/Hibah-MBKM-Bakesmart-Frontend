@@ -9,6 +9,7 @@ import { useTranslation } from "@/app/contexts/TranslationContext";
 import type { MenuItem, ApiProduct } from "@/lib/types";
 import { AlertCircle, Flame, ChevronLeft, ChevronRight } from "lucide-react";
 import { useStoreClosure } from "@/app/contexts/StoreClosureContext";
+import { getImageUrl } from "@/lib/utils";
 
 // [PERUBAHAN] Tipe untuk respons API (sama seperti di MenuGrid)
 interface ApiResponse {
@@ -28,80 +29,77 @@ function BreadStockCard(item: MenuItem) {
   const isLowStock = stock > 0 && stock <= 5;
   const isOutOfStock = stock <= 0;
 
-  const image: string =
-    item.gambars && item.gambars.length > 0
-      ? item.gambars[0].file_path
-      : "/placeholder.svg";
+  const image: string = getImageUrl(item.gambars?.[0]?.file_path);
 
   return (
     <Card className="overflow-hidden bg-white shadow-lg transition-shadow hover:shadow-xl">
       <div className="relative">
         <div className="aspect-square overflow-hidden relative">
-            <Image
-              src={image || "/placeholder.svg"}
-              alt={name}
-              width={200}
-              height={200}
-              className="h-full w-full object-cover transition-transform hover:scale-105"
-            />
-          </div>
+          <Image
+            src={image || "/placeholder.svg"}
+            alt={name}
+            width={200}
+            height={200}
+            className="h-full w-full object-cover transition-transform hover:scale-105"
+          />
+        </div>
 
-          {/* Stock Badge */}
-          <div className="absolute top-3 right-3 flex items-center gap-2">
-            {isLowStock && (
-              <div className="bg-orange-500 text-white text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1">
-                <Flame className="w-3 h-3" />
-                {t("stock.limited") || "Terbatas"}
-              </div>
-            )}
-            {isOutOfStock && (
-              <div className="bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-full">
-                {t("stock.outOfStock") || "Habis"}
-              </div>
-            )}
-          </div>
+        {/* Stock Badge */}
+        <div className="absolute top-3 right-3 flex items-center gap-2">
+          {isLowStock && (
+            <div className="bg-orange-500 text-white text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1">
+              <Flame className="w-3 h-3" />
+              {t("stock.limited") || "Terbatas"}
+            </div>
+          )}
+          {isOutOfStock && (
+            <div className="bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-full">
+              {t("stock.outOfStock") || "Habis"}
+            </div>
+          )}
+        </div>
 
-          {/* Stock Counter
+        {/* Stock Counter
           <div className="absolute bottom-3 left-3 bg-black/70 text-white px-3 py-1 rounded-full text-sm font-semibold">
             {t("stock available") || "Stok"}
           </div> */}
+      </div>
+
+      <CardContent className="p-4">
+        <div className="mb-3">
+          <h3
+            className="font-serif text-lg font-bold line-clamp-1"
+            style={{ color: "#5D4037" }}
+          >
+            {name}
+          </h3>
+          <p className="text-sm text-gray-600 mt-2 line-clamp-2">
+            {description}
+          </p>
         </div>
 
-        <CardContent className="p-4">
-          <div className="mb-3">
-            <h3
-              className="font-serif text-lg font-bold line-clamp-1"
-              style={{ color: "#5D4037" }}
-            >
-              {name}
-            </h3>
-            <p className="text-sm text-gray-600 mt-2 line-clamp-2">
-              {description}
-            </p>
+        <div className="flex items-center justify-between mt-4">
+          <span
+            className="font-semibold text-base"
+            style={{ color: "#5D4037" }}
+          >
+            Rp {item.harga.toLocaleString("id-ID")}
+          </span>
+          <div className="flex items-center gap-2">
+            {!isOutOfStock && (
+              <span className="text-xs bg-green-100 text-green-600 px-3 py-1 rounded-full font-medium">
+                ✓ Tersedia
+              </span>
+            )}
+            {isOutOfStock && (
+              <span className="text-xs bg-red-100 text-red-600 px-3 py-1 rounded-full font-medium">
+                ✗ Habis
+              </span>
+            )}
           </div>
-
-          <div className="flex items-center justify-between mt-4">
-            <span
-              className="font-semibold text-base"
-              style={{ color: "#5D4037" }}
-            >
-              Rp {item.harga.toLocaleString("id-ID")}
-            </span>
-            <div className="flex items-center gap-2">
-              {!isOutOfStock && (
-                <span className="text-xs bg-green-100 text-green-600 px-3 py-1 rounded-full font-medium">
-                  ✓ Tersedia
-                </span>
-              )}
-              {isOutOfStock && (
-                <span className="text-xs bg-red-100 text-red-600 px-3 py-1 rounded-full font-medium">
-                  ✗ Habis
-                </span>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 

@@ -16,6 +16,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 // [PERUBAHAN] Impor tipe yang konsisten dengan komponen lain
 import type { MenuItem, ApiProduct } from "@/lib/types";
 import { useStoreClosure } from "@/app/contexts/StoreClosureContext";
+import { getImageUrl } from "@/lib/utils";
 
 const menuData = {
   hero: {
@@ -372,59 +373,59 @@ export function Menu() {
                             : "cursor-pointer"
                         }`}
                       >
-                      <div className="relative h-48 w-full">
-                        <Image
-                          src={
-                            item.gambars?.[0]?.file_path || "/placeholder.svg"
-                          }
-                          alt={language === "id" ? item.nama_id : item.nama_en}
-                          fill
-                          className="object-cover"
-                        />
-                      </div>
-                      <div className="p-4">
-                        <h3 className="font-semibold text-lg mb-2 text-gray-900">
-                          {language === "id" ? item.nama_id : item.nama_en}
-                        </h3>
-                        <p className="text-sm text-gray-600 mb-4 line-clamp-2">
-                          {language === "id"
-                            ? item.deskripsi_id
-                            : item.deskripsi_en}
-                        </p>
-                        <div className="flex items-center justify-between">
-                          <span className="text-lg font-bold text-gray-900">
-                            {/* [FIX] Tampilkan harga diskon jika ada */}
-                            {item.harga_diskon &&
-                            item.harga_diskon < item.harga ? (
-                              <>
-                                <span className="text-red-600">
-                                  Rp{item.harga_diskon.toLocaleString("id-ID")}
-                                </span>
-                                <span className="text-sm line-through text-gray-500 ml-2">
-                                  Rp{item.harga.toLocaleString("id-ID")}
-                                </span>
-                              </>
-                            ) : (
-                              `Rp${item.harga.toLocaleString("id-ID")}`
-                            )}
-                          </span>
-                          <Button
-                            disabled={storeIsClosed}
-                            className={`text-white px-4 py-2 text-sm ${
-                              storeIsClosed
-                                ? "opacity-50 cursor-not-allowed bg-gray-400"
-                                : "bg-[#5D4037] hover:bg-[#4E342E]"
-                            }`}
-                          >
-                            {t("menu.order")}
-                          </Button>
+                        <div className="relative h-48 w-full">
+                          <Image
+                            src={getImageUrl(item.gambars?.[0]?.file_path)}
+                            alt={
+                              language === "id" ? item.nama_id : item.nama_en
+                            }
+                            fill
+                            className="object-cover"
+                          />
                         </div>
-                      </div>
+                        <div className="p-4">
+                          <h3 className="font-semibold text-lg mb-2 text-gray-900">
+                            {language === "id" ? item.nama_id : item.nama_en}
+                          </h3>
+                          <p className="text-sm text-gray-600 mb-4 line-clamp-2">
+                            {language === "id"
+                              ? item.deskripsi_id
+                              : item.deskripsi_en}
+                          </p>
+                          <div className="flex items-center justify-between">
+                            <span className="text-lg font-bold text-gray-900">
+                              {/* [FIX] Tampilkan harga diskon jika ada */}
+                              {item.harga_diskon &&
+                              item.harga_diskon < item.harga ? (
+                                <>
+                                  <span className="text-red-600">
+                                    Rp
+                                    {item.harga_diskon.toLocaleString("id-ID")}
+                                  </span>
+                                  <span className="text-sm line-through text-gray-500 ml-2">
+                                    Rp{item.harga.toLocaleString("id-ID")}
+                                  </span>
+                                </>
+                              ) : (
+                                `Rp${item.harga.toLocaleString("id-ID")}`
+                              )}
+                            </span>
+                            <Button
+                              disabled={storeIsClosed}
+                              className={`text-white px-4 py-2 text-sm ${
+                                storeIsClosed
+                                  ? "opacity-50 cursor-not-allowed bg-gray-400"
+                                  : "bg-[#5D4037] hover:bg-[#4E342E]"
+                              }`}
+                            >
+                              {t("menu.order")}
+                            </Button>
+                          </div>
+                        </div>
                       </div>
                     </Link>
                   );
                 })}
-
               </div>
             </div>
 
@@ -474,7 +475,6 @@ export function Menu() {
           </div>
         </div>
       </div>
-
     </section>
   );
 }

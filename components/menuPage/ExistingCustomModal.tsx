@@ -6,6 +6,8 @@ import { useCart } from "@/app/contexts/CartContext";
 import { useTranslation } from "@/app/contexts/TranslationContext";
 import type { MenuItem, ProductAttribute } from "@/lib/types";
 
+import { getImageUrl } from "@/lib/utils";
+
 interface ExistingCustomizationModalProps {
   item: MenuItem | null;
   isOpen: boolean;
@@ -290,7 +292,7 @@ export function ExistingCustomizationModal({
     0
   );
   const itemName = language === "en" ? item.nama_en : item.nama_id;
-  const itemImage = item.gambars?.[0]?.file_path || "/placeholder.svg";
+  const itemImage = getImageUrl(item.gambars?.[0]?.file_path);
 
   return (
     <div

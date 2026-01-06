@@ -1,8 +1,9 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { X, Package, CheckCircle, XCircle, Calendar } from 'lucide-react';
-import { Product } from '@/app/contexts/ProductsContext';
+import React from "react";
+import { X, Package, CheckCircle, XCircle, Calendar } from "lucide-react";
+import { Product } from "@/app/contexts/ProductsContext";
+import { getImageUrl } from "@/lib/utils";
 
 interface ProductDetailModalProps {
   isOpen: boolean;
@@ -10,11 +11,19 @@ interface ProductDetailModalProps {
   product: Product | null;
 }
 
-export function ProductDetailModal({ isOpen, onClose, product }: ProductDetailModalProps) {
+export function ProductDetailModal({
+  isOpen,
+  onClose,
+  product,
+}: ProductDetailModalProps) {
   if (!isOpen || !product) return null;
 
   const formatPrice = (price: number) =>
-    new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(price);
+    new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+      minimumFractionDigits: 0,
+    }).format(price);
 
   // Get hari from backend
   const hariFromBackend = product.hari || [];
@@ -30,7 +39,11 @@ export function ProductDetailModal({ isOpen, onClose, product }: ProductDetailMo
         {/* Header - Fixed */}
         <div className="flex items-center justify-between px-6 py-4 border-b flex-shrink-0">
           <h3 className="text-lg font-semibold text-gray-900">Detail Produk</h3>
-          <button onClick={onClose} className="p-2 rounded-md hover:bg-gray-100" aria-label="Close">
+          <button
+            onClick={onClose}
+            className="p-2 rounded-md hover:bg-gray-100"
+            aria-label="Close"
+          >
             <X className="w-5 h-5 text-gray-500" />
           </button>
         </div>
@@ -41,36 +54,54 @@ export function ProductDetailModal({ isOpen, onClose, product }: ProductDetailMo
             <div className="w-24 h-24 rounded-lg overflow-hidden border bg-gray-50 flex items-center justify-center flex-shrink-0">
               {product.gambars && product.gambars.length > 0 ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={product.gambars[0].file_path} alt={product.nama} className="w-full h-full object-cover" />
+                <img
+                  src={getImageUrl(product.gambars[0].file_path)}
+                  alt={product.nama}
+                  className="w-full h-full object-cover"
+                />
               ) : (
                 <Package className="w-8 h-8 text-orange-600" />
               )}
             </div>
 
             <div className="min-w-0">
-              <h4 className="text-xl font-semibold text-gray-900 truncate mb-1">{product.nama}</h4>
+              <h4 className="text-xl font-semibold text-gray-900 truncate mb-1">
+                {product.nama}
+              </h4>
               {product.jenis?.[0]?.nama && (
-                <p className="text-sm text-gray-600">Kategori: {product.jenis[0].nama}</p>
+                <p className="text-sm text-gray-600">
+                  Kategori: {product.jenis[0].nama}
+                </p>
               )}
-              
+
               {/* Deskripsi Bilingual */}
-              {(product.deskripsi_id || product.deskripsi_en) ? (
+              {product.deskripsi_id || product.deskripsi_en ? (
                 <div className="mt-3 space-y-2">
                   {product.deskripsi_id && (
                     <div>
-                      <p className="text-xs font-medium text-gray-500 mb-1">Deskripsi (ID):</p>
-                      <p className="text-sm text-gray-700 whitespace-pre-line">{product.deskripsi_id}</p>
+                      <p className="text-xs font-medium text-gray-500 mb-1">
+                        Deskripsi (ID):
+                      </p>
+                      <p className="text-sm text-gray-700 whitespace-pre-line">
+                        {product.deskripsi_id}
+                      </p>
                     </div>
                   )}
                   {product.deskripsi_en && (
                     <div>
-                      <p className="text-xs font-medium text-gray-500 mb-1">Description (EN):</p>
-                      <p className="text-sm text-gray-700 whitespace-pre-line">{product.deskripsi_en}</p>
+                      <p className="text-xs font-medium text-gray-500 mb-1">
+                        Description (EN):
+                      </p>
+                      <p className="text-sm text-gray-700 whitespace-pre-line">
+                        {product.deskripsi_en}
+                      </p>
                     </div>
                   )}
                 </div>
               ) : product.deskripsi ? (
-                <p className="mt-2 text-gray-700 whitespace-pre-line">{product.deskripsi}</p>
+                <p className="mt-2 text-gray-700 whitespace-pre-line">
+                  {product.deskripsi}
+                </p>
               ) : null}
             </div>
           </div>
@@ -78,7 +109,9 @@ export function ProductDetailModal({ isOpen, onClose, product }: ProductDetailMo
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="rounded-lg border p-4">
               <p className="text-sm text-gray-600">Harga</p>
-              <p className="text-lg font-semibold">{formatPrice(product.harga)}</p>
+              <p className="text-lg font-semibold">
+                {formatPrice(product.harga)}
+              </p>
             </div>
             <div className="rounded-lg border p-4">
               <p className="text-sm text-gray-600">Stok</p>
@@ -96,7 +129,9 @@ export function ProductDetailModal({ isOpen, onClose, product }: ProductDetailMo
               <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 rounded-t-lg">
                 <div className="flex items-center gap-2">
                   <Calendar className="w-4 h-4 text-gray-600" />
-                  <h4 className="text-sm font-semibold text-gray-900">Hari Ketersediaan</h4>
+                  <h4 className="text-sm font-semibold text-gray-900">
+                    Hari Ketersediaan
+                  </h4>
                 </div>
                 <p className="text-xs text-gray-600 mt-0.5">
                   Produk tersedia pada {hariFromBackend.length} hari
@@ -121,7 +156,9 @@ export function ProductDetailModal({ isOpen, onClose, product }: ProductDetailMo
           {product.attributes && product.attributes.length > 0 && (
             <div className="rounded-lg border border-gray-200">
               <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 rounded-t-lg">
-                <h4 className="text-sm font-semibold text-gray-900">Product Addons</h4>
+                <h4 className="text-sm font-semibold text-gray-900">
+                  Product Addons
+                </h4>
                 <p className="text-xs text-gray-600 mt-0.5">
                   {product.attributes.length} addon(s) tersedia
                 </p>
@@ -129,15 +166,15 @@ export function ProductDetailModal({ isOpen, onClose, product }: ProductDetailMo
               <div className="p-4">
                 <div className="space-y-2">
                   {product.attributes.map((attribute) => (
-                    <div 
-                      key={attribute.id} 
+                    <div
+                      key={attribute.id}
                       className="flex items-center justify-between p-3 rounded-lg bg-orange-50 border border-orange-200"
                     >
                       <div className="flex items-center gap-3">
                         <CheckCircle className="w-5 h-5 text-orange-600 flex-shrink-0" />
                         <div>
                           <p className="font-medium text-gray-900">
-                            {attribute.nama_id || attribute.nama || 'Unnamed'}
+                            {attribute.nama_id || attribute.nama || "Unnamed"}
                           </p>
                           {attribute.nama_en && (
                             <p className="text-xs text-gray-600">
@@ -150,8 +187,7 @@ export function ProductDetailModal({ isOpen, onClose, product }: ProductDetailMo
                         <p className="font-semibold text-gray-900">
                           {attribute.harga && attribute.harga > 0
                             ? `+${formatPrice(attribute.harga)}`
-                            : 'Gratis'
-                          }
+                            : "Gratis"}
                         </p>
                       </div>
                     </div>
@@ -165,18 +201,23 @@ export function ProductDetailModal({ isOpen, onClose, product }: ProductDetailMo
           {product.addons && product.addons.length > 0 && (
             <div className="rounded-lg border border-gray-200">
               <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 rounded-t-lg">
-                <h4 className="text-sm font-semibold text-gray-900">Product Addons</h4>
+                <h4 className="text-sm font-semibold text-gray-900">
+                  Product Addons
+                </h4>
                 <p className="text-xs text-gray-600 mt-0.5">
-                  {product.addons.length} addon(s) • {product.addons.filter(a => a.is_active).length} active
+                  {product.addons.length} addon(s) •{" "}
+                  {product.addons.filter((a) => a.is_active).length} active
                 </p>
               </div>
               <div className="p-4">
                 <div className="space-y-2">
                   {product.addons.map((addon) => (
-                    <div 
-                      key={addon.id} 
+                    <div
+                      key={addon.id}
                       className={`flex items-center justify-between p-3 rounded-lg ${
-                        addon.is_active ? 'bg-green-50 border border-green-200' : 'bg-gray-50 border border-gray-200'
+                        addon.is_active
+                          ? "bg-green-50 border border-green-200"
+                          : "bg-gray-50 border border-gray-200"
                       }`}
                     >
                       <div className="flex items-center gap-3">
@@ -186,20 +227,29 @@ export function ProductDetailModal({ isOpen, onClose, product }: ProductDetailMo
                           <XCircle className="w-5 h-5 text-gray-400 flex-shrink-0" />
                         )}
                         <div>
-                          <p className={`font-medium ${addon.is_active ? 'text-gray-900' : 'text-gray-500'}`}>
+                          <p
+                            className={`font-medium ${
+                              addon.is_active
+                                ? "text-gray-900"
+                                : "text-gray-500"
+                            }`}
+                          >
                             {addon.nama}
                           </p>
                           <p className="text-xs text-gray-600">
-                            {addon.is_active ? 'Active' : 'Inactive'}
+                            {addon.is_active ? "Active" : "Inactive"}
                           </p>
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className={`font-semibold ${addon.is_active ? 'text-gray-900' : 'text-gray-500'}`}>
-                          {addon.harga_tambahan > 0 
+                        <p
+                          className={`font-semibold ${
+                            addon.is_active ? "text-gray-900" : "text-gray-500"
+                          }`}
+                        >
+                          {addon.harga_tambahan > 0
                             ? `+${formatPrice(addon.harga_tambahan)}`
-                            : 'Free'
-                          }
+                            : "Free"}
                         </p>
                       </div>
                     </div>
@@ -212,7 +262,12 @@ export function ProductDetailModal({ isOpen, onClose, product }: ProductDetailMo
 
         {/* Footer - Fixed */}
         <div className="flex items-center justify-end gap-3 px-6 py-4 border-t flex-shrink-0 bg-white">
-          <button onClick={onClose} className="px-4 py-2 rounded-md border hover:bg-gray-50">Tutup</button>
+          <button
+            onClick={onClose}
+            className="px-4 py-2 rounded-md border hover:bg-gray-50"
+          >
+            Tutup
+          </button>
         </div>
       </div>
     </div>

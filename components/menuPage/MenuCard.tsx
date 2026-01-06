@@ -6,6 +6,7 @@ import { useCart } from "@/app/contexts/CartContext";
 import { useStoreClosure } from "@/app/contexts/StoreClosureContext";
 import { useTranslation } from "@/app/contexts/TranslationContext";
 import { useState, useEffect, useRef } from "react";
+import { getImageUrl } from "@/lib/utils";
 
 import type { MenuItem } from "@/lib/types";
 
@@ -46,10 +47,7 @@ export function MenuCard({
   const originalPrice = isDiscount
     ? `Rp ${item.harga?.toLocaleString("id-ID") ?? "0"}`
     : undefined;
-  const image =
-    item.gambars && item.gambars.length > 0
-      ? item.gambars[0].file_path
-      : "/placeholder.svg";
+  const image = getImageUrl(item.gambars?.[0]?.file_path);
   // Extract the raw day names in Indonesian (nama_id) since the cart uses Indonesian day names
   const availableDays = (item.hari || [])
     .filter((day) => day !== null)
