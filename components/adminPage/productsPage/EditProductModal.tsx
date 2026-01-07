@@ -39,6 +39,12 @@ export function EditProductModal({
     images: [] as File[],
     isBestSeller: false,
     isDaily: false,
+    ingredients: [] as Array<{
+      id?: number;
+      nama_id: string;
+      nama_en: string;
+      jumlah: string;
+    }>,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAddonsManager, setShowAddonsManager] = useState(false);
@@ -49,6 +55,14 @@ export function EditProductModal({
   const [availableHari, setAvailableHari] = useState<
     Array<{ id: number; nama_id: string; nama_en: string }>
   >([]);
+
+  // Store initial IDs for change detection
+  const [initialIds, setInitialIds] = useState<{
+    sub_jenis: number[];
+    hari: number[];
+    attributes: number[];
+    ingredients: number[];
+  }>({ sub_jenis: [], hari: [], attributes: [], ingredients: [] });
 
   // Fetch available hari from backend (jenis/sub_jenis now from context)
   useEffect(() => {
@@ -123,6 +137,14 @@ export function EditProductModal({
         })
       );
 
+      // Initial IDs from props
+      setInitialIds({
+        sub_jenis: product.sub_jenis?.map((sj) => sj.id) || [],
+        hari: product.hari?.map((h) => h.id) || [],
+        attributes: mappedAddons.map((a) => a.id),
+        ingredients: product.bahans?.map((b) => b.id) || [],
+      });
+
       setFormData({
         nama_id: product.nama_id || product.nama || "",
         nama_en: product.nama_en || product.nama || "",
@@ -138,6 +160,13 @@ export function EditProductModal({
         images: [],
         isBestSeller: product.isBestSeller || false,
         isDaily: product.isDaily || false,
+        ingredients:
+          product.bahans?.map((b) => ({
+            id: b.id,
+            nama_id: b.nama_id || b.nama || "",
+            nama_en: b.nama_en || b.nama || "",
+            jumlah: (b.jumlah || 0).toString(),
+          })) || [],
       });
       setExistingImages(product.gambars || []);
       setImagePreviews([]);
@@ -153,6 +182,18 @@ export function EditProductModal({
             // If we got valid detail data, update the form
             if (detail) {
               console.log("📦 Fetched fresh product detail:", detail);
+
+              // Update initial IDs with fresh data
+              setInitialIds((prev) => ({
+                sub_jenis:
+                  detail.sub_jenis?.map((sj: any) => sj.id) || prev.sub_jenis,
+                hari: detail.hari?.map((h: any) => h.id) || prev.hari,
+                attributes:
+                  detail.attributes?.map((a: any) => a.id) || prev.attributes,
+                ingredients:
+                  detail.bahans?.map((b: any) => b.id) || prev.ingredients,
+              }));
+
               setFormData((prev) => ({
                 ...prev,
                 // Update arrays that might be truncated in list view
@@ -160,6 +201,16 @@ export function EditProductModal({
                   detail.sub_jenis?.map((sj: any) => sj.id) ||
                   prev.sub_jenis_ids,
                 hari_ids: detail.hari?.map((h: any) => h.id) || prev.hari_ids,
+                ingredients:
+                  detail.bahans?.map((b: any) => ({
+                    id: b.id,
+                    nama_id: b.nama_id || b.nama || "",
+                    nama_en: b.nama_en || b.nama || "",
+                    jumlah: (b.jumlah || 0).toString(),
+                  })) || prev.ingredients,
+                // If detail contains attributes, we might want to update addons too, but mapping is complex.
+                // For now, let's assume we proceed with prop-derived addons or if detail has them we could parse.
+                // Since existing code didn't update addons from detail, we won't force it to avoid breaking format.
               }));
               // Also update images if needed
               if (detail.gambars) {
@@ -192,63 +243,166 @@ export function EditProductModal({
       return;
     }
 
+    if (!product?.id) {
+      alert("Produk tidak ditemukan");
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
-      // 1. Prepare JSON Payload (Without new blob images)
-      // Only send existing images to maintain state (deletions are handled by omitting removed images)
-      const cleanImages = existingImages.map((img) => ({
-        id: img.id,
-        file_path: img.file_path,
-        product_id: product?.id || 0,
-      }));
-
-      // Exclude addons from spread since we send attribute_ids instead
-      const { addons, ...restFormData } = formData;
-
+      // 1. Update Core Product Data
+      const { addons, sub_jenis_ids, hari_ids, images, ...restFormData } =
+        formData;
       const productData = {
         ...restFormData,
         nama: formData.nama_id, // Keep nama for backward compatibility
         deskripsi: formData.deskripsi_id, // Keep deskripsi for backward compatibility
         jenis_id: formData.jenis_id,
-        sub_jenis_ids: formData.sub_jenis_ids,
-        hari_ids: formData.hari_ids,
         harga_diskon: formData.harga_diskon,
         isBestSeller: formData.isBestSeller,
         isDaily: formData.isDaily,
-        attribute_ids: addons.map((a) => a.id), // Send attribute IDs to backend
-        gambars: cleanImages, // Only existing images
       };
 
-      console.log("🚀 Sending product text data to backend:", productData);
-      
-      // Step 1: Update Text Data
+      console.log("🚀 Sending core product data:", productData);
       await onEditProduct(productData);
 
-      // Step 2: Upload New Images
-      if (formData.images.length > 0 && product?.id) {
+      const pId = product.id;
+
+      // 2. Sync Sub Jenis
+      const subJenisToAdd = formData.sub_jenis_ids.filter(
+        (id) => !initialIds.sub_jenis.includes(id)
+      );
+      const subJenisToRemove = initialIds.sub_jenis.filter(
+        (id) => !formData.sub_jenis_ids.includes(id)
+      );
+
+      for (const id of subJenisToAdd)
+        await fetch(`/api/products/${pId}/sub_jenis/${id}`, { method: "POST" });
+      for (const id of subJenisToRemove)
+        await fetch(`/api/products/${pId}/sub_jenis/${id}`, {
+          method: "DELETE",
+        });
+
+      // 3. Sync Hari
+      const hariToAdd = formData.hari_ids.filter(
+        (id) => !initialIds.hari.includes(id)
+      );
+      const hariToRemove = initialIds.hari.filter(
+        (id) => !formData.hari_ids.includes(id)
+      );
+
+      for (const id of hariToAdd)
+        await fetch(`/api/products/${pId}/hari/${id}`, { method: "POST" });
+      for (const id of hariToRemove)
+        await fetch(`/api/products/${pId}/hari/${id}`, { method: "DELETE" });
+
+      // 4. Sync Attributes (Add-ons)
+      const currentAttrIds = formData.addons.map((a) => a.id);
+      const attrToAdd = currentAttrIds.filter(
+        (id) => !initialIds.attributes.includes(id)
+      );
+      const attrToRemove = initialIds.attributes.filter(
+        (id) => !currentAttrIds.includes(id)
+      );
+
+      for (const id of attrToAdd)
+        await fetch(`/api/products/${pId}/attributes/${id}`, {
+          method: "POST",
+        });
+      for (const id of attrToRemove)
+        await fetch(`/api/products/${pId}/attributes/${id}`, {
+          method: "DELETE",
+        });
+
+      // 5. Sync Ingredients (Bahans)
+      const currentIngredientIds = formData.ingredients
+        .map((i) => i.id)
+        .filter((id) => id !== undefined) as number[];
+      const ingredientsToRemove = initialIds.ingredients.filter(
+        (id) => !currentIngredientIds.includes(id)
+      );
+
+      for (const id of ingredientsToRemove) {
+        await fetch(`/api/products/${pId}/bahan/${id}`, { method: "DELETE" });
+      }
+
+      for (const ingredient of formData.ingredients) {
+        const payload = {
+          nama_id: ingredient.nama_id,
+          nama_en: ingredient.nama_en,
+          jumlah: parseFloat(ingredient.jumlah) || 0,
+        };
+
+        if (ingredient.id) {
+          // Update
+          await fetch(`/api/products/${pId}/bahan/${ingredient.id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+        } else {
+          // Add
+          await fetch(`/api/products/${pId}/bahan`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+        }
+      }
+
+      // 6. Sync Images
+
+      // Upload new images
+      if (formData.images.length > 0) {
         console.log("🚀 Uploading new images...", formData.images);
-        // Upload each file individually
         for (const file of formData.images) {
           const imageFormData = new FormData();
-          imageFormData.append('file', file);
+          imageFormData.append("file", file);
 
           try {
-            const response = await fetch(`${BACKEND_URL}/products/${product.id}/gambar`, {
-              method: 'POST',
+            const response = await fetch(`/api/products/${pId}/gambar`, {
+              method: "POST",
               body: imageFormData,
-              // Content-Type header is automatically set by browser with boundary
             });
 
             if (!response.ok) {
-              const errorData = await response.json().catch(() => ({}));
-              console.error("Failed to upload image:", errorData);
-              throw new Error(errorData.message || "Failed to upload image");
+              const text = await response.text();
+              console.error(
+                "Failed to upload image. Status:",
+                response.status,
+                "Response:",
+                text
+              );
+              try {
+                const errorData = JSON.parse(text);
+                throw new Error(errorData.message || "Failed to upload image");
+              } catch (e) {
+                throw new Error(
+                  `Failed to upload image (Status ${response.status})`
+                );
+              }
             }
-            console.log("✅ Image uploaded successfully");
           } catch (uploadError) {
-             console.error("Error uploading specific image:", uploadError);
+            console.error("Error uploading specific image:", uploadError);
           }
+        }
+      }
+
+      // Delete removed images
+      // Find images that were present initially (or in product prop) but are not in existingImages state
+      const currentExistingIds = new Set(existingImages.map((img) => img.id));
+      const imagesToDelete = (product.gambars || []).filter(
+        (img) => !currentExistingIds.has(img.id)
+      );
+
+      for (const img of imagesToDelete) {
+        try {
+          await fetch(`/api/products/${pId}/gambar/${img.id}`, {
+            method: "DELETE",
+          });
+        } catch (delError) {
+          console.error("Error deleting image:", delError);
         }
       }
 
@@ -277,6 +431,7 @@ export function EditProductModal({
       images: [],
       isBestSeller: false,
       isDaily: false,
+      ingredients: [],
     });
     setImagePreviews([]);
     setExistingImages([]);
@@ -288,8 +443,10 @@ export function EditProductModal({
 
     const totalImages =
       existingImages.length + formData.images.length + files.length;
-    if (totalImages > 5) {
-      alert("Maksimal 5 gambar total");
+    if (totalImages > 1) {
+      alert(
+        "Maksimal 1 gambar total. Hapus gambar lama terlebih dahulu jika ingin mengganti."
+      );
       return;
     }
 
@@ -320,6 +477,35 @@ export function EditProductModal({
 
   const removeExistingImage = (index: number) => {
     setExistingImages((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleAddIngredient = () => {
+    setFormData((prev) => ({
+      ...prev,
+      ingredients: [
+        ...prev.ingredients,
+        { nama_id: "", nama_en: "", jumlah: "" },
+      ],
+    }));
+  };
+
+  const handleRemoveIngredient = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      ingredients: prev.ingredients.filter((_, i) => i !== index),
+    }));
+  };
+
+  const handleIngredientChange = (
+    index: number,
+    field: "nama_id" | "nama_en" | "jumlah",
+    value: string
+  ) => {
+    setFormData((prev) => {
+      const newIngredients = [...prev.ingredients];
+      newIngredients[index] = { ...newIngredients[index], [field]: value };
+      return { ...prev, ingredients: newIngredients };
+    });
   };
 
   const toggleHari = (hariId: number) => {
@@ -388,7 +574,7 @@ export function EditProductModal({
           {/* Product Images Upload */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Gambar Produk (Max 5 gambar total)
+              Gambar Produk (Max 1 gambar)
             </label>
 
             {/* Existing Images */}
@@ -431,14 +617,14 @@ export function EditProductModal({
                 id="image-upload-edit"
                 disabled={
                   isSubmitting ||
-                  existingImages.length + formData.images.length >= 5
+                  existingImages.length + formData.images.length >= 1
                 }
               />
               <label
                 htmlFor="image-upload-edit"
                 className={`cursor-pointer ${
                   isSubmitting ||
-                  existingImages.length + formData.images.length >= 5
+                  existingImages.length + formData.images.length >= 1
                     ? "cursor-not-allowed opacity-50"
                     : ""
                 }`}
@@ -451,7 +637,7 @@ export function EditProductModal({
                   PNG, JPG, JPEG up to 10MB
                 </p>
                 <p className="text-xs text-orange-600 mt-1">
-                  {existingImages.length + formData.images.length} / 5 gambar
+                  {existingImages.length + formData.images.length} / 1 gambar
                 </p>
               </label>
             </div>
@@ -640,6 +826,101 @@ export function EditProductModal({
               </p>
             </div>
           )}
+
+          {/* Ingredients (Bahan) */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <label className="flex items-center text-sm font-medium text-gray-700">
+                <Layers className="w-4 h-4 mr-2 text-green-500" />
+                Bahan (Ingredients)
+              </label>
+              <button
+                type="button"
+                onClick={handleAddIngredient}
+                disabled={isSubmitting}
+                className="text-sm text-orange-600 hover:text-orange-700 font-medium"
+              >
+                + Tambah Bahan
+              </button>
+            </div>
+
+            {formData.ingredients.length === 0 ? (
+              <p className="text-sm text-gray-500 italic border rounded-lg p-3 text-center">
+                Belum ada bahan ditambahkan
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {formData.ingredients.map((ingredient, index) => (
+                  <div
+                    key={index}
+                    className="flex flex-col gap-2 p-3 border rounded-lg bg-gray-50"
+                  >
+                    <div className="flex gap-2">
+                      <div className="flex-1">
+                        <input
+                          type="text"
+                          placeholder="Nama Bahan (ID)"
+                          value={ingredient.nama_id}
+                          onChange={(e) =>
+                            handleIngredientChange(
+                              index,
+                              "nama_id",
+                              e.target.value
+                            )
+                          }
+                          className="w-full px-2 py-1 text-sm border rounded"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <input
+                          type="text"
+                          placeholder="Ingredient Name (EN)"
+                          value={ingredient.nama_en}
+                          onChange={(e) =>
+                            handleIngredientChange(
+                              index,
+                              "nama_en",
+                              e.target.value
+                            )
+                          }
+                          className="w-full px-2 py-1 text-sm border rounded"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex gap-2 items-center">
+                      <div className="w-24">
+                        <input
+                          type="number"
+                          placeholder="Jml"
+                          value={ingredient.jumlah}
+                          onChange={(e) =>
+                            handleIngredientChange(
+                              index,
+                              "jumlah",
+                              e.target.value
+                            )
+                          }
+                          className="w-full px-2 py-1 text-sm border rounded"
+                          min="0"
+                          step="0.1"
+                        />
+                      </div>
+                      <span className="text-xs text-gray-500 flex-1">
+                        Unit/Jumlah
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveIngredient(index)}
+                        className="text-red-500 hover:text-red-700 p-1"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
 
           {/* Best Seller & Daily Options */}
           <div className="flex gap-6">

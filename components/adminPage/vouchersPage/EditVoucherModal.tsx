@@ -25,7 +25,7 @@ export function EditVoucherModal({
     discount: "",
     expiryDate: "",
     maxUsage: "",
-    minPurchase: "",
+    maxDiscount: "",
   });
 
   useEffect(() => {
@@ -38,8 +38,8 @@ export function EditVoucherModal({
         maxUsage: voucher.batas_penggunaan
           ? voucher.batas_penggunaan.toString()
           : "1",
-        minPurchase: voucher.minimal__pembelian
-          ? voucher.minimal__pembelian.toString()
+        maxDiscount: voucher.maksimal_diskon
+          ? voucher.maksimal_diskon.toString()
           : "0",
       });
     }
@@ -65,8 +65,8 @@ export function EditVoucherModal({
         tanggal_mulai: null,
         tanggal_selesai: formData.expiryDate || null,
         batas_penggunaan: Number.parseInt(formData.maxUsage),
-        minimal__pembelian: formData.minPurchase
-          ? Number.parseInt(formData.minPurchase)
+        maksimal_diskon: formData.maxDiscount
+          ? Number.parseInt(formData.maxDiscount)
           : 0,
       } as any);
 
@@ -109,7 +109,10 @@ export function EditVoucherModal({
         </div>
 
         {/* Form - Scrollable */}
-        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+        <form
+          onSubmit={handleSubmit}
+          className="flex flex-col flex-1 overflow-hidden"
+        >
           <div className="p-6 space-y-4 overflow-y-auto flex-1">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -173,15 +176,15 @@ export function EditVoucherModal({
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Minimal Pembelian (Rp)
+                Maksimal Diskon (Rp)
               </label>
               <input
                 type="number"
-                value={formData.minPurchase}
+                value={formData.maxDiscount}
                 onChange={(e) =>
-                  setFormData({ ...formData, minPurchase: e.target.value })
+                  setFormData({ ...formData, maxDiscount: e.target.value })
                 }
-                placeholder="0 jika tidak ada minimal"
+                placeholder="0 jika tidak ada maksimal"
                 min="0"
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500"
               />

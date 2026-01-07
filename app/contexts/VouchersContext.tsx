@@ -25,7 +25,7 @@ export interface Voucher {
   usageCount: number;
   maxUsage: number | null;
   batas_penggunaan: number; // Field asli dari backend
-  minimal__pembelian: number; // Field baru untuk minimal pembelian
+  maksimal_diskon: number; // Menggantikan minimal_pembelian
   status: "active" | "inactive" | "expired";
   qr_code?: string; // Field dari backend
   createdAt: string;
@@ -102,7 +102,7 @@ export function VouchersProvider({ children }: { children: ReactNode }) {
       usageCount: usageCount,
       maxUsage: maxUsage,
       batas_penggunaan: backendVoucher.batas_penggunaan || 0,
-      minimal__pembelian: backendVoucher.minimal__pembelian || 0,
+      maksimal_diskon: backendVoucher.maksimal_diskon || 0,
       status: status,
       qr_code: backendVoucher.qr_code,
       createdAt:
@@ -180,29 +180,41 @@ export function VouchersProvider({ children }: { children: ReactNode }) {
       setVouchers(mappedVouchers);
       setError(null); // Clear any previous error on success
     } catch (err) {
-      console.error(`Error fetching vouchers (attempt ${retryCount + 1}/${MAX_RETRIES}):`, err);
+      console.error(
+        `Error fetching vouchers (attempt ${retryCount + 1}/${MAX_RETRIES}):`,
+        err
+      );
 
       // Check if we should retry
-      const isTimeout = err instanceof Error && (
-        err.name === 'AbortError' ||
-        err.message.includes('timeout') ||
-        err.message.includes('aborted')
-      );
-      const isNetworkError = err instanceof TypeError && err.message.includes("fetch");
+      const isTimeout =
+        err instanceof Error &&
+        (err.name === "AbortError" ||
+          err.message.includes("timeout") ||
+          err.message.includes("aborted"));
+      const isNetworkError =
+        err instanceof TypeError && err.message.includes("fetch");
 
       if ((isTimeout || isNetworkError) && retryCount < MAX_RETRIES - 1) {
-        console.log(`[VouchersContext] Retrying... (attempt ${retryCount + 2}/${MAX_RETRIES})`);
+        console.log(
+          `[VouchersContext] Retrying... (attempt ${
+            retryCount + 2
+          }/${MAX_RETRIES})`
+        );
         // Wait a bit before retrying (exponential backoff)
-        await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
+        await new Promise((resolve) =>
+          setTimeout(resolve, 1000 * (retryCount + 1))
+        );
         return refreshVouchers(retryCount + 1);
       }
 
       let errorMessage = "Gagal mengambil data voucher";
 
       if (isTimeout) {
-        errorMessage = "Koneksi timeout. Server membutuhkan waktu lebih lama untuk merespons. Silakan coba lagi.";
+        errorMessage =
+          "Koneksi timeout. Server membutuhkan waktu lebih lama untuk merespons. Silakan coba lagi.";
       } else if (isNetworkError) {
-        errorMessage = "Backend server tidak dapat diakses. Pastikan server backend running.";
+        errorMessage =
+          "Backend server tidak dapat diakses. Pastikan server backend running.";
       } else if (err instanceof Error) {
         errorMessage = err.message;
       }
@@ -237,8 +249,8 @@ export function VouchersProvider({ children }: { children: ReactNode }) {
         payload.tanggal_selesai = newVoucher.tanggal_selesai;
       if (newVoucher.batas_penggunaan !== undefined)
         payload.batas_penggunaan = newVoucher.batas_penggunaan;
-      if (newVoucher.minimal__pembelian !== undefined)
-        payload.minimal__pembelian = newVoucher.minimal__pembelian;
+      if (newVoucher.maksimal_diskon !== undefined)
+        payload.maksimal_diskon = newVoucher.maksimal_diskon;
 
       console.log("[VouchersContext] Creating voucher with payload:", payload);
 
@@ -302,8 +314,8 @@ export function VouchersProvider({ children }: { children: ReactNode }) {
         payload.tanggal_selesai = updates.tanggal_selesai;
       if (updates.batas_penggunaan !== undefined)
         payload.batas_penggunaan = updates.batas_penggunaan;
-      if (updates.minimal__pembelian !== undefined)
-        payload.minimal__pembelian = updates.minimal__pembelian;
+      if (updates.maksimal_diskon !== undefined)
+        payload.maksimal_diskon = updates.maksimal_diskon;
 
       console.log(
         "[VouchersContext] Updating voucher:",

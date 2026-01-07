@@ -52,6 +52,11 @@ interface FormData {
   hari_ids: number[]; // Changed from hari_tersedia to hari_ids array
   isBestSeller: boolean;
   isDaily: boolean;
+  ingredients: Array<{
+    nama_id: string;
+    nama_en: string;
+    jumlah: string;
+  }>;
 }
 
 export function AddProductModal({
@@ -75,6 +80,7 @@ export function AddProductModal({
     hari_ids: [],
     isBestSeller: false,
     isDaily: false,
+    ingredients: [],
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -157,8 +163,11 @@ export function AddProductModal({
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
 
-    if (files.length + formData.images.length > 5) {
-      setErrors((prev) => ({ ...prev, images: "Maksimal 5 gambar" }));
+    if (files.length + formData.images.length > 1) {
+      setErrors((prev) => ({
+        ...prev,
+        images: "Maksimal 1 gambar. Hapus gambar lama jika ingin mengganti.",
+      }));
       return;
     }
 
@@ -195,6 +204,35 @@ export function AddProductModal({
         ? prev.hari_ids.filter((id) => id !== hariId)
         : [...prev.hari_ids, hariId],
     }));
+  };
+
+  const handleAddIngredient = () => {
+    setFormData((prev) => ({
+      ...prev,
+      ingredients: [
+        ...prev.ingredients,
+        { nama_id: "", nama_en: "", jumlah: "" },
+      ],
+    }));
+  };
+
+  const handleRemoveIngredient = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      ingredients: prev.ingredients.filter((_, i) => i !== index),
+    }));
+  };
+
+  const handleIngredientChange = (
+    index: number,
+    field: "nama_id" | "nama_en" | "jumlah",
+    value: string
+  ) => {
+    setFormData((prev) => {
+      const newIngredients = [...prev.ingredients];
+      newIngredients[index] = { ...newIngredients[index], [field]: value };
+      return { ...prev, ingredients: newIngredients };
+    });
   };
 
   const selectJenis = (jenisId: number) => {
@@ -276,6 +314,11 @@ export function AddProductModal({
         hari_ids: formData.hari_ids,
         // Image files - will be uploaded separately
         imageFiles: formData.images,
+        bahans: formData.ingredients.map((ing) => ({
+          nama_id: ing.nama_id,
+          nama_en: ing.nama_en,
+          jumlah: parseFloat(ing.jumlah) || 0,
+        })),
       };
 
       onAddProduct(newProduct);
@@ -303,6 +346,7 @@ export function AddProductModal({
       hari_ids: [],
       isBestSeller: false,
       isDaily: false,
+      ingredients: [],
     });
     setImagePreviews([]);
     setErrors({});
@@ -603,6 +647,101 @@ export function AddProductModal({
                   </div>
                 )}
 
+                {/* Ingredients (Bahan) */}
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <label className="flex items-center text-sm font-medium text-gray-700">
+                      <Layers className="w-4 h-4 mr-2 text-green-500" />
+                      Bahan (Ingredients)
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handleAddIngredient}
+                      disabled={isSubmitting}
+                      className="text-sm text-orange-600 hover:text-orange-700 font-medium"
+                    >
+                      + Tambah Bahan
+                    </button>
+                  </div>
+
+                  {formData.ingredients.length === 0 ? (
+                    <p className="text-sm text-gray-500 italic border rounded-lg p-3 text-center">
+                      Belum ada bahan ditambahkan
+                    </p>
+                  ) : (
+                    <div className="space-y-3">
+                      {formData.ingredients.map((ingredient, index) => (
+                        <div
+                          key={index}
+                          className="flex flex-col gap-2 p-3 border rounded-lg bg-gray-50"
+                        >
+                          <div className="flex gap-2">
+                            <div className="flex-1">
+                              <input
+                                type="text"
+                                placeholder="Nama Bahan (ID)"
+                                value={ingredient.nama_id}
+                                onChange={(e) =>
+                                  handleIngredientChange(
+                                    index,
+                                    "nama_id",
+                                    e.target.value
+                                  )
+                                }
+                                className="w-full px-2 py-1 text-sm border rounded"
+                              />
+                            </div>
+                            <div className="flex-1">
+                              <input
+                                type="text"
+                                placeholder="Ingredient Name (EN)"
+                                value={ingredient.nama_en}
+                                onChange={(e) =>
+                                  handleIngredientChange(
+                                    index,
+                                    "nama_en",
+                                    e.target.value
+                                  )
+                                }
+                                className="w-full px-2 py-1 text-sm border rounded"
+                              />
+                            </div>
+                          </div>
+                          <div className="flex gap-2 items-center">
+                            <div className="w-24">
+                              <input
+                                type="number"
+                                placeholder="Jml"
+                                value={ingredient.jumlah}
+                                onChange={(e) =>
+                                  handleIngredientChange(
+                                    index,
+                                    "jumlah",
+                                    e.target.value
+                                  )
+                                }
+                                className="w-full px-2 py-1 text-sm border rounded"
+                                min="0"
+                                step="0.1"
+                              />
+                            </div>
+                            <span className="text-xs text-gray-500 flex-1">
+                              Unit/Jumlah
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveIngredient(index)}
+                              className="text-red-500 hover:text-red-700 p-1"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 {/* Best Seller & Daily Options */}
                 <div className="flex gap-6">
                   <label className="flex items-center cursor-pointer">
@@ -664,7 +803,7 @@ export function AddProductModal({
                 {/* Images Upload */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Gambar Produk * (Max 5 gambar)
+                    Gambar Produk * (Max 1 gambar)
                   </label>
 
                   <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-orange-500 transition-colors">
@@ -675,12 +814,12 @@ export function AddProductModal({
                       onChange={handleImageUpload}
                       className="hidden"
                       id="image-upload"
-                      disabled={isSubmitting || formData.images.length >= 5}
+                      disabled={isSubmitting || formData.images.length >= 1}
                     />
                     <label
                       htmlFor="image-upload"
                       className={`cursor-pointer ${
-                        isSubmitting || formData.images.length >= 5
+                        isSubmitting || formData.images.length >= 1
                           ? "cursor-not-allowed opacity-50"
                           : ""
                       }`}

@@ -20,7 +20,7 @@ export function AddVoucherModal({ isOpen, onClose }: AddVoucherModalProps) {
     discount: "",
     expiryDate: "",
     maxUsage: "",
-    minPurchase: "",
+    maxDiscount: "",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -43,8 +43,8 @@ export function AddVoucherModal({ isOpen, onClose }: AddVoucherModalProps) {
         tanggal_mulai: null,
         tanggal_selesai: formData.expiryDate || null,
         batas_penggunaan: Number.parseInt(formData.maxUsage),
-        minimal__pembelian: formData.minPurchase
-          ? Number.parseInt(formData.minPurchase)
+        maksimal_diskon: formData.maxDiscount
+          ? Number.parseInt(formData.maxDiscount)
           : 0,
       } as any);
 
@@ -60,7 +60,7 @@ export function AddVoucherModal({ isOpen, onClose }: AddVoucherModalProps) {
         discount: "",
         expiryDate: "",
         maxUsage: "",
-        minPurchase: "",
+        maxDiscount: "",
       });
       onClose();
     } catch (error) {
@@ -165,18 +165,18 @@ export function AddVoucherModal({ isOpen, onClose }: AddVoucherModalProps) {
             />
           </div>
 
-          {/* Min Purchase */}
+          {/* Max Discount */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Minimal Pembelian (Rp)
+              Maksimal Diskon (Rp)
             </label>
             <input
               type="number"
-              value={formData.minPurchase}
+              value={formData.maxDiscount}
               onChange={(e) =>
-                setFormData({ ...formData, minPurchase: e.target.value })
+                setFormData({ ...formData, maxDiscount: e.target.value })
               }
-              placeholder="0 jika tidak ada minimal"
+              placeholder="0 jika tidak ada maksimal"
               min="0"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500"
             />

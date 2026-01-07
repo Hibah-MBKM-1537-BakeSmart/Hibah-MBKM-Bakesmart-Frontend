@@ -88,13 +88,13 @@ export function VoucherDetailModal({
             <p className="text-lg font-bold text-gray-900">{discountText}</p>
           </div>
 
-          {/* Min Purchase */}
+          {/* Max Discount */}
           <div>
-            <p className="text-sm text-gray-600 mb-1">Minimal Pembelian</p>
+            <p className="text-sm text-gray-600 mb-1">Maksimal Diskon</p>
             <p className="text-lg font-bold text-gray-900">
-              {voucher.minimal__pembelian
-                ? `Rp ${voucher.minimal__pembelian.toLocaleString("id-ID")}`
-                : "Tidak ada minimal pembelian"}
+              {voucher.maksimal_diskon
+                ? `Rp ${voucher.maksimal_diskon.toLocaleString("id-ID")}`
+                : "Tidak ada maksimal diskon"}
             </p>
           </div>
 
@@ -133,8 +133,9 @@ export function VoucherDetailModal({
                     <div
                       className="bg-blue-500 h-2 rounded-full"
                       style={{
-                        width: `${(voucher.usageCount / voucher.maxUsage) * 100
-                          }%`,
+                        width: `${
+                          (voucher.usageCount / voucher.maxUsage) * 100
+                        }%`,
                       }}
                     />
                   </div>
@@ -147,18 +148,19 @@ export function VoucherDetailModal({
           <div className="flex items-center justify-between">
             <p className="text-sm text-gray-600">Status</p>
             <span
-              className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${voucher.status === "active"
-                ? "bg-green-100 text-green-800"
-                : voucher.status === "inactive"
+              className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                voucher.status === "active"
+                  ? "bg-green-100 text-green-800"
+                  : voucher.status === "inactive"
                   ? "bg-gray-100 text-gray-800"
                   : "bg-red-100 text-red-800"
-                }`}
+              }`}
             >
               {voucher.status === "active"
                 ? "Aktif"
                 : voucher.status === "inactive"
-                  ? "Tidak Aktif"
-                  : "Kadaluarsa"}
+                ? "Tidak Aktif"
+                : "Kadaluarsa"}
             </span>
           </div>
 

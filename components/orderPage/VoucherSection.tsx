@@ -34,6 +34,7 @@ export function VoucherSection({
     code: string;
     discount: number;
     minPurchase?: number;
+    maxDiscount?: number;
     persen?: number;
     nominal?: number;
   } | null>(null);
@@ -86,7 +87,8 @@ export function VoucherSection({
       setAppliedVoucher({
         code: result.code,
         discount: result.discount,
-        minPurchase: result.details?.minimal__pembelian || 0,
+        minPurchase: 0,
+        maxDiscount: result.maxDiscount || result.details?.maksimal_diskon || 0,
         persen: result.details?.persen,
         nominal: result.details?.nominal,
       });
@@ -110,24 +112,15 @@ export function VoucherSection({
 
   useEffect(() => {
     if (appliedVoucher) {
-      // 1. Cek Minimal Pembelian
-      if (
-        appliedVoucher.minPurchase &&
-        totalAmount < appliedVoucher.minPurchase
-      ) {
-        setAppliedVoucher(null);
-        onVoucherRemoved?.();
-        setError(
-          `Voucher dihapus: Total belanja kurang dari Rp ${appliedVoucher.minPurchase.toLocaleString(
-            "id-ID"
-          )}`
-        );
-        return;
-      }
-
-      // 2. Recalculate Discount jika Persentase
+      // 1. Recalculate Discount jika Persentase
       if (appliedVoucher.persen) {
-        const newDiscount = (totalAmount * appliedVoucher.persen) / 100;
+        let newDiscount = (totalAmount * appliedVoucher.persen) / 100;
+
+        // Apply Max Discount Cap logic
+        if (appliedVoucher.maxDiscount && appliedVoucher.maxDiscount > 0) {
+          newDiscount = Math.min(newDiscount, appliedVoucher.maxDiscount);
+        }
+
         // Hanya update jika ada perubahan signifikan (untuk menghindari loop)
         if (Math.abs(newDiscount - appliedVoucher.discount) > 0.01) {
           setAppliedVoucher((prev) =>
@@ -330,12 +323,31 @@ export function VoucherSection({
                     <p className="text-sm text-green-700 font-mono font-bold">
                       {appliedVoucher.code}
                     </p>
-                    <p className="text-sm text-green-600 mt-1">
-                      Diskon:{" "}
-                      <span className="font-bold">
-                        {formatPrice(appliedVoucher.discount)}
-                      </span>
-                    </p>
+                    <div className="text-sm text-green-600 mt-1">
+                      {appliedVoucher.persen ? (
+                        <div className="flex flex-col">
+                          <span>
+                            Diskon {appliedVoucher.persen}%
+                            {appliedVoucher.maxDiscount &&
+                            appliedVoucher.maxDiscount > 0
+                              ? ` hingga ${formatPrice(
+                                  appliedVoucher.maxDiscount
+                                )}`
+                              : ""}
+                          </span>
+                          <span className="font-bold">
+                            Hemat: {formatPrice(appliedVoucher.discount)}
+                          </span>
+                        </div>
+                      ) : (
+                        <span>
+                          Diskon:{" "}
+                          <span className="font-bold">
+                            {formatPrice(appliedVoucher.discount)}
+                          </span>
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
                 <Button

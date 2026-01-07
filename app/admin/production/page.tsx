@@ -28,11 +28,15 @@ import {
   Star,
   Flame,
   Search,
-  Hourglass,
+  FileText,
+  Share2,
+  ChevronDown,
   ArrowUpDown,
   ChevronUp,
-  ChevronDown,
+  Hourglass,
 } from "lucide-react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 interface Addon {
   addon_id: number;
@@ -148,8 +152,6 @@ const transformBackendData = (groups: OrderGroup[]): Order[] => {
   return allOrders;
 };
 
-
-
 function ProductionItemRow({
   item,
   orderNote,
@@ -222,12 +224,17 @@ function ProductionOrderCard({
   order,
   onPrint,
   onMarkComplete,
+  onDownloadPDF,
+  onShareWA,
 }: {
   order: Order;
   onPrint: (order: Order) => void;
   onMarkComplete: (orderId: number) => void;
+  onDownloadPDF: (order: Order) => void;
+  onShareWA: (order: Order) => void;
 }) {
   const [isEditingNotes, setIsEditingNotes] = useState(false);
+  const [showPrintOptions, setShowPrintOptions] = useState(false);
   const [editedNotes, setEditedNotes] = useState(order.notes || "");
 
   const totalItems = order.order_products.reduce(
@@ -265,9 +272,10 @@ function ProductionOrderCard({
 
   return (
     <div
-      className={`border-2 rounded-lg p-4 ${statusColors[order.production_status || "pending"] ||
+      className={`border-2 rounded-lg p-4 ${
+        statusColors[order.production_status || "pending"] ||
         "bg-gray-50 border-gray-300"
-        }`}
+      }`}
     >
       {/* Header */}
       <div className="flex items-start justify-between gap-3 mb-4">
@@ -276,8 +284,9 @@ function ProductionOrderCard({
           <p className="text-xs text-gray-600">{order.user.nama}</p>
         </div>
         <span
-          className={`px-2 py-1 rounded text-xs font-semibold whitespace-nowrap ${statusBadgeColors[order.production_status || "pending"]
-            }`}
+          className={`px-2 py-1 rounded text-xs font-semibold whitespace-nowrap ${
+            statusBadgeColors[order.production_status || "pending"]
+          }`}
         >
           {statusLabels[order.production_status || "pending"]}
         </span>
@@ -325,27 +334,44 @@ function ProductionOrderCard({
       </div>
 
       {/* Actions */}
-      <div className="flex gap-2 pt-3 border-t border-gray-200">
-        <button
-          onClick={() => onPrint(order)}
-          className="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-medium transition-colors"
-        >
-          👁️ View
-        </button>
-        {order.production_status !== "completed" && (
+      <div className="flex flex-col gap-2 pt-3 border-t border-gray-200">
+        <div className="flex gap-2">
+          <button
+            onClick={() => onPrint(order)}
+            className="flex-1 px-2 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-xs font-medium transition-colors flex items-center justify-center gap-1"
+            title="Lihat Struk"
+          >
+            <Eye size={14} />
+          </button>
+          <button
+            onClick={() => onDownloadPDF(order)}
+            className="flex-1 px-2 py-2 bg-red-50 hover:bg-red-100 text-red-700 rounded text-xs font-medium transition-colors flex items-center justify-center gap-1"
+            title="Download PDF"
+          >
+            <FileText size={14} /> PDF
+          </button>
+          <button
+            onClick={() => onShareWA(order)}
+            className="flex-1 px-2 py-2 bg-green-50 hover:bg-green-100 text-green-700 rounded text-xs font-medium transition-colors flex items-center justify-center gap-1"
+            title="Kirim Text WA"
+          >
+            <MessageCircle size={14} /> WA
+          </button>
+        </div>
+
+        {order.production_status !== "completed" ? (
           <button
             onClick={() => onMarkComplete(order.id)}
-            className="flex-1 px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded text-xs font-medium transition-colors"
+            className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-medium transition-colors flex items-center justify-center gap-2"
           >
-            ✓ Selesai
+            <CheckCircle size={14} /> Tandai Selesai
           </button>
-        )}
-        {order.production_status === "completed" && (
+        ) : (
           <button
             disabled
-            className="flex-1 px-3 py-2 bg-gray-300 text-gray-600 rounded text-xs font-medium cursor-not-allowed"
+            className="w-full px-3 py-2 bg-gray-100 text-gray-400 rounded text-xs font-medium cursor-not-allowed flex items-center justify-center gap-2 border border-gray-200"
           >
-            ✓ Selesai
+            <CheckCircle size={14} /> Selesai
           </button>
         )}
       </div>
@@ -358,9 +384,13 @@ export default function ProductionPage() {
     format(new Date(), "yyyy-MM-dd")
   );
   // Multi-select dates for Order tab (using Set for easy toggle)
-  const [selectedOrderDates, setSelectedOrderDates] = useState<Set<string>>(new Set());
+  const [selectedOrderDates, setSelectedOrderDates] = useState<Set<string>>(
+    new Set()
+  );
   // Multi-select dates for Production tab
-  const [selectedProductionDates, setSelectedProductionDates] = useState<Set<string>>(new Set());
+  const [selectedProductionDates, setSelectedProductionDates] = useState<
+    Set<string>
+  >(new Set());
   const [allOrders, setAllOrders] = useState<Order[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -382,55 +412,66 @@ export default function ProductionPage() {
   const [showAllDates, setShowAllDates] = useState(true); // Default to show all dates for orders tab
   const [showAllProductionDates, setShowAllProductionDates] = useState(true); // Default to show all dates for production tab
   // Sorting state for orders table
-  const [orderSortField, setOrderSortField] = useState<'id' | 'pelanggan' | 'status' | 'qty' | 'tanggal' | 'total'>('id');
-  const [orderSortDirection, setOrderSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [orderSortField, setOrderSortField] = useState<
+    "id" | "pelanggan" | "status" | "qty" | "tanggal" | "total"
+  >("id");
+  const [orderSortDirection, setOrderSortDirection] = useState<"asc" | "desc">(
+    "desc"
+  );
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
   const [isEditingOrder, setIsEditingOrder] = useState(false);
   const [editedOrder, setEditedOrder] = useState<Order | null>(null);
 
   useEffect(() => {
     fetchProductionList();
-  }, []);  // Remove dateRange dependency to always fetch all data
+  }, []); // Remove dateRange dependency to always fetch all data
 
   const fetchProductionList = async () => {
     setLoading(true);
     setError(null);
     try {
       // Fetch order groups from backend API
-      const response = await fetch('/api/orders/group');
+      const response = await fetch("/api/orders/group");
       const result = await response.json();
 
-      console.log('[Production] API Response:', result);
+      console.log("[Production] API Response:", result);
 
       // Backend returns { message: "Order retrieved", data: [...] } without status field
       // Check if we have data array (success case)
       if (Array.isArray(result.data)) {
         // Transform backend data to frontend Order format
         const transformedOrders = transformBackendData(result.data);
-        console.log('[Production] Transformed orders:', transformedOrders.length);
+        console.log(
+          "[Production] Transformed orders:",
+          transformedOrders.length
+        );
         setAllOrders(transformedOrders);
-        
+
         // Set orders to all paid/completed orders for production tracking
         // Production shows orders that are paid (ready for production) or completed
-        const productionOrders = transformedOrders.filter((order: Order) => 
-          order.status === "paid" || order.status === "completed"
+        const productionOrders = transformedOrders.filter(
+          (order: Order) =>
+            order.status === "paid" || order.status === "completed"
         );
-        console.log('[Production] Orders for production:', productionOrders.length);
+        console.log(
+          "[Production] Orders for production:",
+          productionOrders.length
+        );
         setOrders(productionOrders);
-      } else if (result.status === 'error') {
-        console.error('[Production] API error:', result.message);
-        setError(result.message || 'Gagal memuat data dari server');
+      } else if (result.status === "error") {
+        console.error("[Production] API error:", result.message);
+        setError(result.message || "Gagal memuat data dari server");
         setAllOrders([]);
         setOrders([]);
       } else {
-        console.error('[Production] Unexpected response format:', result);
-        setError('Format response tidak sesuai');
+        console.error("[Production] Unexpected response format:", result);
+        setError("Format response tidak sesuai");
         setAllOrders([]);
         setOrders([]);
       }
     } catch (err) {
-      console.error('[Production] Fetch error:', err);
-      setError('Gagal memuat data. Pastikan backend server berjalan.');
+      console.error("[Production] Fetch error:", err);
+      setError("Gagal memuat data. Pastikan backend server berjalan.");
       setAllOrders([]);
       setOrders([]);
     } finally {
@@ -438,10 +479,10 @@ export default function ProductionPage() {
     }
   };
 
-
   // Compute filtered production orders based on selected dates
   const filteredProductionOrders = orders.filter((order: Order) => {
-    if (showAllProductionDates || selectedProductionDates.size === 0) return true;
+    if (showAllProductionDates || selectedProductionDates.size === 0)
+      return true;
     const orderDate = order.scheduled_date
       ? order.scheduled_date.split("T")[0]
       : null;
@@ -519,14 +560,14 @@ export default function ProductionPage() {
         <div class="info">
           <div style="display: flex; justify-content: space-between;">
             <span>${new Date(order.created_at).toLocaleDateString(
-      "id-ID"
-    )}</span>
+              "id-ID"
+            )}</span>
             <span>Admin</span>
           </div>
           <div style="display: flex; justify-content: space-between;">
             <span>${new Date(order.created_at).toLocaleTimeString(
-      "id-ID"
-    )}</span>
+              "id-ID"
+            )}</span>
             <span>${order.user.nama.substring(0, 15)}</span>
           </div>
           <div>No. #${order.id}</div>
@@ -536,28 +577,29 @@ export default function ProductionPage() {
 
         <div class="items">
           ${order.order_products
-        .map((item) => {
-          const itemTotal = item.jumlah * item.harga_beli;
-          const addonsTotal =
-            item.addons?.reduce(
-              (sum, addon) => sum + (addon.quantity || 0) * addon.harga,
-              0
-            ) || 0;
-          const total = itemTotal + addonsTotal;
+            .map((item) => {
+              const itemTotal = item.jumlah * item.harga_beli;
+              const addonsTotal =
+                item.addons?.reduce(
+                  (sum, addon) => sum + (addon.quantity || 0) * addon.harga,
+                  0
+                ) || 0;
+              const total = itemTotal + addonsTotal;
 
-          return `
+              return `
             <div class="item">
               <div class="item-name">${item.product.nama}</div>
               <div class="item-details">
                 <span>${item.jumlah} x ${item.harga_beli.toLocaleString(
-            "id-ID"
-          )}</span>
+                "id-ID"
+              )}</span>
                 <span>Rp ${itemTotal.toLocaleString("id-ID")}</span>
               </div>
-              ${item.addons && item.addons.length > 0
-              ? item.addons
-                .map(
-                  (addon) => `
+              ${
+                item.addons && item.addons.length > 0
+                  ? item.addons
+                      .map(
+                        (addon) => `
                   <div class="item-details addon">
                     <span>+ ${addon.nama} (${addon.quantity || 0}x)</span>
                     <span>Rp ${(
@@ -565,44 +607,44 @@ export default function ProductionPage() {
                     ).toLocaleString("id-ID")}</span>
                   </div>
                 `
-                )
-                .join("")
-              : ""
-            }
+                      )
+                      .join("")
+                  : ""
+              }
             </div>
           `;
-        })
-        .join("")}
+            })
+            .join("")}
         </div>
 
         <div class="total-section">
           <div class="row">
             <span>Total</span>
             <span>Rp ${order.order_products
-        .reduce((sum, item) => {
-          const itemTotal = item.jumlah * item.harga_beli;
-          const addonsTotal =
-            item.addons?.reduce(
-              (s, a) => s + (a.quantity || 0) * a.harga,
-              0
-            ) || 0;
-          return sum + itemTotal + addonsTotal;
-        }, 0)
-        .toLocaleString("id-ID")}</span>
+              .reduce((sum, item) => {
+                const itemTotal = item.jumlah * item.harga_beli;
+                const addonsTotal =
+                  item.addons?.reduce(
+                    (s, a) => s + (a.quantity || 0) * a.harga,
+                    0
+                  ) || 0;
+                return sum + itemTotal + addonsTotal;
+              }, 0)
+              .toLocaleString("id-ID")}</span>
           </div>
           <div class="row">
             <span>Bayar (Cash)</span>
             <span>Rp ${order.order_products
-        .reduce((sum, item) => {
-          const itemTotal = item.jumlah * item.harga_beli;
-          const addonsTotal =
-            item.addons?.reduce(
-              (s, a) => s + (a.quantity || 0) * a.harga,
-              0
-            ) || 0;
-          return sum + itemTotal + addonsTotal;
-        }, 0)
-        .toLocaleString("id-ID")}</span>
+              .reduce((sum, item) => {
+                const itemTotal = item.jumlah * item.harga_beli;
+                const addonsTotal =
+                  item.addons?.reduce(
+                    (s, a) => s + (a.quantity || 0) * a.harga,
+                    0
+                  ) || 0;
+                return sum + itemTotal + addonsTotal;
+              }, 0)
+              .toLocaleString("id-ID")}</span>
           </div>
           <div class="row">
             <span>Kembali</span>
@@ -724,19 +766,26 @@ export default function ProductionPage() {
       <body>
         <div class="header">
           <h2>DAFTAR PRODUKSI</h2>
-          <p>Tanggal: ${showAllProductionDates || selectedProductionDates.size === 0 
-            ? 'Semua Tanggal' 
-            : Array.from(selectedProductionDates).sort().map(d => format(new Date(d), "dd MMM", { locale: idLocale })).join(", ")
+          <p>Tanggal: ${
+            showAllProductionDates || selectedProductionDates.size === 0
+              ? "Semua Tanggal"
+              : Array.from(selectedProductionDates)
+                  .sort()
+                  .map((d) =>
+                    format(new Date(d), "dd MMM", { locale: idLocale })
+                  )
+                  .join(", ")
           }</p>
           <p>Total ${filteredProductionOrders.length} Pesanan</p>
         </div>
 
-        ${generalNotes
-        ? `<div class="notes"><div class="notes-title">📌 CATATAN UMUM:</div>${generalNotes
-          .split("\\n")
-          .join("<br>")}</div>`
-        : ""
-      }
+        ${
+          generalNotes
+            ? `<div class="notes"><div class="notes-title">📌 CATATAN UMUM:</div>${generalNotes
+                .split("\\n")
+                .join("<br>")}</div>`
+            : ""
+        }
 
         <table>
           <thead>
@@ -750,29 +799,29 @@ export default function ProductionPage() {
           </thead>
           <tbody>
             ${allRows
-        .map((row) => {
-          const targetKey = row.product;
-          const target = productionTargets[targetKey] || row.totalQty;
+              .map((row) => {
+                const targetKey = row.product;
+                const target = productionTargets[targetKey] || row.totalQty;
 
-          // Count breakdown items: items without addons + number of different addons
-          const breakdownItems: Array<{ label: string; qty: number }> =
-            [];
-          if (row.withoutAddons > 0) {
-            breakdownItems.push({
-              label: "(tanpa addon)",
-              qty: row.withoutAddons,
-            });
-          }
-          row.addons.forEach((addon) => {
-            breakdownItems.push({
-              label: addon.nama,
-              qty: addon.quantity,
-            });
-          });
+                // Count breakdown items: items without addons + number of different addons
+                const breakdownItems: Array<{ label: string; qty: number }> =
+                  [];
+                if (row.withoutAddons > 0) {
+                  breakdownItems.push({
+                    label: "(tanpa addon)",
+                    qty: row.withoutAddons,
+                  });
+                }
+                row.addons.forEach((addon) => {
+                  breakdownItems.push({
+                    label: addon.nama,
+                    qty: addon.quantity,
+                  });
+                });
 
-          // If no breakdown items, just show product row
-          if (breakdownItems.length === 0) {
-            return `
+                // If no breakdown items, just show product row
+                if (breakdownItems.length === 0) {
+                  return `
                   <tr>
                     <td class="product-col"><strong>${row.product}</strong></td>
                     <td class="addon-col">-</td>
@@ -781,35 +830,39 @@ export default function ProductionPage() {
                     <td class="target-col">${target}</td>
                   </tr>
                 `;
-          }
+                }
 
-          // If has breakdown items, show product with first breakdown item, then remaining items
-          return `
+                // If has breakdown items, show product with first breakdown item, then remaining items
+                return `
                 <tr>
-                  <td class="product-col" rowspan="${breakdownItems.length
-            }"><strong>${row.product}</strong></td>
-                  <td class="addon-col"><span class="addon-item">└─ ${breakdownItems[0].label
-            }</span></td>
+                  <td class="product-col" rowspan="${
+                    breakdownItems.length
+                  }"><strong>${row.product}</strong></td>
+                  <td class="addon-col"><span class="addon-item">└─ ${
+                    breakdownItems[0].label
+                  }</span></td>
                   <td class="qty-col">${breakdownItems[0].qty}</td>
-                  <td class="qty-col" rowspan="${breakdownItems.length
-            }"><strong>${row.totalQty}</strong></td>
-                  <td class="target-col" rowspan="${breakdownItems.length
-            }"><strong>${target}</strong></td>
+                  <td class="qty-col" rowspan="${
+                    breakdownItems.length
+                  }"><strong>${row.totalQty}</strong></td>
+                  <td class="target-col" rowspan="${
+                    breakdownItems.length
+                  }"><strong>${target}</strong></td>
                 </tr>
                 ${breakdownItems
-              .slice(1)
-              .map(
-                (item) => `
+                  .slice(1)
+                  .map(
+                    (item) => `
                   <tr class="addon-row">
                     <td class="addon-col"><span class="addon-item">└─ ${item.label}</span></td>
                     <td class="qty-col">${item.qty}</td>
                   </tr>
                 `
-              )
-              .join("")}
+                  )
+                  .join("")}
               `;
-        })
-        .join("")}
+              })
+              .join("")}
           </tbody>
         </table>
       </body>
@@ -964,7 +1017,7 @@ export default function ProductionPage() {
   // Handle date toggle for Orders tab (click to add/remove date)
   const handleOrderDateClick = (dateStr: string) => {
     setShowAllDates(false);
-    setSelectedOrderDates(prev => {
+    setSelectedOrderDates((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(dateStr)) {
         newSet.delete(dateStr);
@@ -986,7 +1039,7 @@ export default function ProductionPage() {
   // Handle date toggle for Production tab
   const handleProductionDateClick = (dateStr: string) => {
     setShowAllProductionDates(false);
-    setSelectedProductionDates(prev => {
+    setSelectedProductionDates((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(dateStr)) {
         newSet.delete(dateStr);
@@ -1005,6 +1058,166 @@ export default function ProductionPage() {
     });
   };
 
+  const handleDownloadPDF = (order: Order) => {
+    const doc = new jsPDF();
+
+    // Header
+    doc.setFontSize(16);
+    doc.text("BAKESMART", 105, 15, { align: "center" });
+    doc.setFontSize(10);
+    doc.text("Bukti Pemesanan", 105, 20, { align: "center" });
+
+    // Info Left
+    doc.setFontSize(9);
+    doc.text(`No. Order: #${order.id}`, 15, 30);
+    doc.text(
+      `Tanggal: ${format(new Date(order.created_at), "dd MMM yyyy HH:mm", {
+        locale: idLocale,
+      })}`,
+      15,
+      35
+    );
+    doc.text(
+      `Jadwal: ${format(
+        new Date(order.scheduled_date || new Date()),
+        "dd MMM yyyy",
+        { locale: idLocale }
+      )}`,
+      15,
+      40
+    );
+
+    // Info Right
+    doc.text(`Customer: ${order.user.nama}`, 140, 30);
+    doc.text(`No. HP: ${order.user.no_hp}`, 140, 35);
+
+    // Table
+    const tableColumn = ["Produk", "Qty", "Harga", "Total"];
+    const tableRows: any[] = [];
+
+    order.order_products.forEach((item) => {
+      const total = item.jumlah * item.harga_beli;
+      tableRows.push([
+        item.product.nama,
+        item.jumlah,
+        `Rp ${item.harga_beli.toLocaleString("id-ID")}`,
+        `Rp ${total.toLocaleString("id-ID")}`,
+      ]);
+
+      // Addons
+      if (item.addons && item.addons.length > 0) {
+        item.addons.forEach((addon) => {
+          const addonTotal = (addon.quantity || 0) * addon.harga;
+          tableRows.push([
+            `+ ${addon.nama}`,
+            addon.quantity || 0,
+            `Rp ${addon.harga.toLocaleString("id-ID")}`,
+            `Rp ${addonTotal.toLocaleString("id-ID")}`,
+          ]);
+        });
+      }
+    });
+
+    // Calculate Total
+    const grandTotal = order.order_products.reduce((sum, item) => {
+      const itemTotal = item.jumlah * item.harga_beli;
+      const addonTotal =
+        item.addons?.reduce((s, a) => s + (a.quantity || 0) * a.harga, 0) || 0;
+      return sum + itemTotal + addonTotal;
+    }, 0);
+
+    tableRows.push([
+      "",
+      "",
+      "TOTAL",
+      `Rp ${grandTotal.toLocaleString("id-ID")}`,
+    ]);
+
+    autoTable(doc, {
+      head: [tableColumn],
+      body: tableRows,
+      startY: 50,
+      theme: "grid",
+      styles: { fontSize: 8, cellPadding: 2 },
+      headStyles: { fillColor: [66, 66, 66], textColor: 255 },
+      columnStyles: {
+        0: { cellWidth: 80 },
+        1: { halign: "center" },
+        2: { halign: "right" },
+        3: { halign: "right", fontStyle: "bold" },
+      },
+    });
+
+    let finalY = (doc as any).lastAutoTable.finalY || 50;
+
+    // Notes
+    if (order.notes) {
+      finalY += 10;
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "bold");
+      doc.text("Catatan:", 15, finalY);
+      doc.setFont("helvetica", "normal");
+      doc.text(order.notes, 15, finalY + 5);
+      finalY += 10;
+    }
+
+    // Footer
+    finalY += 10;
+    doc.setFontSize(8);
+    doc.setTextColor(100);
+    doc.text("Terima kasih telah berbelanja di Bakesmart!", 105, finalY, {
+      align: "center",
+    });
+
+    doc.save(`Struk-Order-${order.id}.pdf`);
+  };
+
+  const handleShareWA = (order: Order) => {
+    const totalItems = order.order_products.reduce(
+      (sum, item) => sum + item.jumlah,
+      0
+    );
+    const totalPrice = order.order_products.reduce((sum, item) => {
+      const baseTotal = item.jumlah * item.harga_beli;
+      const addonTotal =
+        item.addons?.reduce(
+          (addSum, addon) => addSum + (addon.quantity || 0) * addon.harga,
+          0
+        ) || 0;
+      return sum + baseTotal + addonTotal;
+    }, 0);
+
+    const message =
+      `Halo Kak ${order.user.nama}, ini detail pesananmu ya:\n\n` +
+      `*Struk Pesanan #${order.id}*\n` +
+      `Tanggal: ${format(new Date(order.created_at), "dd MMM yyyy", {
+        locale: idLocale,
+      })}\n\n` +
+      `*Detail Produk:*\n` +
+      order.order_products
+        .map(
+          (p) =>
+            `- ${p.product.nama} (${
+              p.jumlah
+            }x) @ Rp${p.harga_beli.toLocaleString("id-ID")}` +
+            (p.addons && p.addons.length > 0
+              ? "\n" +
+                p.addons.map((a) => `  + ${a.nama} (${a.quantity}x)`).join("\n")
+              : "")
+        )
+        .join("\n") +
+      `\n\n*Total: Rp ${totalPrice.toLocaleString("id-ID")}*\n` +
+      `\nSimpan struk ini sebagai bukti pesanan ya, terima kasih!`;
+
+    window.open(
+      `https://wa.me/62${order.user.no_hp.replace(
+        /^0/,
+        ""
+      )}?text=${encodeURIComponent(message)}`,
+      "_blank"
+    );
+  };
+
   // Helper function to check if order date matches selected dates
   const isOrderDateSelected = (orderDate: string | null): boolean => {
     if (showAllDates || selectedOrderDates.size === 0) return true;
@@ -1013,20 +1226,44 @@ export default function ProductionPage() {
 
   const groupedOrders = {
     verifying: allOrders.filter((o) => {
-      const orderDate = o.scheduled_date ? o.scheduled_date.split("T")[0] : null;
+      const orderDate = o.scheduled_date
+        ? o.scheduled_date.split("T")[0]
+        : null;
       return isOrderDateSelected(orderDate) && o.status === "verifying";
     }),
     pending: allOrders.filter((o) => {
-      const orderDate = o.scheduled_date ? o.scheduled_date.split("T")[0] : null;
+      const orderDate = o.scheduled_date
+        ? o.scheduled_date.split("T")[0]
+        : null;
       return isOrderDateSelected(orderDate) && o.status === "pending";
     }),
+    ongoing: allOrders.filter((o) => {
+      const orderDate = o.scheduled_date
+        ? o.scheduled_date.split("T")[0]
+        : null;
+      // Map 'ongoing' or 'in_production' to ongoing group if backend returns different strings
+      return (
+        isOrderDateSelected(orderDate) &&
+        (o.status === "ongoing" || o.status === "in_production")
+      );
+    }),
     paid: allOrders.filter((o) => {
-      const orderDate = o.scheduled_date ? o.scheduled_date.split("T")[0] : null;
+      const orderDate = o.scheduled_date
+        ? o.scheduled_date.split("T")[0]
+        : null;
       return isOrderDateSelected(orderDate) && o.status === "paid";
     }),
     completed: allOrders.filter((o) => {
-      const orderDate = o.scheduled_date ? o.scheduled_date.split("T")[0] : null;
+      const orderDate = o.scheduled_date
+        ? o.scheduled_date.split("T")[0]
+        : null;
       return isOrderDateSelected(orderDate) && o.status === "completed";
+    }),
+    cancelled: allOrders.filter((o) => {
+      const orderDate = o.scheduled_date
+        ? o.scheduled_date.split("T")[0]
+        : null;
+      return isOrderDateSelected(orderDate) && o.status === "cancelled";
     }),
   };
 
@@ -1043,19 +1280,21 @@ export default function ProductionPage() {
       <div className="flex gap-1 border-b border-gray-200">
         <button
           onClick={() => setActiveTab("orders")}
-          className={`px-4 py-2 text-sm font-medium transition-colors flex items-center gap-2 ${activeTab === "orders"
-            ? "border-b-2 border-[#9B6D49] text-[#9B6D49] -mb-px"
-            : "text-gray-500 hover:text-gray-700"
-            }`}
+          className={`px-4 py-2 text-sm font-medium transition-colors flex items-center gap-2 ${
+            activeTab === "orders"
+              ? "border-b-2 border-[#9B6D49] text-[#9B6D49] -mb-px"
+              : "text-gray-500 hover:text-gray-700"
+          }`}
         >
           <ClipboardList size={16} /> Kelola Order
         </button>
         <button
           onClick={() => setActiveTab("production")}
-          className={`px-4 py-2 text-sm font-medium transition-colors flex items-center gap-2 ${activeTab === "production"
-            ? "border-b-2 border-[#9B6D49] text-[#9B6D49] -mb-px"
-            : "text-gray-500 hover:text-gray-700"
-            }`}
+          className={`px-4 py-2 text-sm font-medium transition-colors flex items-center gap-2 ${
+            activeTab === "production"
+              ? "border-b-2 border-[#9B6D49] text-[#9B6D49] -mb-px"
+              : "text-gray-500 hover:text-gray-700"
+          }`}
         >
           <ChefHat size={16} /> Daftar Produksi
         </button>
@@ -1085,7 +1324,8 @@ export default function ProductionPage() {
                     locale: idLocale,
                   });
                   const dayNum = format(currentDate, "d");
-                  const isSelected = selectedOrderDates.has(dateStr) && !showAllDates;
+                  const isSelected =
+                    selectedOrderDates.has(dateStr) && !showAllDates;
 
                   return (
                     <button
@@ -1098,11 +1338,13 @@ export default function ProductionPage() {
                       }`}
                     >
                       {/* Checkbox indicator */}
-                      <div className={`absolute -top-1 -right-1 w-4 h-4 rounded border-2 flex items-center justify-center text-[9px] ${
-                        isSelected 
-                          ? "bg-[#9B6D49] border-[#9B6D49] text-white" 
-                          : "bg-white border-gray-300"
-                      }`}>
+                      <div
+                        className={`absolute -top-1 -right-1 w-4 h-4 rounded border-2 flex items-center justify-center text-[9px] ${
+                          isSelected
+                            ? "bg-[#9B6D49] border-[#9B6D49] text-white"
+                            : "bg-white border-gray-300"
+                        }`}
+                      >
                         {isSelected && "✓"}
                       </div>
                       <div className="text-xs font-bold">{dayName}</div>
@@ -1120,7 +1362,11 @@ export default function ProductionPage() {
                   setShowAllDates(true);
                   setSelectedOrderDates(new Set());
                 }}
-                className={`px-3 py-2 border rounded font-medium ${showAllDates ? 'bg-[#9B6D49] text-white border-[#9B6D49]' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'}`}
+                className={`px-3 py-2 border rounded font-medium ${
+                  showAllDates
+                    ? "bg-[#9B6D49] text-white border-[#9B6D49]"
+                    : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
+                }`}
               >
                 Semua
               </button>
@@ -1130,7 +1376,13 @@ export default function ProductionPage() {
                   setSelectedOrderDates(new Set([today]));
                   setShowAllDates(false);
                 }}
-                className={`px-3 py-2 border rounded font-medium ${!showAllDates && selectedOrderDates.size === 1 && selectedOrderDates.has(format(new Date(), "yyyy-MM-dd")) ? 'bg-[#9B6D49] text-white border-[#9B6D49]' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'}`}
+                className={`px-3 py-2 border rounded font-medium ${
+                  !showAllDates &&
+                  selectedOrderDates.size === 1 &&
+                  selectedOrderDates.has(format(new Date(), "yyyy-MM-dd"))
+                    ? "bg-[#9B6D49] text-white border-[#9B6D49]"
+                    : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
+                }`}
               >
                 Hari Ini
               </button>
@@ -1139,12 +1391,23 @@ export default function ProductionPage() {
                   // Select all 7 days
                   const dates = new Set<string>();
                   for (let i = 0; i < 7; i++) {
-                    dates.add(format(new Date(new Date().getTime() + i * 24 * 60 * 60 * 1000), "yyyy-MM-dd"));
+                    dates.add(
+                      format(
+                        new Date(
+                          new Date().getTime() + i * 24 * 60 * 60 * 1000
+                        ),
+                        "yyyy-MM-dd"
+                      )
+                    );
                   }
                   setSelectedOrderDates(dates);
                   setShowAllDates(false);
                 }}
-                className={`px-3 py-2 border rounded font-medium ${!showAllDates && selectedOrderDates.size === 7 ? 'bg-[#9B6D49] text-white border-[#9B6D49]' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'}`}
+                className={`px-3 py-2 border rounded font-medium ${
+                  !showAllDates && selectedOrderDates.size === 7
+                    ? "bg-[#9B6D49] text-white border-[#9B6D49]"
+                    : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
+                }`}
               >
                 7 Hari
               </button>
@@ -1154,10 +1417,10 @@ export default function ProductionPage() {
                 className="px-3 py-2 text-sm border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-[#9B6D49] bg-white text-gray-700 font-medium"
               >
                 <option value="all">Semua Status</option>
-                <option value="verifying">Verifikasi</option>
-                <option value="pending">Menunggu Bayar</option>
-                <option value="paid">Dibayar</option>
-                <option value="completed">Selesai</option>
+                <option value="pending">Pending</option>
+                <option value="ongoing">Ongoing</option>
+                <option value="completed">Completed</option>
+                <option value="cancelled">Cancelled</option>
               </select>
               <input
                 type="date"
@@ -1170,13 +1433,14 @@ export default function ProductionPage() {
                 className="px-3 py-2 text-sm border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-[#9B6D49] font-medium"
               />
               <span className="text-gray-400 ml-auto">
-                {showAllDates || selectedOrderDates.size === 0 ? (
-                  "Semua Tanggal"
-                ) : (
-                  Array.from(selectedOrderDates).sort().map(d => 
-                    format(new Date(d), "d MMM", { locale: idLocale })
-                  ).join(", ")
-                )}
+                {showAllDates || selectedOrderDates.size === 0
+                  ? "Semua Tanggal"
+                  : Array.from(selectedOrderDates)
+                      .sort()
+                      .map((d) =>
+                        format(new Date(d), "d MMM", { locale: idLocale })
+                      )
+                      .join(", ")}
               </span>
             </div>
           </div>
@@ -1246,121 +1510,157 @@ export default function ProductionPage() {
               <table className="w-full">
                 <thead>
                   <tr className="bg-gray-50 border-b border-gray-200">
-                    <th 
+                    <th
                       className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
                       onClick={() => {
-                        if (orderSortField === 'id') {
-                          setOrderSortDirection(orderSortDirection === 'asc' ? 'desc' : 'asc');
+                        if (orderSortField === "id") {
+                          setOrderSortDirection(
+                            orderSortDirection === "asc" ? "desc" : "asc"
+                          );
                         } else {
-                          setOrderSortField('id');
-                          setOrderSortDirection('desc');
+                          setOrderSortField("id");
+                          setOrderSortDirection("desc");
                         }
                       }}
                     >
                       <div className="flex items-center gap-1">
                         ID
-                        {orderSortField === 'id' ? (
-                          orderSortDirection === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />
+                        {orderSortField === "id" ? (
+                          orderSortDirection === "asc" ? (
+                            <ChevronUp size={14} />
+                          ) : (
+                            <ChevronDown size={14} />
+                          )
                         ) : (
                           <ArrowUpDown size={14} className="text-gray-400" />
                         )}
                       </div>
                     </th>
-                    <th 
+                    <th
                       className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
                       onClick={() => {
-                        if (orderSortField === 'pelanggan') {
-                          setOrderSortDirection(orderSortDirection === 'asc' ? 'desc' : 'asc');
+                        if (orderSortField === "pelanggan") {
+                          setOrderSortDirection(
+                            orderSortDirection === "asc" ? "desc" : "asc"
+                          );
                         } else {
-                          setOrderSortField('pelanggan');
-                          setOrderSortDirection('asc');
+                          setOrderSortField("pelanggan");
+                          setOrderSortDirection("asc");
                         }
                       }}
                     >
                       <div className="flex items-center gap-1">
                         Pelanggan
-                        {orderSortField === 'pelanggan' ? (
-                          orderSortDirection === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />
+                        {orderSortField === "pelanggan" ? (
+                          orderSortDirection === "asc" ? (
+                            <ChevronUp size={14} />
+                          ) : (
+                            <ChevronDown size={14} />
+                          )
                         ) : (
                           <ArrowUpDown size={14} className="text-gray-400" />
                         )}
                       </div>
                     </th>
-                    <th 
+                    <th
                       className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
                       onClick={() => {
-                        if (orderSortField === 'status') {
-                          setOrderSortDirection(orderSortDirection === 'asc' ? 'desc' : 'asc');
+                        if (orderSortField === "status") {
+                          setOrderSortDirection(
+                            orderSortDirection === "asc" ? "desc" : "asc"
+                          );
                         } else {
-                          setOrderSortField('status');
-                          setOrderSortDirection('asc');
+                          setOrderSortField("status");
+                          setOrderSortDirection("asc");
                         }
                       }}
                     >
                       <div className="flex items-center gap-1">
                         Status
-                        {orderSortField === 'status' ? (
-                          orderSortDirection === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />
+                        {orderSortField === "status" ? (
+                          orderSortDirection === "asc" ? (
+                            <ChevronUp size={14} />
+                          ) : (
+                            <ChevronDown size={14} />
+                          )
                         ) : (
                           <ArrowUpDown size={14} className="text-gray-400" />
                         )}
                       </div>
                     </th>
-                    <th 
+                    <th
                       className="px-4 py-3 text-center text-xs font-bold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
                       onClick={() => {
-                        if (orderSortField === 'qty') {
-                          setOrderSortDirection(orderSortDirection === 'asc' ? 'desc' : 'asc');
+                        if (orderSortField === "qty") {
+                          setOrderSortDirection(
+                            orderSortDirection === "asc" ? "desc" : "asc"
+                          );
                         } else {
-                          setOrderSortField('qty');
-                          setOrderSortDirection('desc');
+                          setOrderSortField("qty");
+                          setOrderSortDirection("desc");
                         }
                       }}
                     >
                       <div className="flex items-center justify-center gap-1">
                         Qty
-                        {orderSortField === 'qty' ? (
-                          orderSortDirection === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />
+                        {orderSortField === "qty" ? (
+                          orderSortDirection === "asc" ? (
+                            <ChevronUp size={14} />
+                          ) : (
+                            <ChevronDown size={14} />
+                          )
                         ) : (
                           <ArrowUpDown size={14} className="text-gray-400" />
                         )}
                       </div>
                     </th>
-                    <th 
+                    <th
                       className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
                       onClick={() => {
-                        if (orderSortField === 'tanggal') {
-                          setOrderSortDirection(orderSortDirection === 'asc' ? 'desc' : 'asc');
+                        if (orderSortField === "tanggal") {
+                          setOrderSortDirection(
+                            orderSortDirection === "asc" ? "desc" : "asc"
+                          );
                         } else {
-                          setOrderSortField('tanggal');
-                          setOrderSortDirection('desc');
+                          setOrderSortField("tanggal");
+                          setOrderSortDirection("desc");
                         }
                       }}
                     >
                       <div className="flex items-center gap-1">
                         Tanggal
-                        {orderSortField === 'tanggal' ? (
-                          orderSortDirection === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />
+                        {orderSortField === "tanggal" ? (
+                          orderSortDirection === "asc" ? (
+                            <ChevronUp size={14} />
+                          ) : (
+                            <ChevronDown size={14} />
+                          )
                         ) : (
                           <ArrowUpDown size={14} className="text-gray-400" />
                         )}
                       </div>
                     </th>
-                    <th 
+                    <th
                       className="px-4 py-3 text-right text-xs font-bold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
                       onClick={() => {
-                        if (orderSortField === 'total') {
-                          setOrderSortDirection(orderSortDirection === 'asc' ? 'desc' : 'asc');
+                        if (orderSortField === "total") {
+                          setOrderSortDirection(
+                            orderSortDirection === "asc" ? "desc" : "asc"
+                          );
                         } else {
-                          setOrderSortField('total');
-                          setOrderSortDirection('desc');
+                          setOrderSortField("total");
+                          setOrderSortDirection("desc");
                         }
                       }}
                     >
                       <div className="flex items-center justify-end gap-1">
                         Total
-                        {orderSortField === 'total' ? (
-                          orderSortDirection === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />
+                        {orderSortField === "total" ? (
+                          orderSortDirection === "asc" ? (
+                            <ChevronUp size={14} />
+                          ) : (
+                            <ChevronDown size={14} />
+                          )
                         ) : (
                           <ArrowUpDown size={14} className="text-gray-400" />
                         )}
@@ -1382,6 +1682,10 @@ export default function ProductionPage() {
                         ...o,
                         type: "pending" as const,
                       })),
+                      ...groupedOrders.ongoing.map((o) => ({
+                        ...o,
+                        type: "ongoing" as const,
+                      })),
                       ...groupedOrders.paid.map((o) => ({
                         ...o,
                         type: "paid" as const,
@@ -1389,6 +1693,10 @@ export default function ProductionPage() {
                       ...groupedOrders.completed.map((o) => ({
                         ...o,
                         type: "completed" as const,
+                      })),
+                      ...groupedOrders.cancelled.map((o) => ({
+                        ...o,
+                        type: "cancelled" as const,
                       })),
                     ].filter(
                       (o) =>
@@ -1411,40 +1719,66 @@ export default function ProductionPage() {
 
                     // Sorting logic
                     const sortedOrders = [...allOrdersList].sort((a, b) => {
-                      const statusOrder = { verifying: 0, pending: 1, paid: 2, completed: 3 };
+                      const statusOrder = {
+                        verifying: 0,
+                        pending: 1,
+                        ongoing: 2,
+                        paid: 3,
+                        completed: 4,
+                        cancelled: 5,
+                      };
                       let comparison = 0;
-                      
-                      const aTotalItems = a.order_products.reduce((sum, p) => sum + p.jumlah, 0);
-                      const bTotalItems = b.order_products.reduce((sum, p) => sum + p.jumlah, 0);
-                      const aTotalPrice = a.order_products.reduce((sum, p) => sum + p.jumlah * p.harga_beli, 0);
-                      const bTotalPrice = b.order_products.reduce((sum, p) => sum + p.jumlah * p.harga_beli, 0);
-                      
+
+                      const aTotalItems = a.order_products.reduce(
+                        (sum, p) => sum + p.jumlah,
+                        0
+                      );
+                      const bTotalItems = b.order_products.reduce(
+                        (sum, p) => sum + p.jumlah,
+                        0
+                      );
+                      const aTotalPrice = a.order_products.reduce(
+                        (sum, p) => sum + p.jumlah * p.harga_beli,
+                        0
+                      );
+                      const bTotalPrice = b.order_products.reduce(
+                        (sum, p) => sum + p.jumlah * p.harga_beli,
+                        0
+                      );
+
                       switch (orderSortField) {
-                        case 'id':
+                        case "id":
                           comparison = a.id - b.id;
                           break;
-                        case 'pelanggan':
+                        case "pelanggan":
                           comparison = a.user.nama.localeCompare(b.user.nama);
                           break;
-                        case 'status':
-                          comparison = statusOrder[a.type] - statusOrder[b.type];
+                        case "status":
+                          comparison =
+                            statusOrder[a.type] - statusOrder[b.type];
                           break;
-                        case 'qty':
+                        case "qty":
                           comparison = aTotalItems - bTotalItems;
                           break;
-                        case 'tanggal':
-                          const dateA = new Date(a.scheduled_date || a.created_at).getTime();
-                          const dateB = new Date(b.scheduled_date || b.created_at).getTime();
+                        case "tanggal":
+                          const dateA = new Date(
+                            a.scheduled_date || a.created_at
+                          ).getTime();
+                          const dateB = new Date(
+                            b.scheduled_date || b.created_at
+                          ).getTime();
                           comparison = dateA - dateB;
                           break;
-                        case 'total':
+                        case "total":
                           comparison = aTotalPrice - bTotalPrice;
                           break;
                         default:
                           comparison = 0;
                       }
-                      
-                      return orderSortDirection === 'asc' ? comparison : -comparison;
+
+                      return orderSortDirection === "asc"
+                        ? comparison
+                        : -comparison;
                     });
 
                     return sortedOrders.map((order) => {
@@ -1461,6 +1795,12 @@ export default function ProductionPage() {
                           bgColor: "bg-yellow-100",
                           textColor: "text-yellow-800",
                         },
+                        ongoing: {
+                          label: "Proses",
+                          icon: <Flame size={14} className="mr-1" />,
+                          bgColor: "bg-indigo-100",
+                          textColor: "text-indigo-800",
+                        },
                         paid: {
                           label: "Dibayar",
                           icon: <CreditCard size={14} className="mr-1" />,
@@ -1472,6 +1812,12 @@ export default function ProductionPage() {
                           icon: <CheckCircle size={14} className="mr-1" />,
                           bgColor: "bg-green-100",
                           textColor: "text-green-800",
+                        },
+                        cancelled: {
+                          label: "Dibatalkan",
+                          icon: <X size={14} className="mr-1" />,
+                          bgColor: "bg-red-100",
+                          textColor: "text-red-800",
                         },
                       };
                       const config = statusConfig[order.type];
@@ -1532,78 +1878,107 @@ export default function ProductionPage() {
                                   setIsEditingOrder(false);
                                 }}
                                 className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
-                                title={
-                                  order.type === "verifying" ? "Edit" : "Lihat"
-                                }
+                                title="Lihat/Edit"
                               >
                                 <Eye className="w-4 h-4 lg:w-5 lg:h-5" />
                               </button>
-                              {order.type === "verifying" && (
-                                <>
-                                  <button
-                                    onClick={() => handleApproveOrder(order.id)}
-                                    className="p-2 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition-colors"
-                                    title="Terima"
-                                  >
-                                    <CheckCircle className="w-4 h-4 lg:w-5 lg:h-5" />
-                                  </button>
-                                  <button
-                                    onClick={() => handleRejectOrder(order.id)}
-                                    className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
-                                    title="Tolak"
-                                  >
-                                    <XCircle className="w-4 h-4 lg:w-5 lg:h-5" />
-                                  </button>
-                                </>
-                              )}
-                              {order.type === "pending" && (
-                                <button
-                                  onClick={() => handleVerifyPayment(order.id)}
-                                  className="p-2 rounded-lg bg-orange-50 text-orange-600 hover:bg-orange-100 transition-colors"
-                                  title="Verifikasi Pembayaran"
+
+                              {/* Status Dropdown */}
+                              <div className="relative group">
+                                <select
+                                  value={order.type}
+                                  onClick={(e) => e.stopPropagation()}
+                                  onChange={async (e) => {
+                                    const newStatus = e.target.value;
+                                    const orderId = order.id;
+
+                                    try {
+                                      // Using generic status update endpoint
+                                      const response = await fetch(
+                                        `/api/orders/${orderId}/status`,
+                                        {
+                                          method: "PUT",
+                                          headers: {
+                                            "Content-Type": "application/json",
+                                          },
+                                          body: JSON.stringify({
+                                            status: newStatus,
+                                          }),
+                                        }
+                                      );
+
+                                      if (response.ok) {
+                                        // Refresh orders locally
+                                        const updatedOrders = orders.map((o) =>
+                                          o.id === orderId
+                                            ? { ...o, status: newStatus }
+                                            : o
+                                        );
+                                        const updatedAllOrders = allOrders.map(
+                                          (o) =>
+                                            o.id === orderId
+                                              ? { ...o, status: newStatus }
+                                              : o
+                                        );
+                                        setOrders(updatedOrders as any);
+                                        setAllOrders(updatedAllOrders as any);
+                                      } else {
+                                        console.error(
+                                          "Failed to update status manually"
+                                        );
+                                      }
+                                    } catch (err) {
+                                      console.error(
+                                        "Error updating status:",
+                                        err
+                                      );
+                                    }
+                                  }}
+                                  className={`appearance-none pl-2 pr-6 py-2 rounded-lg text-xs font-medium cursor-pointer focus:outline-none transition-colors border ${config.bgColor} ${config.textColor} border-transparent hover:border-current`}
+                                  style={{
+                                    minWidth: "100px",
+                                    textAlign: "center",
+                                  }}
                                 >
-                                  <Wallet className="w-4 h-4 lg:w-5 lg:h-5" />
-                                </button>
-                              )}
-                              {order.type === "paid" && (
-                                <button
-                                  onClick={() => handleCompleteOrder(order.id)}
-                                  className="p-2 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 transition-colors"
-                                  title="Selesai / Kirim"
-                                >
-                                  <PackageCheck className="w-4 h-4 lg:w-5 lg:h-5" />
-                                </button>
-                              )}
-                              {order.type === "completed" && (
-                                <span className="p-2 inline-flex items-center justify-center bg-gray-50 text-gray-400 rounded-lg">
-                                  <CheckCircle className="w-4 h-4 lg:w-5 lg:h-5" />
-                                </span>
-                              )}
+                                  <option value="pending">⏳ Pending</option>
+                                  <option value="ongoing">🔥 Ongoing</option>
+                                  <option value="completed">
+                                    ✅ Completed
+                                  </option>
+                                  <option value="cancelled">
+                                    ❌ Cancelled
+                                  </option>
+                                </select>
+                                <div className="absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none text-current opacity-50">
+                                  <ChevronDown size={12} />
+                                </div>
+                              </div>
+
                               <a
                                 href={`https://wa.me/62${order.user.no_hp.replace(
                                   /^0/,
                                   ""
                                 )}?text=${encodeURIComponent(
                                   `Halo Kak ${order.user.nama}, berikut detail pesanan Anda:\n\n` +
-                                  `*Pesanan #${order.id}*\n` +
-                                  `Jadwal: ${format(
-                                    new Date(
-                                      order.scheduled_date || order.created_at
-                                    ),
-                                    "dd MMM yyyy",
-                                    { locale: idLocale }
-                                  )}\n\n` +
-                                  `*Rincian Produk:*\n` +
-                                  order.order_products
-                                    .map(
-                                      (p) =>
-                                        `- ${p.product.nama} (${p.jumlah}x)`
-                                    )
-                                    .join("\n") +
-                                  `\n\n*Total: Rp ${totalPrice.toLocaleString(
-                                    "id-ID"
-                                  )}*\n\n` +
-                                  `Mohon ditunggu updatenya ya kak! Terima kasih`
+                                    `*Pesanan #${order.id}*\n` +
+                                    `Jadwal: ${format(
+                                      new Date(
+                                        order.scheduled_date || order.created_at
+                                      ),
+                                      "dd MMM yyyy",
+                                      { locale: idLocale }
+                                    )}\n\n` +
+                                    `*Rincian Produk:*\n` +
+                                    order.order_products
+                                      .map(
+                                        (p) =>
+                                          `- ${p.product.nama} (${p.jumlah}x)`
+                                      )
+                                      .join("\n") +
+                                    `\n\n*Total: Rp ${totalPrice.toLocaleString(
+                                      "id-ID"
+                                    )}*\n\n` +
+                                    `Mohon ditunggu updatenya ya kak! Terima kasih`
                                 )}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
@@ -1634,11 +2009,12 @@ export default function ProductionPage() {
               <div className="mb-2">
                 <h3 className="text-sm font-bold text-gray-900 mb-2 flex items-center gap-2">
                   <Calendar size={16} /> Jadwal
-                  {selectedProductionDates.size > 0 && !showAllProductionDates && (
-                    <span className="text-[10px] text-gray-500 font-normal ml-2">
-                      ({selectedProductionDates.size}/7 tanggal dipilih)
-                    </span>
-                  )}
+                  {selectedProductionDates.size > 0 &&
+                    !showAllProductionDates && (
+                      <span className="text-[10px] text-gray-500 font-normal ml-2">
+                        ({selectedProductionDates.size}/7 tanggal dipilih)
+                      </span>
+                    )}
                 </h3>
                 <div className="flex gap-1.5 flex-wrap">
                   {Array.from({ length: 7 }).map((_, i) => {
@@ -1650,7 +2026,9 @@ export default function ProductionPage() {
                       locale: idLocale,
                     });
                     const dayNum = format(currentDate, "d");
-                    const isSelected = selectedProductionDates.has(dateStr) && !showAllProductionDates;
+                    const isSelected =
+                      selectedProductionDates.has(dateStr) &&
+                      !showAllProductionDates;
 
                     return (
                       <button
@@ -1663,11 +2041,13 @@ export default function ProductionPage() {
                         }`}
                       >
                         {/* Checkbox indicator */}
-                        <div className={`absolute -top-1 -right-1 w-4 h-4 rounded border-2 flex items-center justify-center text-[9px] ${
-                          isSelected 
-                            ? "bg-[#9B6D49] border-[#9B6D49] text-white" 
-                            : "bg-white border-gray-300"
-                        }`}>
+                        <div
+                          className={`absolute -top-1 -right-1 w-4 h-4 rounded border-2 flex items-center justify-center text-[9px] ${
+                            isSelected
+                              ? "bg-[#9B6D49] border-[#9B6D49] text-white"
+                              : "bg-white border-gray-300"
+                          }`}
+                        >
                           {isSelected && "✓"}
                         </div>
                         <div className="text-xs font-bold">{dayName}</div>
@@ -1685,7 +2065,11 @@ export default function ProductionPage() {
                     setShowAllProductionDates(true);
                     setSelectedProductionDates(new Set());
                   }}
-                  className={`px-3 py-2 border rounded font-medium ${showAllProductionDates ? 'bg-[#9B6D49] text-white border-[#9B6D49]' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'}`}
+                  className={`px-3 py-2 border rounded font-medium ${
+                    showAllProductionDates
+                      ? "bg-[#9B6D49] text-white border-[#9B6D49]"
+                      : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
+                  }`}
                 >
                   Semua
                 </button>
@@ -1695,7 +2079,15 @@ export default function ProductionPage() {
                     setSelectedProductionDates(new Set([today]));
                     setShowAllProductionDates(false);
                   }}
-                  className={`px-3 py-2 border rounded font-medium ${!showAllProductionDates && selectedProductionDates.size === 1 && selectedProductionDates.has(format(new Date(), "yyyy-MM-dd")) ? 'bg-[#9B6D49] text-white border-[#9B6D49]' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'}`}
+                  className={`px-3 py-2 border rounded font-medium ${
+                    !showAllProductionDates &&
+                    selectedProductionDates.size === 1 &&
+                    selectedProductionDates.has(
+                      format(new Date(), "yyyy-MM-dd")
+                    )
+                      ? "bg-[#9B6D49] text-white border-[#9B6D49]"
+                      : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
+                  }`}
                 >
                   Hari Ini
                 </button>
@@ -1704,12 +2096,24 @@ export default function ProductionPage() {
                     // Select all 7 days
                     const dates = new Set<string>();
                     for (let i = 0; i < 7; i++) {
-                      dates.add(format(new Date(new Date().getTime() + i * 24 * 60 * 60 * 1000), "yyyy-MM-dd"));
+                      dates.add(
+                        format(
+                          new Date(
+                            new Date().getTime() + i * 24 * 60 * 60 * 1000
+                          ),
+                          "yyyy-MM-dd"
+                        )
+                      );
                     }
                     setSelectedProductionDates(dates);
                     setShowAllProductionDates(false);
                   }}
-                  className={`px-3 py-2 border rounded font-medium ${!showAllProductionDates && selectedProductionDates.size === 7 ? 'bg-[#9B6D49] text-white border-[#9B6D49]' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'}`}
+                  className={`px-3 py-2 border rounded font-medium ${
+                    !showAllProductionDates &&
+                    selectedProductionDates.size === 7
+                      ? "bg-[#9B6D49] text-white border-[#9B6D49]"
+                      : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
+                  }`}
                 >
                   7 Hari
                 </button>
@@ -1718,10 +2122,10 @@ export default function ProductionPage() {
                   onChange={(e) =>
                     setProductionStatusFilter(
                       e.target.value as
-                      | "all"
-                      | "pending"
-                      | "in_production"
-                      | "completed"
+                        | "all"
+                        | "pending"
+                        | "in_production"
+                        | "completed"
                     )
                   }
                   className="px-3 py-2 text-sm border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-[#9B6D49] bg-white text-gray-700 font-medium"
@@ -1741,13 +2145,14 @@ export default function ProductionPage() {
                   className="px-3 py-2 text-sm border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-[#9B6D49] font-medium"
                 />
                 <span className="text-gray-400 ml-auto">
-                  {showAllProductionDates || selectedProductionDates.size === 0 ? (
-                    "Semua Tanggal"
-                  ) : (
-                    Array.from(selectedProductionDates).sort().map(d => 
-                      format(new Date(d), "d MMM", { locale: idLocale })
-                    ).join(", ")
-                  )}
+                  {showAllProductionDates || selectedProductionDates.size === 0
+                    ? "Semua Tanggal"
+                    : Array.from(selectedProductionDates)
+                        .sort()
+                        .map((d) =>
+                          format(new Date(d), "d MMM", { locale: idLocale })
+                        )
+                        .join(", ")}
                 </span>
               </div>
             </div>
@@ -1937,12 +2342,13 @@ export default function ProductionPage() {
                       >
                         {/* Status Strip */}
                         <div
-                          className={`h-1 w-full ${status === "pending"
-                            ? "bg-yellow-400"
-                            : status === "in_production"
+                          className={`h-1 w-full ${
+                            status === "pending"
+                              ? "bg-yellow-400"
+                              : status === "in_production"
                               ? "bg-blue-500"
                               : "bg-green-500"
-                            }`}
+                          }`}
                         />
 
                         <div className="p-3">
@@ -1963,10 +2369,10 @@ export default function ProductionPage() {
                             >
                               {(status === "pending" ||
                                 status === "in_production") && (
-                                  <>
-                                    <Flame size={10} /> Proses Masak
-                                  </>
-                                )}
+                                <>
+                                  <Flame size={10} /> Proses Masak
+                                </>
+                              )}
                               {status === "completed" && (
                                 <>
                                   <CheckCircle size={10} /> Selesai
@@ -2012,21 +2418,36 @@ export default function ProductionPage() {
                                   setEditedOrder(order);
                                   setIsEditingOrder(false);
                                 }}
-                                className="flex-1 py-2 text-sm font-medium text-blue-600 bg-blue-50 border border-blue-200 hover:bg-blue-100 rounded-lg flex items-center justify-center gap-2 transition-colors"
+                                className="flex-1 py-2 text-xs font-medium text-blue-600 bg-blue-50 border border-blue-200 hover:bg-blue-100 rounded-lg flex items-center justify-center gap-1 transition-colors"
+                                title="Lihat Detail"
                               >
-                                <Eye className="w-4 h-4" /> Preview
+                                <Eye className="w-4 h-4" />
                               </button>
                               <button
                                 onClick={() => handlePrint(order)}
-                                className="flex-1 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 hover:bg-gray-50 rounded-lg flex items-center justify-center gap-2 transition-colors"
+                                className="flex-1 py-2 text-xs font-medium text-gray-600 bg-white border border-gray-200 hover:bg-gray-50 rounded-lg flex items-center justify-center gap-1 transition-colors"
+                                title="Cetak Struk Web"
                               >
-                                <Printer className="w-4 h-4" /> Cetak
+                                <Printer className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleDownloadPDF(order)}
+                                className="flex-1 py-2 text-xs font-medium text-red-600 bg-red-50 border border-red-200 hover:bg-red-100 rounded-lg flex items-center justify-center gap-1 transition-colors"
+                                title="Download PDF"
+                              >
+                                <FileText className="w-4 h-4" /> PDF
+                              </button>
+                              <button
+                                onClick={() => handleShareWA(order)}
+                                className="flex-1 py-2 text-xs font-medium text-green-600 bg-green-50 border border-green-200 hover:bg-green-100 rounded-lg flex items-center justify-center gap-1 transition-colors"
+                                title="Kirim WA"
+                              >
+                                <MessageCircle className="w-4 h-4" /> WA
                               </button>
                             </div>
                             <select
-                              value={
-                                status === "pending" ? "in_production" : status
-                              }
+                              value={status}
+                              onClick={(e) => e.stopPropagation()}
                               onChange={async (e) => {
                                 const newStatus = e.target.value as
                                   | "pending"
@@ -2051,31 +2472,43 @@ export default function ProductionPage() {
 
                                 // Call backend API
                                 try {
-                                  const response = await fetch(`/api/orders/${order.id}/production`, {
-                                    method: "PUT",
-                                    headers: {
-                                      "Content-Type": "application/json",
-                                    },
-                                    body: JSON.stringify({ production_status: newStatus }),
-                                  });
+                                  const response = await fetch(
+                                    `/api/orders/${order.id}/production`,
+                                    {
+                                      method: "PUT",
+                                      headers: {
+                                        "Content-Type": "application/json",
+                                      },
+                                      body: JSON.stringify({
+                                        production_status: newStatus,
+                                      }),
+                                    }
+                                  );
                                   if (!response.ok) {
-                                    console.error("[Production] Failed to update production status");
+                                    console.error(
+                                      "[Production] Failed to update production status"
+                                    );
                                   }
                                 } catch (err) {
-                                  console.error("[Production] Error updating production status:", err);
+                                  console.error(
+                                    "[Production] Error updating production status:",
+                                    err
+                                  );
                                 }
                               }}
-
-                              className={`w-full py-1.5 px-2 text-xs font-medium rounded-lg appearance-none text-center cursor-pointer focus:outline-none transition-colors ${status === "pending" ||
-                                status === "in_production"
-                                ? "bg-blue-50 text-blue-700 hover:bg-blue-100"
-                                : "bg-green-50 text-green-700 hover:bg-green-100"
-                                }`}
+                              className={`w-full py-1.5 px-2 text-xs font-medium rounded-lg appearance-none text-center cursor-pointer focus:outline-none transition-colors border ${
+                                status === "pending"
+                                  ? "bg-yellow-50 text-yellow-700 border-yellow-200 hover:bg-yellow-100"
+                                  : status === "in_production"
+                                  ? "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
+                                  : "bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
+                              }`}
                             >
+                              <option value="pending">⏳ Menunggu</option>
                               <option value="in_production">
-                                Proses Masak
+                                🔥 Proses Masak
                               </option>
-                              <option value="completed">Selesai</option>
+                              <option value="completed">✅ Selesai</option>
                             </select>
                           </div>
                         </div>
@@ -2170,7 +2603,11 @@ export default function ProductionPage() {
                       onClick={() => setIsEditingOrder(!isEditingOrder)}
                       className="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-sm rounded font-medium transition-colors flex items-center gap-1.5"
                     >
-                      {isEditingOrder ? <Save className="w-4 h-4" /> : <Edit className="w-4 h-4" />}
+                      {isEditingOrder ? (
+                        <Save className="w-4 h-4" />
+                      ) : (
+                        <Edit className="w-4 h-4" />
+                      )}
                       {isEditingOrder ? "Selesai Edit" : "Edit"}
                     </button>
                   )}

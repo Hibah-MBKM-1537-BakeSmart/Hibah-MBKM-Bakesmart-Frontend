@@ -197,6 +197,49 @@ export function ProductDetailModal({
             </div>
           )}
 
+          {/* Ingredients (Bahans) */}
+          {product.bahans && product.bahans.length > 0 && (
+            <div className="rounded-lg border border-gray-200">
+              <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 rounded-t-lg">
+                <h4 className="text-sm font-semibold text-gray-900">
+                  Komposisi / Bahan
+                </h4>
+                <p className="text-xs text-gray-600 mt-0.5">
+                  {product.bahans.length} bahan terdaftar
+                </p>
+              </div>
+              <div className="p-4">
+                <div className="space-y-2">
+                  {product.bahans.map((bahan) => (
+                    <div
+                      key={bahan.id}
+                      className="flex items-center justify-between p-3 rounded-lg bg-blue-50 border border-blue-200"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-2 h-2 rounded-full bg-blue-500" />
+                        <div>
+                          <p className="font-medium text-gray-900">
+                            {bahan.nama_id || bahan.nama || "Unnamed"}
+                          </p>
+                          {bahan.nama_en && (
+                            <p className="text-xs text-gray-600">
+                              EN: {bahan.nama_en}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-semibold text-gray-900">
+                          {bahan.jumlah} unit
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Product Addons Section (Frontend managed) */}
           {product.addons && product.addons.length > 0 && (
             <div className="rounded-lg border border-gray-200">

@@ -81,6 +81,12 @@ export async function POST(request: Request) {
     let discountAmount = 0;
     if (voucherData.persen) {
       discountAmount = (amount * voucherData.persen) / 100;
+
+      // Apply max discount cap
+      const maxDiscount = voucherData.maksimal_diskon || 0;
+      if (maxDiscount > 0) {
+        discountAmount = Math.min(discountAmount, maxDiscount);
+      }
     } else if (voucherData.nominal) {
       discountAmount = voucherData.nominal;
     }
@@ -90,10 +96,10 @@ export async function POST(request: Request) {
       valid: true,
       code: voucherData.kode || voucherData.code,
       discount: discountAmount,
-      voucherId: voucherData.id, // Include voucher ID for order creation
-      minPurchase: voucherData.minimal__pembelian || 0, // Include min purchase
+      voucherId: voucherData.id,
+      maxDiscount: voucherData.maksimal_diskon || 0,
       message: result.message,
-      details: voucherData, // Kirim data lengkap jika perlu
+      details: voucherData,
     });
   } catch (error) {
     console.error("Error validating voucher:", error);

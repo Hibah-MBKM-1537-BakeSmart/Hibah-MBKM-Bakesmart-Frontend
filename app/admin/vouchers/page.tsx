@@ -264,7 +264,9 @@ export default function VouchersPage() {
       {/* Page Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">{t("vouchers.title")}</h1>
+          <h1 className="text-2xl font-bold text-gray-900">
+            {t("vouchers.title")}
+          </h1>
           <p className="text-gray-600">{t("vouchers.subtitle")}</p>
         </div>
         <button
@@ -309,7 +311,8 @@ export default function VouchersPage() {
             </div>
 
             <div className="text-sm text-gray-600">
-              {filteredAndSortedVouchers.length} {t("vouchers.of")} {vouchers.length} voucher
+              {filteredAndSortedVouchers.length} {t("vouchers.of")}{" "}
+              {vouchers.length} voucher
             </div>
           </div>
 
@@ -335,7 +338,9 @@ export default function VouchersPage() {
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
-            <span className="ml-3 text-gray-600">{t("vouchers.loadingVouchers")}</span>
+            <span className="ml-3 text-gray-600">
+              {t("vouchers.loadingVouchers")}
+            </span>
           </div>
         ) : error ? (
           <div className="flex flex-col items-center justify-center py-12">
@@ -379,7 +384,7 @@ export default function VouchersPage() {
                       </button>
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      <span>{t("vouchers.minPurchase")}</span>
+                      <span>{t("vouchers.maxDiscount")}</span>
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       <button
@@ -445,22 +450,22 @@ export default function VouchersPage() {
                                   {voucher.discountType === "percentage"
                                     ? `${voucher.discount}%`
                                     : `Rp ${voucher.discount.toLocaleString(
-                                      "id-ID"
-                                    )}`}
+                                        "id-ID"
+                                      )}`}
                                 </span>
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                {voucher.minimal__pembelian
-                                  ? `Rp ${voucher.minimal__pembelian.toLocaleString(
-                                    "id-ID"
-                                  )}`
+                                {voucher.maksimal_diskon
+                                  ? `Rp ${voucher.maksimal_diskon.toLocaleString(
+                                      "id-ID"
+                                    )}`
                                   : "-"}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                 {voucher.expiryDate
                                   ? new Date(
-                                    voucher.expiryDate
-                                  ).toLocaleDateString("id-ID")
+                                      voucher.expiryDate
+                                    ).toLocaleDateString("id-ID")
                                   : "-"}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap">
@@ -469,12 +474,13 @@ export default function VouchersPage() {
                                     <div
                                       className="bg-orange-500 h-2 rounded-full"
                                       style={{
-                                        width: `${voucher.maxUsage
-                                          ? (voucher.usageCount /
-                                            voucher.maxUsage) *
-                                          100
-                                          : 0
-                                          }%`,
+                                        width: `${
+                                          voucher.maxUsage
+                                            ? (voucher.usageCount /
+                                                voucher.maxUsage) *
+                                              100
+                                            : 0
+                                        }%`,
                                       }}
                                     />
                                   </div>
@@ -555,7 +561,9 @@ export default function VouchersPage() {
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">{t("vouchers.totalVoucher")}</p>
+              <p className="text-sm font-medium text-gray-600">
+                {t("vouchers.totalVoucher")}
+              </p>
               <p className="text-2xl font-bold text-gray-900">
                 {vouchers.length}
               </p>
@@ -569,7 +577,9 @@ export default function VouchersPage() {
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">{t("vouchers.activeVoucher")}</p>
+              <p className="text-sm font-medium text-gray-600">
+                {t("vouchers.activeVoucher")}
+              </p>
               <p className="text-2xl font-bold text-gray-900">
                 {vouchers.filter((v) => v.status === "active").length}
               </p>
