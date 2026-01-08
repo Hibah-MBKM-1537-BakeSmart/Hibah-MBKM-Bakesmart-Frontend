@@ -513,10 +513,49 @@ export default function ProductionPage() {
     const printWindow = window.open("", "_blank");
     if (!printWindow) return;
 
-    const totalItems = order.order_products.reduce(
-      (sum, p) => sum + p.jumlah,
-      0
-    );
+    // Formatting helpers
+    const formatCurrency = (amount: number) => {
+      return new Intl.NumberFormat("id-ID", {
+        style: "currency",
+        currency: "IDR",
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      }).format(amount);
+    };
+
+    const formatDate = (dateString: string) => {
+      try {
+        const date = new Date(dateString);
+        return date.toLocaleDateString("id-ID", {
+          weekday: "long",
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        });
+      } catch (e) {
+        return dateString;
+      }
+    };
+
+    const formatTime = (dateString: string) => {
+      try {
+        const date = new Date(dateString);
+        return date.toLocaleTimeString("id-ID", {
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+      } catch (e) {
+        return "";
+      }
+    };
+
+    // Calculate totals
+    const grandTotal = order.order_products.reduce((sum, item) => {
+      const itemTotal = item.jumlah * item.harga_beli;
+      const addonsTotal =
+        item.addons?.reduce((s, a) => s + (a.quantity || 0) * a.harga, 0) || 0;
+      return sum + itemTotal + addonsTotal;
+    }, 0);
 
     const html = `
       <!DOCTYPE html>
@@ -525,57 +564,146 @@ export default function ProductionPage() {
         <meta charset="UTF-8">
         <title>Receipt #${order.id}</title>
         <style>
-          @page { margin: 0; size: 80mm auto; }
-          body { 
-            font-family: 'Courier New', monospace; 
-            width: 78mm; 
-            margin: 0 auto; 
-            padding: 10px 5px; 
-            font-size: 12px; 
-            line-height: 1.4;
-            color: #000;
+          @media print {
+            @page {
+              size: auto;
+              margin: 0mm;
+            }
+            body {
+              margin: 0;
+              padding: 0;
+            }
           }
-          .header { text-align: center; margin-bottom: 10px; border-bottom: 1px dashed #000; padding-bottom: 10px; }
-          .title { font-size: 16px; font-weight: bold; margin-bottom: 5px; }
-          .subtitle { font-size: 12px; }
-          .info { margin-bottom: 10px; font-size: 11px; }
-          .divider { border-top: 1px dashed #000; margin: 5px 0; }
-          .item { margin-bottom: 8px; }
-          .item-name { font-weight: bold; margin-bottom: 2px; }
-          .item-details { display: flex; justify-content: space-between; font-size: 11px; }
-          .addon { margin-left: 10px; font-size: 10px; font-style: italic; color: #444; }
-          .total-section { margin-top: 10px; border-top: 1px dashed #000; padding-top: 5px; }
-          .row { display: flex; justify-content: space-between; font-weight: bold; }
-          .footer { text-align: center; margin-top: 20px; font-size: 11px; }
-          .feedback-link { margin-top: 10px; font-weight: bold; }
+          body {
+            font-family: 'Courier New', monospace;
+            margin: 0;
+            padding: 5mm;
+            font-size: 10pt;
+            line-height: 1.4;
+            width: 80mm;
+            box-sizing: border-box;
+          }
+          
+          .receipt-header {
+            text-align: center;
+            margin-bottom: 5mm;
+            padding-bottom: 3mm;
+            border-bottom: 1px dashed #000;
+          }
+          
+          .receipt-title {
+            font-size: 16pt;
+            font-weight: bold;
+            margin-bottom: 2mm;
+          }
+          
+          .receipt-info {
+            font-size: 9pt;
+            margin: 1mm 0;
+          }
+          
+          .receipt-section {
+            margin: 4mm 0;
+            padding: 2mm 0;
+          }
+          
+          .section-title {
+            font-weight: bold;
+            font-size: 10pt;
+            margin-bottom: 2mm;
+            padding-bottom: 1mm;
+            border-bottom: 1px solid #000;
+          }
+          
+          .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 1mm 0;
+            font-size: 9pt;
+          }
+          
+          .product-item {
+            margin: 2mm 0;
+            padding: 1mm 0;
+            border-bottom: 1px dashed #ccc;
+          }
+          
+          .product-name {
+            font-weight: bold;
+            margin-bottom: 1mm;
+          }
+          
+          .product-details {
+            display: flex;
+            justify-content: space-between;
+            font-size: 9pt;
+          }
+          
+          .totals {
+            margin-top: 3mm;
+            padding-top: 2mm;
+            border-top: 1px solid #000;
+          }
+          
+          .total-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 1mm 0;
+            font-size: 10pt;
+          }
+          
+          .grand-total {
+            font-weight: bold;
+            font-size: 12pt;
+            margin-top: 2mm;
+            padding-top: 2mm;
+            border-top: 2px double #000;
+          }
+          
+          .receipt-footer {
+            text-align: center;
+            margin-top: 5mm;
+            padding-top: 3mm;
+            border-top: 1px dashed #000;
+            font-size: 9pt;
+          }
         </style>
       </head>
       <body>
-        <div class="header">
-          <div class="title">BAKESMART</div>
-          <div class="subtitle">Jl. Raya Bakesmart No. 123</div>
-          <div class="subtitle">0812-3456-7890</div>
-        </div>
-        
-        <div class="info">
-          <div style="display: flex; justify-content: space-between;">
-            <span>${new Date(order.created_at).toLocaleDateString(
-              "id-ID"
-            )}</span>
-            <span>Admin</span>
-          </div>
-          <div style="display: flex; justify-content: space-between;">
-            <span>${new Date(order.created_at).toLocaleTimeString(
-              "id-ID"
-            )}</span>
-            <span>${order.user.nama.substring(0, 15)}</span>
-          </div>
-          <div>No. #${order.id}</div>
+        <div class="receipt-header">
+          <div class="receipt-title">BAKESMART</div>
+          <div class="receipt-info">Order #${order.id}</div>
+          <div class="receipt-info">${formatDate(order.created_at)}</div>
+          <div class="receipt-info">${formatTime(order.created_at)}</div>
         </div>
 
-        <div class="divider"></div>
+        <div class="receipt-section">
+          <div class="section-title">INFORMASI PESANAN</div>
+          <div class="info-row">
+            <span>Pelanggan:</span>
+            <span>${order.user.nama || "Guest"}</span>
+          </div>
+          <div class="info-row">
+            <span>No. HP:</span>
+            <span>${order.user.no_hp || "-"}</span>
+          </div>
+          <div class="info-row">
+            <span>Status:</span>
+            <span>${
+              order.status === "completed"
+                ? "Selesai"
+                : order.status === "cancelled"
+                ? "Dibatalkan"
+                : order.status === "production"
+                ? "Produksi"
+                : order.status
+            }</span>
+          </div>
+        </div>
 
-        <div class="items">
+        <div class="receipt-section">
+          <div class="section-title">DETAIL PESANAN</div>
+          
           ${order.order_products
             .map((item) => {
               const itemTotal = item.jumlah * item.harga_beli;
@@ -587,24 +715,24 @@ export default function ProductionPage() {
               const total = itemTotal + addonsTotal;
 
               return `
-            <div class="item">
-              <div class="item-name">${item.product.nama}</div>
-              <div class="item-details">
-                <span>${item.jumlah} x ${item.harga_beli.toLocaleString(
-                "id-ID"
-              )}</span>
-                <span>Rp ${itemTotal.toLocaleString("id-ID")}</span>
+            <div class="product-item">
+              <div class="product-name">${item.product.nama}</div>
+              <div class="product-details">
+                <span>${item.jumlah} x ${formatCurrency(item.harga_beli)}</span>
+                <span>${formatCurrency(itemTotal)}</span>
               </div>
               ${
                 item.addons && item.addons.length > 0
                   ? item.addons
                       .map(
                         (addon) => `
-                  <div class="item-details addon">
-                    <span>+ ${addon.nama} (${addon.quantity || 0}x)</span>
-                    <span>Rp ${(
+                  <div class="product-details" style="font-size: 9pt; color: #666; font-style: italic;">
+                    <span style="padding-left: 10px;">+ ${addon.nama} (${
+                          addon.quantity || 0
+                        }x)</span>
+                    <span>${formatCurrency(
                       (addon.quantity || 0) * addon.harga
-                    ).toLocaleString("id-ID")}</span>
+                    )}</span>
                   </div>
                 `
                       )
@@ -615,45 +743,18 @@ export default function ProductionPage() {
           `;
             })
             .join("")}
-        </div>
 
-        <div class="total-section">
-          <div class="row">
-            <span>Total</span>
-            <span>Rp ${order.order_products
-              .reduce((sum, item) => {
-                const itemTotal = item.jumlah * item.harga_beli;
-                const addonsTotal =
-                  item.addons?.reduce(
-                    (s, a) => s + (a.quantity || 0) * a.harga,
-                    0
-                  ) || 0;
-                return sum + itemTotal + addonsTotal;
-              }, 0)
-              .toLocaleString("id-ID")}</span>
-          </div>
-          <div class="row">
-            <span>Bayar (Cash)</span>
-            <span>Rp ${order.order_products
-              .reduce((sum, item) => {
-                const itemTotal = item.jumlah * item.harga_beli;
-                const addonsTotal =
-                  item.addons?.reduce(
-                    (s, a) => s + (a.quantity || 0) * a.harga,
-                    0
-                  ) || 0;
-                return sum + itemTotal + addonsTotal;
-              }, 0)
-              .toLocaleString("id-ID")}</span>
-          </div>
-          <div class="row">
-            <span>Kembali</span>
-            <span>Rp 0</span>
+          <div class="totals">
+            <div class="total-row grand-total">
+              <span>TOTAL:</span>
+              <span>${formatCurrency(grandTotal)}</span>
+            </div>
           </div>
         </div>
 
-        <div class="footer">
-
+        <div class="receipt-footer">
+          <div>Terima kasih atas pesanan Anda!</div>
+          <div style="margin-top: 2px;">BakeSmart - Roti Berkualitas</div>
         </div>
       </body>
       </html>
@@ -665,7 +766,7 @@ export default function ProductionPage() {
     setTimeout(() => {
       printWindow.print();
       printWindow.close();
-    }, 250);
+    }, 500);
   };
 
   const handlePrintAll = () => {

@@ -76,99 +76,239 @@ export function KasirCart() {
   };
 
   const handlePrintReceipt = () => {
+    // Current date and time formatting
+    const now = new Date();
+    const formattedDate = now.toLocaleDateString("id-ID", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+    const formattedTime = now.toLocaleTimeString("id-ID");
+
     const receiptContent = `
       <!DOCTYPE html>
       <html>
         <head>
           <title>Struk Pembayaran - ${
-            state.currentTransaction?.id || "RECEIPT"
+            state.currentTransaction?.id || "ORDER"
           }</title>
           <style>
-            body { font-family: 'Courier New', monospace; margin: 0; padding: 20px; font-size: 12px; width: 300px; }
-            .header { text-align: center; margin-bottom: 20px; border-bottom: 1px dashed #000; padding-bottom: 10px; }
-            .store-name { font-size: 16px; font-weight: bold; }
-            .meta { margin-bottom: 15px; }
-            .item { display: flex; justify-content: space-between; margin-bottom: 5px; }
-            .totals { margin-top: 15px; border-top: 1px dashed #000; padding-top: 10px; }
-            .row { display: flex; justify-content: space-between; margin-bottom: 5px; }
-            .total { font-weight: bold; font-size: 14px; }
-            .footer { text-align: center; margin-top: 20px; font-size: 10px; }
             @media print {
-              @page { size: auto; margin: 0; }
+              @page {
+                size: auto;
+                margin: 0mm;
+              }
+              body {
+                margin: 0;
+                padding: 0;
+              }
+            }
+            body {
+              font-family: 'Courier New', monospace;
+              margin: 0;
+              padding: 5mm;
+              font-size: 10pt;
+              line-height: 1.4;
+              width: 80mm; /* Standard thermal receipt width */
+              box-sizing: border-box;
+            }
+            
+            .receipt-header {
+              text-align: center;
+              margin-bottom: 5mm;
+              padding-bottom: 3mm;
+              border-bottom: 1px dashed #000;
+            }
+            
+            .receipt-title {
+              font-size: 16pt;
+              font-weight: bold;
+              margin-bottom: 2mm;
+            }
+            
+            .receipt-info {
+              font-size: 9pt;
+              margin: 1mm 0;
+            }
+            
+            .receipt-section {
+              margin: 4mm 0;
+              padding: 2mm 0;
+            }
+            
+            .section-title {
+              font-weight: bold;
+              font-size: 10pt;
+              margin-bottom: 2mm;
+              padding-bottom: 1mm;
+              border-bottom: 1px solid #000;
+            }
+            
+            .info-row {
+              display: flex;
+              justify-content: space-between;
+              margin: 1mm 0;
+              font-size: 9pt;
+            }
+            
+            .product-item {
+              margin: 2mm 0;
+              padding: 1mm 0;
+              border-bottom: 1px dashed #ccc;
+            }
+            
+            .product-name {
+              font-weight: bold;
+              margin-bottom: 1mm;
+            }
+            
+            .product-details {
+              display: flex;
+              justify-content: space-between;
+              font-size: 9pt;
+            }
+            
+            .totals {
+              margin-top: 3mm;
+              padding-top: 2mm;
+              border-top: 1px solid #000;
+            }
+            
+            .total-row {
+              display: flex;
+              justify-content: space-between;
+              margin: 1mm 0;
+              font-size: 10pt;
+            }
+            
+            .grand-total {
+              font-weight: bold;
+              font-size: 12pt;
+              margin-top: 2mm;
+              padding-top: 2mm;
+              border-top: 2px double #000;
+            }
+            
+            .receipt-footer {
+              text-align: center;
+              margin-top: 5mm;
+              padding-top: 3mm;
+              border-top: 1px dashed #000;
+              font-size: 9pt;
             }
           </style>
         </head>
         <body>
-          <div class="header">
-            <div class="store-name">BakeSmart</div>
-            <div>Struk Pembayaran</div>
+          <div class="receipt-header">
+            <div class="receipt-title">BAKESMART</div>
+            <div class="receipt-info">Order #${
+              state.currentTransaction?.id ||
+              state.customerName?.substring(0, 3).toUpperCase() +
+                Math.floor(Math.random() * 1000)
+            }</div>
+            <div class="receipt-info">${formattedDate}</div>
+            <div class="receipt-info">${formattedTime}</div>
           </div>
-          <div class="meta">
-            <div>ID: ${state.currentTransaction?.id || "-"}</div>
-            <div>Tgl: ${new Date().toLocaleString("id-ID")}</div>
-            <div>Pelanggan: ${state.customerName || "Umum"}</div>
+
+          <div class="receipt-section">
+            <div class="section-title">INFORMASI PESANAN</div>
+            <div class="info-row">
+              <span>Pelanggan:</span>
+              <span>${state.customerName || "Umum"}</span>
+            </div>
+            <div class="info-row">
+              <span>Metode:</span>
+              <span>${
+                state.deliveryMode === "pickup" ? "Ambil Sendiri" : "Pengiriman"
+              }</span>
+            </div>
+            <div class="info-row">
+              <span>Status:</span>
+              <span>Selesai (Lunas)</span>
+            </div>
           </div>
-          <div class="items">
+
+          <div class="receipt-section">
+            <div class="section-title">DETAIL PESANAN</div>
             ${state.cart
               .map(
                 (item) => `
-              <div class="item">
-                <span>${item.product.nama_id} x${item.quantity}</span>
-                <span>${formatPrice(
-                  (item.finalPrice || item.product.harga) * item.quantity
-                )}</span>
-              </div>
-              ${
-                item.customizations
-                  ?.map(
-                    (c) => `
-                <div class="item" style="color: #666; font-size: 10px; padding-left: 10px;">
-                  + ${c.nama}
+              <div class="product-item">
+                <div class="product-name">
+                  ${item.product.nama_id}
                 </div>
-              `
-                  )
-                  .join("") || ""
-              }
+                <div class="product-details">
+                  <span>
+                    ${item.quantity} x ${formatPrice(
+                  item.finalPrice || item.product.harga
+                )}
+                  </span>
+                  <span>${formatPrice(
+                    (item.finalPrice || item.product.harga) * item.quantity
+                  )}</span>
+                </div>
+                ${
+                  item.customizations?.length
+                    ? `<div style="font-size: 8pt; font-style: italic; margin-top: 1mm;">
+                        + ${item.customizations.map((c) => c.nama).join(", ")}
+                       </div>`
+                    : ""
+                }
+              </div>
             `
               )
               .join("")}
+
+            <div class="totals">
+              <div class="total-row">
+                <span>Subtotal:</span>
+                <span>${formatPrice(calculateSubtotal())}</span>
+              </div>
+              
+              ${
+                state.voucherDiscount > 0
+                  ? `
+              <div class="total-row">
+                <span>Diskon:</span>
+                <span>-${formatPrice(state.voucherDiscount)}</span>
+              </div>
+              `
+                  : ""
+              }
+              
+              <div class="total-row">
+                <span>Ongkos Kirim:</span>
+                <span>${formatPrice(state.deliveryFee)}</span>
+              </div>
+              
+              <div class="total-row grand-total">
+                <span>TOTAL:</span>
+                <span>${formatPrice(lastTotal)}</span>
+              </div>
+              
+              ${
+                changeAmount > 0
+                  ? `
+                 <div style="margin-top: 2mm; border-top: 1px dashed #000; padding-top: 2mm;">
+                  <div class="total-row">
+                    <span>Tunai:</span>
+                    <span>${formatPrice(lastTotal + changeAmount)}</span>
+                  </div>
+                  <div class="total-row">
+                    <span>Kembali:</span>
+                    <span>${formatPrice(changeAmount)}</span>
+                  </div>
+                 </div>
+                  `
+                  : ""
+              }
+            </div>
           </div>
-          <div class="totals">
-            <div class="row">
-              <span>Subtotal</span>
-              <span>${formatPrice(calculateSubtotal())}</span>
-            </div>
-            ${
-              state.voucherDiscount > 0
-                ? `
-            <div class="row">
-              <span>Diskon</span>
-              <span>-${formatPrice(state.voucherDiscount)}</span>
-            </div>
-            `
-                : ""
-            }
-            <div class="row total">
-              <span>Total</span>
-              <span>${formatPrice(lastTotal)}</span>
-            </div>
-            ${
-              changeAmount > 0
-                ? `
-            <div class="row">
-              <span>Tunai</span>
-              <span>${formatPrice(lastTotal + changeAmount)}</span>
-            </div>
-            <div class="row">
-              <span>Kembali</span>
-              <span>${formatPrice(changeAmount)}</span>
-            </div>
-            `
-                : ""
-            }
-          </div>
-          <div class="footer">
-            Terima Kasih atas Kunjungan Anda!
+
+          <div class="receipt-footer">
+            <div>Terima kasih atas pesanan Anda!</div>
+            <div style="margin-top: 2px;">BakeSmart - Roti Berkualitas</div>
           </div>
         </body>
       </html>
