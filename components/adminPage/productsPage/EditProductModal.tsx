@@ -32,8 +32,8 @@ export function EditProductModal({
     harga: 0,
     harga_diskon: null as number | null,
     stok: 0,
-    jenis_id: null as number | null,
-    sub_jenis_ids: [] as number[],
+    daily_stock: 0,
+    ref_sub_jenis_id: null as number | null,
     hari_ids: [] as number[],
     addons: [] as ProductAddon[],
     images: [] as File[],
@@ -107,22 +107,6 @@ export function EditProductModal({
     }
   }, [isOpen]);
 
-  // Reset sub_jenis when jenis changes
-  useEffect(() => {
-    if (formData.jenis_id) {
-      // Keep only sub_jenis that belong to selected jenis
-      const validSubJenisIds = getSubJenisByJenisId(formData.jenis_id).map(
-        (sj) => sj.id
-      );
-      setFormData((prev) => ({
-        ...prev,
-        sub_jenis_ids: prev.sub_jenis_ids.filter((id) =>
-          validSubJenisIds.includes(id)
-        ),
-      }));
-    }
-  }, [formData.jenis_id, getSubJenisByJenisId]);
-
   // Reset form when product changes
   useEffect(() => {
     if (product) {
@@ -152,9 +136,9 @@ export function EditProductModal({
         deskripsi_en: product.deskripsi_en || product.deskripsi || "",
         harga: product.harga,
         harga_diskon: product.harga_diskon || null,
-        stok: product.stok,
-        jenis_id: product.jenis?.[0]?.id || null,
-        sub_jenis_ids: product.sub_jenis?.map((sj) => sj.id) || [],
+        stok: product.stok || 0,
+        daily_stock: product.daily_stock || 0,
+        ref_sub_jenis_id: product.sub_jenis?.[0]?.id || null,
         hari_ids: product.hari?.map((h) => h.id) || [],
         addons: mappedAddons,
         images: [],
@@ -197,9 +181,8 @@ export function EditProductModal({
               setFormData((prev) => ({
                 ...prev,
                 // Update arrays that might be truncated in list view
-                sub_jenis_ids:
-                  detail.sub_jenis?.map((sj: any) => sj.id) ||
-                  prev.sub_jenis_ids,
+                ref_sub_jenis_id:
+                  detail.sub_jenis?.[0]?.id || prev.ref_sub_jenis_id,
                 hari_ids: detail.hari?.map((h: any) => h.id) || prev.hari_ids,
                 ingredients:
                   detail.bahans?.map((b: any) => ({
@@ -208,9 +191,6 @@ export function EditProductModal({
                     nama_en: b.nama_en || b.nama || "",
                     jumlah: (b.jumlah || 0).toString(),
                   })) || prev.ingredients,
-                // If detail contains attributes, we might want to update addons too, but mapping is complex.
-                // For now, let's assume we proceed with prop-derived addons or if detail has them we could parse.
-                // Since existing code didn't update addons from detail, we won't force it to avoid breaking format.
               }));
               // Also update images if needed
               if (detail.gambars) {
@@ -252,13 +232,14 @@ export function EditProductModal({
 
     try {
       // 1. Update Core Product Data
-      const { addons, sub_jenis_ids, hari_ids, images, ...restFormData } =
-        formData;
+      const { addons, hari_ids, images, ...restFormData } = formData;
       const productData = {
         ...restFormData,
         nama: formData.nama_id, // Keep nama for backward compatibility
         deskripsi: formData.deskripsi_id, // Keep deskripsi for backward compatibility
-        jenis_id: formData.jenis_id,
+        stok: formData.stok,
+        ...(formData.isDaily && { daily_stock: formData.daily_stock }),
+        ref_sub_jenis_id: formData.ref_sub_jenis_id!,
         harga_diskon: formData.harga_diskon,
         isBestSeller: formData.isBestSeller,
         isDaily: formData.isDaily,
@@ -269,22 +250,7 @@ export function EditProductModal({
 
       const pId = product.id;
 
-      // 2. Sync Sub Jenis
-      const subJenisToAdd = formData.sub_jenis_ids.filter(
-        (id) => !initialIds.sub_jenis.includes(id)
-      );
-      const subJenisToRemove = initialIds.sub_jenis.filter(
-        (id) => !formData.sub_jenis_ids.includes(id)
-      );
-
-      for (const id of subJenisToAdd)
-        await fetch(`/api/products/${pId}/sub_jenis/${id}`, { method: "POST" });
-      for (const id of subJenisToRemove)
-        await fetch(`/api/products/${pId}/sub_jenis/${id}`, {
-          method: "DELETE",
-        });
-
-      // 3. Sync Hari
+      // 2. Sync Hari
       const hariToAdd = formData.hari_ids.filter(
         (id) => !initialIds.hari.includes(id)
       );
@@ -424,8 +390,8 @@ export function EditProductModal({
       harga: 0,
       harga_diskon: null,
       stok: 0,
-      jenis_id: null,
-      sub_jenis_ids: [],
+      daily_stock: 0,
+      ref_sub_jenis_id: null,
       hari_ids: [],
       addons: [],
       images: [],
@@ -524,22 +490,6 @@ export function EditProductModal({
         hari_ids: newHariIds,
       };
     });
-  };
-
-  const selectJenis = (jenisId: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      jenis_id: prev.jenis_id === jenisId ? null : jenisId,
-    }));
-  };
-
-  const toggleSubJenis = (subJenisId: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      sub_jenis_ids: prev.sub_jenis_ids.includes(subJenisId)
-        ? prev.sub_jenis_ids.filter((id) => id !== subJenisId)
-        : [...prev.sub_jenis_ids, subJenisId],
-    }));
   };
 
   const formatPrice = (price: number) => {
@@ -761,71 +711,41 @@ export function EditProductModal({
             />
           </div>
 
-          {/* Kategori Roti (Jenis) */}
+          {/* Sub Jenis Selection */}
           <div>
-            <label className="flex items-center text-sm font-medium text-gray-700 mb-3">
-              <Tag className="w-4 h-4 mr-2 text-orange-500" />
-              Jenis (Kategori) * (Pilih 1)
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              <Layers className="w-4 h-4 inline mr-2 text-blue-500" />
+              Sub Jenis (Kategori) *
             </label>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            <select
+              name="ref_sub_jenis_id"
+              value={formData.ref_sub_jenis_id || ""}
+              onChange={(e) => {
+                setFormData((prev) => ({
+                  ...prev,
+                  ref_sub_jenis_id: e.target.value
+                    ? Number(e.target.value)
+                    : null,
+                }));
+              }}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+              required
+            >
+              <option value="">Pilih Sub Jenis...</option>
               {jenisList.map((jenis) => (
-                <button
-                  key={jenis.id}
-                  type="button"
-                  onClick={() => selectJenis(jenis.id)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors border ${
-                    formData.jenis_id === jenis.id
-                      ? "bg-orange-500 text-white border-orange-500"
-                      : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
-                  }`}
-                >
-                  {jenis.nama_id}
-                </button>
+                <optgroup key={jenis.id} label={jenis.nama_id}>
+                  {getSubJenisByJenisId(jenis.id).map((subJenis) => (
+                    <option key={subJenis.id} value={subJenis.id}>
+                      {subJenis.nama_id} ({subJenis.nama_en})
+                    </option>
+                  ))}
+                </optgroup>
               ))}
-            </div>
-            <p className="text-xs text-gray-500 mt-2">
-              {!formData.jenis_id
-                ? "Belum ada jenis dipilih"
-                : `1 jenis terpilih`}
+            </select>
+            <p className="text-xs text-gray-500 mt-1">
+              Produk akan terkait dengan sub jenis yang dipilih
             </p>
           </div>
-
-          {/* Sub Jenis */}
-          {formData.jenis_id && (
-            <div>
-              <label className="flex items-center text-sm font-medium text-gray-700 mb-3">
-                <Layers className="w-4 h-4 mr-2 text-blue-500" />
-                Sub Jenis (Opsional)
-              </label>
-              {getSubJenisByJenisId(formData.jenis_id).length === 0 ? (
-                <p className="text-sm text-gray-500 italic">
-                  Tidak ada sub jenis untuk kategori ini
-                </p>
-              ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {getSubJenisByJenisId(formData.jenis_id).map((subJenis) => (
-                    <button
-                      key={subJenis.id}
-                      type="button"
-                      onClick={() => toggleSubJenis(subJenis.id)}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors border ${
-                        formData.sub_jenis_ids.includes(subJenis.id)
-                          ? "bg-blue-500 text-white border-blue-500"
-                          : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
-                      }`}
-                    >
-                      {subJenis.nama_id}
-                    </button>
-                  ))}
-                </div>
-              )}
-              <p className="text-xs text-gray-500 mt-2">
-                {formData.sub_jenis_ids.length === 0
-                  ? "Tidak ada sub jenis dipilih"
-                  : `${formData.sub_jenis_ids.length} sub jenis terpilih`}
-              </p>
-            </div>
-          )}
 
           {/* Ingredients (Bahan) */}
           <div>
@@ -985,8 +905,8 @@ export function EditProductModal({
             </p>
           </div>
 
-          {/* Price and Stock */}
-          <div className="grid grid-cols-1 gap-4">
+          {/* Price and Daily Stock */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label
                 htmlFor="harga"
@@ -1022,6 +942,36 @@ export function EditProductModal({
                 </p>
               )}
             </div>
+
+            {formData.isDaily && (
+              <div>
+                <label
+                  htmlFor="daily_stock"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  Daily Stock *
+                </label>
+                <input
+                  type="number"
+                  id="daily_stock"
+                  value={formData.daily_stock || ""}
+                  onChange={(e) => {
+                    const value =
+                      e.target.value === "" ? 0 : parseInt(e.target.value, 10);
+                    setFormData((prev) => ({
+                      ...prev,
+                      daily_stock: isNaN(value) ? 0 : value,
+                    }));
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  placeholder="50"
+                  min="0"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Stok harian yang akan di-reset setiap hari
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Hari Ketersediaan */}

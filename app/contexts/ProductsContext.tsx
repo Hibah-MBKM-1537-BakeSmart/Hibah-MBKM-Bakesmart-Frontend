@@ -278,15 +278,12 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
     refreshProducts();
   }, []);
 
-  // Create product - follows backend documentation flow:
-  // 1. POST /products - create basic product (without relations)
-  // 2. POST /products/{id}/gambar - upload images
-  // 3. POST /products/{id}/sub_jenis/{sub_jenis_id} - add sub_jenis relations
-  // 4. POST /products/{id}/hari/{hari_id} - add hari relations
+  // Create product - NEW: Backend accepts all data in single POST request
+  // POST /products with complete payload
+  // Note: hari_ids NOT needed - hari configuration comes from sub_jenis
   const addProduct = async (
     productData: Partial<Product> & {
       sub_jenis_ids?: number[];
-      hari_ids?: number[];
       jenis_id?: number;
       imageFiles?: File[];
       bahans?: Array<{ nama_id: string; nama_en: string; jumlah: number }>;
@@ -296,36 +293,32 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
       console.log("[ProductsContext] Creating product:", productData);
       setState((prev) => ({ ...prev, error: null }));
 
-      // Extract relation data from productData
-      const {
-        sub_jenis_ids,
-        hari_ids,
-        jenis_id,
-        imageFiles,
-        gambars,
-        bahans,
-        ...basicProductData
-      } = productData;
+      // Extract imageFiles for separate upload
+      const { imageFiles, gambars, ...productPayload } = productData;
 
-      // Step 1: Create basic product (without relations)
-      // Backend expects: nama_id, nama_en, deskripsi_id, deskripsi_en, harga, harga_diskon, stok, isBestSeller, isDaily, daily_stock
+      // Backend expects ALL data in one payload
       const createPayload = {
-        nama_id: basicProductData.nama_id || basicProductData.nama,
-        nama_en: basicProductData.nama_en || basicProductData.nama,
+        nama_id: productPayload.nama_id || productPayload.nama,
+        nama_en: productPayload.nama_en || productPayload.nama,
         deskripsi_id:
-          basicProductData.deskripsi_id || basicProductData.deskripsi || "",
+          productPayload.deskripsi_id || productPayload.deskripsi || "",
         deskripsi_en:
-          basicProductData.deskripsi_en || basicProductData.deskripsi || "",
-        harga: basicProductData.harga || 0,
-        harga_diskon: basicProductData.harga_diskon || null,
-        stok: basicProductData.stok || 0,
-        isBestSeller: basicProductData.isBestSeller || false,
-        isDaily: basicProductData.isDaily || false,
-        daily_stock: basicProductData.daily_stock || null,
+          productPayload.deskripsi_en || productPayload.deskripsi || "",
+        harga: productPayload.harga || 0,
+        harga_diskon: productPayload.harga_diskon || null,
+        // stok removed - backend doesn't need it for create
+        isBestSeller: productPayload.isBestSeller || false,
+        isDaily: productPayload.isDaily || false,
+        daily_stock: productPayload.daily_stock || null,
+        // Include relations in the payload
+        sub_jenis_ids: productPayload.sub_jenis_ids || [],
+        // hari_ids NOT sent - hari comes from sub_jenis configuration
+        jenis_id: productPayload.jenis_id,
+        bahans: productPayload.bahans || [],
       };
 
       console.log(
-        "[ProductsContext] Step 1: Creating basic product:",
+        "[ProductsContext] Creating product with payload:",
         createPayload
       );
 
@@ -355,71 +348,15 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
       const data = await response.json();
       console.log("[ProductsContext] Product created successfully:", data);
 
-      // Get the created product ID
+      // Get the created product ID for image upload
       const productId = data.data?.id || data.id;
       if (!productId) {
         throw new Error("Product created but no ID returned");
       }
 
-      // Step 2: Add sub_jenis relations
-      if (sub_jenis_ids && sub_jenis_ids.length > 0) {
-        console.log(
-          "[ProductsContext] Step 2: Adding sub_jenis relations:",
-          sub_jenis_ids
-        );
-        for (const subJenisId of sub_jenis_ids) {
-          try {
-            const subJenisResponse = await fetch(
-              `${BACKEND_URL}/${productId}/sub_jenis/${subJenisId}`,
-              {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-              }
-            );
-            if (!subJenisResponse.ok) {
-              console.warn(
-                `[ProductsContext] Failed to add sub_jenis ${subJenisId}`
-              );
-            }
-          } catch (err) {
-            console.warn(
-              `[ProductsContext] Error adding sub_jenis ${subJenisId}:`,
-              err
-            );
-          }
-        }
-      }
-
-      // Step 3: Add hari relations
-      if (hari_ids && hari_ids.length > 0) {
-        console.log(
-          "[ProductsContext] Step 3: Adding hari relations:",
-          hari_ids
-        );
-        for (const hariId of hari_ids) {
-          try {
-            const hariResponse = await fetch(
-              `${BACKEND_URL}/${productId}/hari/${hariId}`,
-              {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-              }
-            );
-            if (!hariResponse.ok) {
-              console.warn(`[ProductsContext] Failed to add hari ${hariId}`);
-            }
-          } catch (err) {
-            console.warn(`[ProductsContext] Error adding hari ${hariId}:`, err);
-          }
-        }
-      }
-
-      // Step 4: Upload images (if imageFiles provided)
+      // Upload images separately (if provided)
       if (imageFiles && imageFiles.length > 0) {
-        console.log(
-          "[ProductsContext] Step 4: Uploading images:",
-          imageFiles.length
-        );
+        console.log("[ProductsContext] Uploading images:", imageFiles.length);
         for (const file of imageFiles) {
           try {
             const formData = new FormData();
@@ -443,33 +380,7 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      // Step 5: Add ingredients (bahans)
-      if (bahans && bahans.length > 0) {
-        console.log("[ProductsContext] Step 5: Adding ingredients:", bahans);
-        for (const bahan of bahans) {
-          try {
-            const bahanResponse = await fetch(
-              `${BACKEND_URL}/${productId}/bahan`,
-              {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(bahan),
-              }
-            );
-            if (!bahanResponse.ok) {
-              console.warn(
-                `[ProductsContext] Failed to add bahan ${bahan.nama_en}`
-              );
-            }
-          } catch (err) {
-            console.warn(`[ProductsContext] Error adding bahan:`, err);
-          }
-        }
-      }
-
-      console.log(
-        "[ProductsContext] Product creation completed with all relations"
-      );
+      console.log("[ProductsContext] Product creation completed");
 
       // Refresh products to get the complete data with relations
       await refreshProducts();

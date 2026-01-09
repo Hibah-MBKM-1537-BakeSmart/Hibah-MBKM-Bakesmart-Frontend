@@ -45,11 +45,10 @@ interface FormData {
   deskripsi_en: string;
   harga: string;
   harga_diskon: string;
-  stok: string;
-  jenis_id: number | null; // Single kategori roti selection
-  sub_jenis_ids: number[]; // Sub jenis multi-select
+  stok: string; // Regular stock - backend still uses this
+  daily_stock: string; // Only used when isDaily is true
+  ref_sub_jenis_id: number | null; // Single sub jenis reference
   images: File[];
-  hari_ids: number[]; // Changed from hari_tersedia to hari_ids array
   isBestSeller: boolean;
   isDaily: boolean;
   ingredients: Array<{
@@ -73,11 +72,10 @@ export function AddProductModal({
     deskripsi_en: "",
     harga: "",
     harga_diskon: "",
-    stok: "",
-    jenis_id: null,
-    sub_jenis_ids: [],
+    stok: "0",
+    daily_stock: "",
+    ref_sub_jenis_id: null,
     images: [],
-    hari_ids: [],
     isBestSeller: false,
     isDaily: false,
     ingredients: [],
@@ -129,24 +127,6 @@ export function AddProductModal({
     }
   }, [isOpen]);
 
-  // Reset sub_jenis when jenis changes
-  useEffect(() => {
-    if (formData.jenis_id) {
-      // Keep only sub_jenis that belong to selected jenis
-      const validSubJenisIds = getSubJenisByJenisId(formData.jenis_id).map(
-        (sj) => sj.id
-      );
-      setFormData((prev) => ({
-        ...prev,
-        sub_jenis_ids: prev.sub_jenis_ids.filter((id) =>
-          validSubJenisIds.includes(id)
-        ),
-      }));
-    } else {
-      setFormData((prev) => ({ ...prev, sub_jenis_ids: [] }));
-    }
-  }, [formData.jenis_id, getSubJenisByJenisId]);
-
   const handleInputChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
@@ -195,15 +175,6 @@ export function AddProductModal({
       images: prev.images.filter((_, i) => i !== index),
     }));
     setImagePreviews((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const toggleHari = (hariId: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      hari_ids: prev.hari_ids.includes(hariId)
-        ? prev.hari_ids.filter((id) => id !== hariId)
-        : [...prev.hari_ids, hariId],
-    }));
   };
 
   const handleAddIngredient = () => {
@@ -269,11 +240,14 @@ export function AddProductModal({
     if (!formData.harga || parseFloat(formData.harga) <= 0) {
       newErrors.harga = "Harga harus lebih dari 0";
     }
-    if (!formData.stok || parseInt(formData.stok) < 0) {
-      newErrors.stok = "Stok tidak boleh negatif";
+    if (
+      formData.isDaily &&
+      (!formData.daily_stock || parseInt(formData.daily_stock) < 0)
+    ) {
+      newErrors.daily_stock = "Daily Stock tidak boleh negatif";
     }
-    if (!formData.jenis_id) {
-      newErrors.jenis_id = "Kategori roti harus dipilih";
+    if (!formData.ref_sub_jenis_id) {
+      newErrors.ref_sub_jenis_id = "Sub Jenis harus dipilih";
     }
     if (formData.images.length === 0) {
       newErrors.images = "Minimal 1 gambar produk";
@@ -294,9 +268,8 @@ export function AddProductModal({
       // Prepare product data for backend
       // The ProductsContext.addProduct will handle:
       // 1. Create basic product (POST /products)
-      // 2. Add sub_jenis relations (POST /products/{id}/sub_jenis/{sub_jenis_id})
-      // 3. Add hari relations (POST /products/{id}/hari/{hari_id})
-      // 4. Upload images (POST /products/{id}/gambar)
+      // 2. Add hari relations (POST /products/{id}/hari/{hari_id})
+      // 3. Upload images (POST /products/{id}/gambar)
       const newProduct = {
         nama_id: formData.nama_id,
         nama_en: formData.nama_en,
@@ -306,12 +279,17 @@ export function AddProductModal({
         harga_diskon: formData.harga_diskon
           ? parseFloat(formData.harga_diskon)
           : null,
-        stok: parseInt(formData.stok),
+        // stok removed - backend doesn't need it
+        ...(formData.isDaily && {
+          daily_stock: parseInt(formData.daily_stock),
+        }),
         isBestSeller: formData.isBestSeller,
         isDaily: formData.isDaily,
-        // Relations - will be handled separately by ProductsContext
-        sub_jenis_ids: formData.sub_jenis_ids,
-        hari_ids: formData.hari_ids,
+        // Convert single ref_sub_jenis_id to array for backend
+        sub_jenis_ids: formData.ref_sub_jenis_id
+          ? [formData.ref_sub_jenis_id]
+          : [],
+        // Hari not needed - sub_jenis already has day configuration
         // Image files - will be uploaded separately
         imageFiles: formData.images,
         bahans: formData.ingredients.map((ing) => ({
@@ -339,11 +317,11 @@ export function AddProductModal({
       deskripsi_en: "",
       harga: "",
       harga_diskon: "",
-      stok: "",
-      jenis_id: null,
-      sub_jenis_ids: [],
+      stok: "0",
+      daily_stock: "",
+      ref_sub_jenis_id: null,
       images: [],
-      hari_ids: [],
+
       isBestSeller: false,
       isDaily: false,
       ingredients: [],
@@ -521,131 +499,89 @@ export function AddProductModal({
                     )}
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Stok *
-                    </label>
-                    <input
-                      type="number"
-                      name="stok"
-                      value={formData.stok}
-                      onChange={handleInputChange}
-                      placeholder="15"
-                      min="0"
-                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 ${
-                        errors.stok ? "border-red-500" : "border-gray-300"
-                      }`}
-                      disabled={isSubmitting}
-                    />
-                    {errors.stok && (
-                      <p className="mt-1 text-sm text-red-600">{errors.stok}</p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Hari Ketersediaan */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-3">
-                    Hari Ketersediaan
-                  </label>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
-                    {availableHari.map((hari) => (
-                      <button
-                        key={hari.id}
-                        type="button"
-                        onClick={() => toggleHari(hari.id)}
+                  {formData.isDaily && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Daily Stock *
+                      </label>
+                      <input
+                        type="number"
+                        name="daily_stock"
+                        value={formData.daily_stock}
+                        onChange={handleInputChange}
+                        placeholder="50"
+                        min="0"
+                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 ${
+                          errors.daily_stock
+                            ? "border-red-500"
+                            : "border-gray-300"
+                        }`}
                         disabled={isSubmitting}
-                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors border ${
-                          formData.hari_ids.includes(hari.id)
-                            ? "bg-orange-500 text-white border-orange-500"
-                            : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
-                        } disabled:opacity-50 disabled:cursor-not-allowed`}
-                      >
-                        {hari.nama_id}
-                      </button>
-                    ))}
-                  </div>
-                  <p className="text-xs text-gray-500 mt-2">
-                    {formData.hari_ids.length === 0
-                      ? "Tidak ada hari dipilih (produk tidak tersedia)"
-                      : `Tersedia di ${formData.hari_ids.length} hari`}
-                  </p>
+                      />
+                      {errors.daily_stock && (
+                        <p className="mt-1 text-sm text-red-600">
+                          {errors.daily_stock}
+                        </p>
+                      )}
+                      <p className="mt-1 text-xs text-gray-500">
+                        Stok harian yang akan di-reset setiap hari
+                      </p>
+                    </div>
+                  )}
                 </div>
 
-                {/* Kategori Roti (Jenis) */}
+                {/* Sub Jenis Selection */}
                 <div>
-                  <label className="flex items-center text-sm font-medium text-gray-700 mb-3">
-                    <Tag className="w-4 h-4 mr-2 text-orange-500" />
-                    Jenis (Kategori) * (Pilih 1)
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <Layers className="w-4 h-4 inline mr-2 text-blue-500" />
+                    Sub Jenis (Kategori) *
                   </label>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  <select
+                    name="ref_sub_jenis_id"
+                    value={formData.ref_sub_jenis_id || ""}
+                    onChange={(e) => {
+                      setFormData((prev) => ({
+                        ...prev,
+                        ref_sub_jenis_id: e.target.value
+                          ? Number(e.target.value)
+                          : null,
+                      }));
+                      if (errors.ref_sub_jenis_id) {
+                        setErrors((prev) => ({
+                          ...prev,
+                          ref_sub_jenis_id: "",
+                        }));
+                      }
+                    }}
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 ${
+                      errors.ref_sub_jenis_id
+                        ? "border-red-500"
+                        : "border-gray-300"
+                    }`}
+                    disabled={isSubmitting}
+                    required
+                  >
+                    <option value="">Pilih Sub Jenis...</option>
                     {jenisList.map((jenis) => (
-                      <button
-                        key={jenis.id}
-                        type="button"
-                        onClick={() => selectJenis(jenis.id)}
-                        disabled={isSubmitting}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors border ${
-                          formData.jenis_id === jenis.id
-                            ? "bg-orange-500 text-white border-orange-500"
-                            : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
-                        } disabled:opacity-50 disabled:cursor-not-allowed`}
-                      >
-                        {jenis.nama_id}
-                      </button>
+                      <optgroup key={jenis.id} label={jenis.nama_id}>
+                        {getSubJenisByJenisId(jenis.id).map((subJenis) => (
+                          <option key={subJenis.id} value={subJenis.id}>
+                            {subJenis.nama_id} ({subJenis.nama_en})
+                          </option>
+                        ))}
+                      </optgroup>
                     ))}
-                  </div>
-                  {errors.jenis_id && (
+                  </select>
+                  {errors.ref_sub_jenis_id && (
                     <p className="mt-2 text-sm text-red-600">
-                      {errors.jenis_id}
+                      {errors.ref_sub_jenis_id}
                     </p>
                   )}
-                  <p className="text-xs text-gray-500 mt-2">
-                    {!formData.jenis_id
-                      ? "Belum ada jenis dipilih"
-                      : `1 jenis terpilih`}
+                  <p className="text-xs text-gray-500 mt-1">
+                    Sub jenis sudah termasuk konfigurasi hari tersedia, jumlah
+                    pesanan, dan add-ons
                   </p>
                 </div>
-
-                {/* Sub Jenis */}
-                {formData.jenis_id && (
-                  <div>
-                    <label className="flex items-center text-sm font-medium text-gray-700 mb-3">
-                      <Layers className="w-4 h-4 mr-2 text-blue-500" />
-                      Sub Jenis (Opsional)
-                    </label>
-                    {getSubJenisByJenisId(formData.jenis_id).length === 0 ? (
-                      <p className="text-sm text-gray-500 italic">
-                        Tidak ada sub jenis untuk kategori ini
-                      </p>
-                    ) : (
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                        {getSubJenisByJenisId(formData.jenis_id).map(
-                          (subJenis) => (
-                            <button
-                              key={subJenis.id}
-                              type="button"
-                              onClick={() => toggleSubJenis(subJenis.id)}
-                              disabled={isSubmitting}
-                              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors border ${
-                                formData.sub_jenis_ids.includes(subJenis.id)
-                                  ? "bg-blue-500 text-white border-blue-500"
-                                  : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
-                              } disabled:opacity-50 disabled:cursor-not-allowed`}
-                            >
-                              {subJenis.nama_id}
-                            </button>
-                          )
-                        )}
-                      </div>
-                    )}
-                    <p className="text-xs text-gray-500 mt-2">
-                      {formData.sub_jenis_ids.length === 0
-                        ? "Tidak ada sub jenis dipilih"
-                        : `${formData.sub_jenis_ids.length} sub jenis terpilih`}
-                    </p>
-                  </div>
-                )}
 
                 {/* Ingredients (Bahan) */}
                 <div>

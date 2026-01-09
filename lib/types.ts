@@ -47,6 +47,9 @@ export interface SubJenis {
   nama_en: string;
   jenis_id: number;
   jenis?: Jenis; // Optional: populated when fetching with relations
+  min_amount?: number;
+  max_amount?: number;
+  po_closed?: string; // Time string in HH:mm:ss format
 }
 
 // Legacy Category interface (for backwards compatibility)
@@ -90,7 +93,12 @@ export interface ApiProduct {
   updated_at?: string;
   gambars?: Array<{ id: number; file_path: string } | null>;
   jenis?: Array<{ id: number; nama_en: string; nama_id: string }>;
-  sub_jenis?: Array<{ id: number; nama_en: string; nama_id: string; jenis_id?: number }>;
+  sub_jenis?: Array<{
+    id: number;
+    nama_en: string;
+    nama_id: string;
+    jenis_id?: number;
+  }>;
   hari?: Array<{ id: number; nama_en: string; nama_id: string }>;
   attributes?: Array<{
     id: number;
@@ -134,7 +142,12 @@ export interface MenuItem {
     updated_at?: string;
   }>;
   jenis: Array<{ id: number; nama_en: string; nama_id: string }>;
-  sub_jenis?: Array<{ id: number; nama_en: string; nama_id: string; jenis_id?: number }>;
+  sub_jenis?: Array<{
+    id: number;
+    nama_en: string;
+    nama_id: string;
+    jenis_id?: number;
+  }>;
   hari: Array<{ id: number; nama_en: string; nama_id: string }>;
   attributes: Array<{
     id: number;
