@@ -143,15 +143,106 @@ function ProductTableRow({
         {product.harga ? formatPrice(product.harga) : "Rp 0"}
       </td>
       <td className="px-3 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-900 w-[180px]">
-        {product.isDaily ? (
+        {editingStockId === product.id ? (
           <div className="flex items-center gap-2">
-            <div className="px-3 py-1.5 rounded-lg text-sm font-semibold bg-blue-100 text-blue-800 border border-blue-200">
-              {product.daily_stock ?? 0}
+            <input
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              value={tempStock}
+              onChange={(e) => handleStockInputChange(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  saveStockEdit(product.id);
+                } else if (e.key === "Escape") {
+                  cancelStockEdit();
+                }
+              }}
+              className="w-20 px-3 py-2 border-2 border-orange-500 rounded-lg text-center focus:outline-none focus:ring-2 focus:ring-orange-500 font-semibold"
+              autoFocus
+              placeholder="0"
+            />
+            <button
+              onClick={() => saveStockEdit(product.id)}
+              className="p-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors shadow-sm"
+              title="Save"
+            >
+              <span className="text-base font-bold">✓</span>
+            </button>
+            <button
+              onClick={cancelStockEdit}
+              className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors shadow-sm"
+              title="Cancel"
+            >
+              <span className="text-base font-bold">✕</span>
+            </button>
+          </div>
+        ) : pendingStockChanges[product.id] !== undefined ? (
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => handleStockDecrement(product.id)}
+              className="p-1.5 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent border border-gray-200 hover:border-red-300"
+              disabled={pendingStockChanges[product.id] === 0}
+              title="Decrease stock"
+            >
+              <Minus className="w-4 h-4 text-gray-600 hover:text-red-600" />
+            </button>
+            <div className="min-w-[45px] px-3 py-1.5 rounded-lg text-sm font-semibold bg-orange-100 text-orange-800 border-2 border-orange-400 shadow-md animate-pulse">
+              {pendingStockChanges[product.id]}
             </div>
-            <span className="text-xs text-gray-500">units/day</span>
+            <button
+              onClick={() => handleStockIncrement(product.id)}
+              className="p-1.5 hover:bg-green-50 rounded-lg transition-colors border border-gray-200 hover:border-green-300"
+              title="Increase stock"
+            >
+              <Plus className="w-4 h-4 text-gray-600 hover:text-green-600" />
+            </button>
+            <button
+              onClick={() => confirmStockChange(product.id)}
+              className="ml-2 px-3 py-1.5 bg-green-500 text-white text-xs font-semibold rounded-lg hover:bg-green-600 transition-colors shadow-sm"
+              title="Confirm and save to database"
+            >
+              ✓ Confirm
+            </button>
+            <button
+              onClick={() => cancelStockChange(product.id)}
+              className="px-3 py-1.5 bg-red-500 text-white text-xs font-semibold rounded-lg hover:bg-red-600 transition-colors shadow-sm"
+              title="Cancel changes"
+            >
+              ✕ Cancel
+            </button>
           </div>
         ) : (
-          <span className="text-gray-400 text-xs italic">N/A</span>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => handleStockDecrement(product.id)}
+              className="p-1.5 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent border border-gray-200 hover:border-red-300"
+              disabled={!product.stok || product.stok === 0}
+              title="Decrease stock"
+            >
+              <Minus className="w-4 h-4 text-gray-600 hover:text-red-600" />
+            </button>
+            <button
+              onClick={() => startEditingStock(product.id, product.stok || 0)}
+              className={`min-w-[45px] px-3 py-1.5 rounded-lg text-sm font-semibold transition-all shadow-sm ${
+                !product.stok || product.stok === 0
+                  ? "bg-red-100 text-red-800 hover:bg-red-200 border border-red-200"
+                  : product.stok < 10
+                  ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-200 border border-yellow-200"
+                  : "bg-green-100 text-green-800 hover:bg-green-200 border border-green-200"
+              }`}
+              title="Click to edit stock"
+            >
+              {product.stok ?? 0}
+            </button>
+            <button
+              onClick={() => handleStockIncrement(product.id)}
+              className="p-1.5 hover:bg-green-50 rounded-lg transition-colors border border-gray-200 hover:border-green-300"
+              title="Increase stock"
+            >
+              <Plus className="w-4 h-4 text-gray-600 hover:text-green-600" />
+            </button>
+          </div>
         )}
       </td>
       <td className="px-3 lg:px-6 py-4 whitespace-nowrap text-xs lg:text-sm text-gray-900 w-[100px]">
@@ -1095,8 +1186,14 @@ export function ProductsTab() {
                     {getSortIcon("harga")}
                   </div>
                 </th>
-                <th className="px-3 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[180px]">
-                  <div className="flex items-center">Daily Stock</div>
+                <th
+                  className="px-3 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 w-[180px]"
+                  onClick={() => handleSort("stok")}
+                >
+                  <div className="flex items-center">
+                    Stock
+                    {getSortIcon("stok")}
+                  </div>
                 </th>
                 <th
                   className="px-3 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 w-[100px]"

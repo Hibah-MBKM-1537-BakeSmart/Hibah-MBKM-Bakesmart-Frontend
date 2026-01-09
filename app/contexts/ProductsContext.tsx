@@ -94,7 +94,20 @@ interface ProductsContextType {
   loading: boolean;
   error: string | null;
   isBackendConnected: boolean;
-  addProduct: (productData: Partial<Product>) => Promise<void>;
+  addProduct: (
+    productData: Partial<Product> & {
+      sub_jenis_ids?: number[];
+      jenis_id?: number;
+      imageFiles?: File[];
+      bahans?: Array<{
+        id?: number;
+        nama_id?: string;
+        nama_en?: string;
+        nama?: string;
+        jumlah?: number;
+      }>;
+    }
+  ) => Promise<void>;
   updateProduct: (id: number, productData: Partial<Product>) => Promise<void>;
   deleteProduct: (id: number) => Promise<void>;
   refreshProducts: () => Promise<void>;
@@ -286,7 +299,13 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
       sub_jenis_ids?: number[];
       jenis_id?: number;
       imageFiles?: File[];
-      bahans?: Array<{ nama_id: string; nama_en: string; jumlah: number }>;
+      bahans?: Array<{
+        id?: number;
+        nama_id?: string;
+        nama_en?: string;
+        nama?: string;
+        jumlah?: number;
+      }>;
     }
   ): Promise<void> => {
     try {
@@ -413,7 +432,24 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
       setState((prev) => ({ ...prev, error: null }));
 
       // Remove fields backend doesn't need
-      const { stok, gambars, hari, jenis, sub_jenis, attributes, bahans, addons, vouchers, sales, rating, status, hari_tersedia, created_at, updated_at, ...cleanData } = productData;
+      const {
+        stok,
+        gambars,
+        hari,
+        jenis,
+        sub_jenis,
+        attributes,
+        bahans,
+        addons,
+        vouchers,
+        sales,
+        rating,
+        status,
+        hari_tersedia,
+        created_at,
+        updated_at,
+        ...cleanData
+      } = productData;
 
       console.log("[ProductsContext] Cleaned payload for update:", cleanData);
 

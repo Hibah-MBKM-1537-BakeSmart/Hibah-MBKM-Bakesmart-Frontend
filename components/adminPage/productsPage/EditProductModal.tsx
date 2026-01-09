@@ -188,7 +188,9 @@ export function EditProductModal({
         // stok removed - backend doesn't need it for update
         ...(formData.isDaily && { daily_stock: formData.daily_stock }),
         // Convert single ref_sub_jenis_id to array for backend
-        sub_jenis_ids: formData.ref_sub_jenis_id ? [formData.ref_sub_jenis_id] : [],
+        sub_jenis_ids: formData.ref_sub_jenis_id
+          ? [formData.ref_sub_jenis_id]
+          : [],
         // hari_ids NOT sent - hari comes from sub_jenis configuration
         harga_diskon: formData.harga_diskon,
         isBestSeller: formData.isBestSeller,
