@@ -407,33 +407,35 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
   // Update product
   const updateProduct = async (
     id: number,
-    productData: Partial<Product>
+    productData: Partial<Product> & {
+      sub_jenis_ids?: number[];
+      bahans?: Array<{ nama_id: string; nama_en: string; jumlah: number }>;
+    }
   ): Promise<void> => {
     try {
       console.log("[ProductsContext] Updating product:", id, productData);
       setState((prev) => ({ ...prev, error: null }));
 
-      // Remove fields backend doesn't need
-      const {
-        stok,
-        gambars,
-        hari,
-        jenis,
-        sub_jenis,
-        attributes,
-        bahans,
-        addons,
-        vouchers,
-        sales,
-        rating,
-        status,
-        hari_tersedia,
-        created_at,
-        updated_at,
-        ...cleanData
-      } = productData;
+      // Build the update payload with correct structure
+      const updatePayload: Record<string, any> = {
+        nama_id: productData.nama_id,
+        nama_en: productData.nama_en,
+        deskripsi_id: productData.deskripsi_id,
+        deskripsi_en: productData.deskripsi_en,
+        harga: productData.harga,
+        harga_diskon: productData.harga_diskon ?? null,
+        isBestSeller: productData.isBestSeller ?? false,
+        isDaily: productData.isDaily ?? false,
+        daily_stock: productData.daily_stock ?? null,
+        sub_jenis_ids: productData.sub_jenis_ids || [],
+        bahans: (productData.bahans || []).map((b) => ({
+          nama_id: b.nama_id,
+          nama_en: b.nama_en,
+          jumlah: typeof b.jumlah === "string" ? parseInt(b.jumlah, 10) : b.jumlah,
+        })),
+      };
 
-      console.log("[ProductsContext] Cleaned payload for update:", cleanData);
+      console.log("[ProductsContext] Update payload:", updatePayload);
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000);
@@ -444,7 +446,7 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(cleanData),
+        body: JSON.stringify(updatePayload),
       });
 
       clearTimeout(timeoutId);
