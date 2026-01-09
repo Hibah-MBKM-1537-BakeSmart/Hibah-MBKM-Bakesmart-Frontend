@@ -563,12 +563,13 @@ export default function UsersPage() {
         })}
       </div>
 
-      {/* Add User Modal - TODO: Update for backend */}
-      {/* <AddUserModal
+      {/* Add User Modal */}
+      <AddUserModal
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
         onAddUser={handleAddUser}
-      /> */}
+        roles={roles}
+      />
 
       {/* View User Modal */}
       {selectedAdmin && showViewModal && (

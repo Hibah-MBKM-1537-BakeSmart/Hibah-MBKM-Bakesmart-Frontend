@@ -38,82 +38,6 @@ interface Order {
   production_status?: 'pending' | 'in_production' | 'completed';
 }
 
-// Demo data
-const DEMO_ORDERS = (): Order[] => [
-  {
-    id: 2001,
-    user: { id: 201, nama: 'Ahmad Rizki', no_hp: '08111222333' },
-    order_products: [
-      {
-        id: 601,
-        product: { id: 1, nama: 'Roti Tawar', gambar: '/img/roti-tawar.jpg' },
-        jumlah: 3,
-        harga_beli: 15000,
-        note: 'Dipanggang golden',
-        addons: [{ addon_id: 1, nama: 'Topping Coklat', harga: 2000, quantity: 2 }]
-      }
-    ],
-    status: 'verifying',
-    created_at: '2025-12-25T08:00:00Z',
-    scheduled_date: '2025-12-25',
-    notes: 'Pesanan baru - menunggu verifikasi'
-  },
-  {
-    id: 2002,
-    user: { id: 202, nama: 'Siti Nur', no_hp: '08222333444' },
-    order_products: [
-      {
-        id: 602,
-        product: { id: 2, nama: 'Cupcakes', gambar: '/img/cupcakes.jpg' },
-        jumlah: 12,
-        harga_beli: 8000,
-        note: 'Warna merah muda',
-        addons: [{ addon_id: 4, nama: 'Frosting Strawberry', harga: 2000, quantity: 10 }]
-      }
-    ],
-    status: 'pending',
-    created_at: '2025-12-24T14:30:00Z',
-    scheduled_date: '2025-12-25',
-    notes: 'Menunggu bukti pembayaran'
-  },
-  {
-    id: 2003,
-    user: { id: 203, nama: 'Bima Sakti', no_hp: '08333444555' },
-    order_products: [
-      {
-        id: 603,
-        product: { id: 3, nama: 'Donuts', gambar: '/img/donuts.jpg' },
-        jumlah: 20,
-        harga_beli: 5000,
-        addons: [{ addon_id: 3, nama: 'Sprinkles', harga: 1000, quantity: 20 }]
-      }
-    ],
-    status: 'paid',
-    created_at: '2025-12-24T10:00:00Z',
-    scheduled_date: '2025-12-25',
-    notes: '',
-    production_status: 'pending'
-  },
-  {
-    id: 2004,
-    user: { id: 204, nama: 'Dewi Lestari', no_hp: '08444555666' },
-    order_products: [
-      {
-        id: 604,
-        product: { id: 4, nama: 'Croissant', gambar: '/img/croissant.jpg' },
-        jumlah: 8,
-        harga_beli: 10000,
-        addons: []
-      }
-    ],
-    status: 'completed',
-    created_at: '2025-12-23T09:00:00Z',
-    scheduled_date: '2025-12-23',
-    notes: 'Sudah dikirim',
-    production_status: 'completed'
-  }
-];
-
 function OrderCard({
   order,
   onApprove,
@@ -259,23 +183,53 @@ export default function OrdersPage() {
     try {
       setLoading(true);
       setError(null);
-      // Try API first, fallback to demo
-      try {
-        const response = await fetch('/api/admin/orders?all=true', {
-          credentials: 'include'
-        });
-        if (response.ok) {
-          const data = await response.json();
-          setOrders(data.data || []);
-        } else {
-          setOrders(DEMO_ORDERS());
+      // Use /api/orders/group to get all orders grouped by date
+      const response = await fetch('/api/orders/group', {
+        method: 'GET',
+        cache: 'no-store'
+      });
+      if (response.ok) {
+        const result = await response.json();
+        // Transform order groups to flat order list
+        const allOrders: Order[] = [];
+        if (Array.isArray(result.data)) {
+          result.data.forEach((group: any) => {
+            group.orders?.forEach((order: any) => {
+              allOrders.push({
+                id: order.id,
+                user: {
+                  id: order.user?.id || order.user_id,
+                  nama: order.user?.nama || 'Unknown',
+                  no_hp: order.user?.no_hp || '-'
+                },
+                order_products: (order.products || []).map((p: any) => ({
+                  id: p.product_id,
+                  product: {
+                    id: p.product_id,
+                    nama: p.product_name_id,
+                    gambar: ''
+                  },
+                  jumlah: p.jumlah,
+                  harga_beli: p.harga_beli,
+                  note: p.note || '',
+                  addons: []
+                })),
+                status: order.status === 'ongoing' ? 'pending' : order.status,
+                created_at: order.created_at || group.tanggal,
+                scheduled_date: group.tanggal,
+                notes: order.note || '',
+                production_status: order.production_status
+              });
+            });
+          });
         }
-      } catch {
-        setOrders(DEMO_ORDERS());
+        setOrders(allOrders);
+      } else {
+        throw new Error('Gagal memuat pesanan dari server');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Gagal memuat pesanan');
-      setOrders(DEMO_ORDERS());
+      setOrders([]);
     } finally {
       setLoading(false);
     }
@@ -283,65 +237,70 @@ export default function OrdersPage() {
 
   const handleApprove = async (orderId: number) => {
     try {
-      const response = await fetch(`/api/admin/orders/${orderId}/approve`, {
+      // Confirm order (changes status from draft to ongoing)
+      const response = await fetch(`/api/orders/${orderId}/confirm`, {
         method: 'POST',
-        credentials: 'include'
+        headers: { 'Content-Type': 'application/json' }
       });
       if (response.ok) {
         setOrders(orders.map(o => (o.id === orderId ? { ...o, status: 'pending' as const } : o)));
+      } else {
+        console.error('Failed to approve order');
       }
     } catch (err) {
       console.error('Error approving order:', err);
-      // Local update as fallback
-      setOrders(orders.map(o => (o.id === orderId ? { ...o, status: 'pending' as const } : o)));
     }
   };
 
   const handleReject = async (orderId: number) => {
     try {
-      const response = await fetch(`/api/admin/orders/${orderId}/reject`, {
-        method: 'POST',
-        credentials: 'include'
+      // Delete order
+      const response = await fetch(`/api/orders/${orderId}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' }
       });
       if (response.ok) {
         setOrders(orders.filter(o => o.id !== orderId));
+      } else {
+        console.error('Failed to reject order');
       }
     } catch (err) {
       console.error('Error rejecting order:', err);
-      // Local update as fallback
-      setOrders(orders.filter(o => o.id !== orderId));
     }
   };
 
   const handleVerifyPayment = async (orderId: number) => {
     try {
-      const response = await fetch(`/api/admin/orders/${orderId}/verify-payment`, {
-        method: 'POST',
-        credentials: 'include'
+      // Update order status to paid (ongoing)
+      const response = await fetch(`/api/orders/${orderId}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'ongoing' })
       });
       if (response.ok) {
         setOrders(orders.map(o => (o.id === orderId ? { ...o, status: 'paid' as const } : o)));
+      } else {
+        console.error('Failed to verify payment');
       }
     } catch (err) {
       console.error('Error verifying payment:', err);
-      // Local update as fallback
-      setOrders(orders.map(o => (o.id === orderId ? { ...o, status: 'paid' as const } : o)));
     }
   };
 
   const handleDone = async (orderId: number) => {
     try {
-      const response = await fetch(`/api/admin/orders/${orderId}/complete`, {
+      // Finish order (sets status to completed and sends WhatsApp notification)
+      const response = await fetch(`/api/orders/${orderId}/finish`, {
         method: 'POST',
-        credentials: 'include'
+        headers: { 'Content-Type': 'application/json' }
       });
       if (response.ok) {
         setOrders(orders.map(o => (o.id === orderId ? { ...o, status: 'completed' as const } : o)));
+      } else {
+        console.error('Failed to complete order');
       }
     } catch (err) {
       console.error('Error completing order:', err);
-      // Local update as fallback
-      setOrders(orders.map(o => (o.id === orderId ? { ...o, status: 'completed' as const } : o)));
     }
   };
 
