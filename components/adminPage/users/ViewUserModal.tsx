@@ -65,7 +65,7 @@ export function ViewUserModal({ isOpen, onClose, user }: ViewUserModalProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/10 backdrop-blur-[2px]" onClick={onClose} />
 
       {/* Modal */}
       <div className="relative z-10 w-full max-w-2xl rounded-xl bg-white shadow-xl border border-gray-200 m-4">

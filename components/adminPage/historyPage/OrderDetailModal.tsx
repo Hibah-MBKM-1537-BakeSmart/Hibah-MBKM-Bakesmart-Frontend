@@ -13,7 +13,8 @@ import {
   CheckCircle,
   XCircle,
   X,
-  Calendar
+  Calendar,
+  AlertCircle
 } from 'lucide-react';
 
 export function OrderDetailModal() {
@@ -277,16 +278,7 @@ export function OrderDetailModal() {
       
       {/* Modal Background Overlay */}
       <div 
-        className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
-        style={{ 
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          backdropFilter: 'blur(3px)',
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0
-        }}
+        className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/10 backdrop-blur-[2px]"
         onClick={closeOrderDetail}
       >
         {/* Hidden Print Receipt (Only visible when printing) */}
@@ -338,15 +330,15 @@ export function OrderDetailModal() {
                 ))}
                 
                 <div className="totals">
-                  {order.shipping_cost && order.shipping_cost > 0 && (
+                  {order.shipping_cost && Number(order.shipping_cost) > 0 && (
                     <div className="total-row">
                       <span>Ongkos Kirim:</span>
-                      <span>{formatCurrency(order.shipping_cost)}</span>
+                      <span>{formatCurrency(Number(order.shipping_cost))}</span>
                     </div>
                   )}
                   <div className="total-row grand-total">
                     <span>TOTAL:</span>
-                    <span>{formatCurrency(order.total_harga)}</span>
+                    <span>{formatCurrency(Number(order.total_harga))}</span>
                   </div>
                 </div>
               </>
@@ -558,13 +550,13 @@ export function OrderDetailModal() {
                   )}
                   {order.products && order.products.length > 0 && (
                     <>
-                      {order.shipping_cost && order.shipping_cost > 0 && (
+                      {order.shipping_cost && Number(order.shipping_cost) > 0 && (
                         <tr className="border-t" style={{ borderColor: '#e0d5c7' }}>
                           <td colSpan={3} className="p-3 text-right font-admin-body" style={{ color: '#5d4037' }}>
                             Ongkos Kirim:
                           </td>
                           <td className="p-3 text-right font-admin-body" style={{ color: '#5d4037' }}>
-                            {formatCurrency(order.shipping_cost)}
+                            {formatCurrency(Number(order.shipping_cost))}
                           </td>
                         </tr>
                       )}
@@ -573,7 +565,7 @@ export function OrderDetailModal() {
                           Total:
                         </td>
                         <td className="p-3 text-right font-admin-heading" style={{ color: '#5d4037' }}>
-                          {formatCurrency(order.total_harga)}
+                          {formatCurrency(Number(order.total_harga))}
                         </td>
                       </tr>
                     </>

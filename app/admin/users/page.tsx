@@ -576,7 +576,7 @@ export default function UsersPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           {/* Backdrop */}
           <div
-            className="absolute inset-0 bg-black/40"
+            className="absolute inset-0 bg-black/10 backdrop-blur-[2px]"
             onClick={() => {
               setShowViewModal(false);
               setSelectedAdmin(null);

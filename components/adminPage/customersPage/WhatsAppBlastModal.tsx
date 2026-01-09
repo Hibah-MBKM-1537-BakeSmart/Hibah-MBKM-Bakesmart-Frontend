@@ -167,11 +167,7 @@ export function WhatsAppBlastModal({
 
   return (
     <div
-      className="fixed inset-0 flex items-center justify-center p-4 z-50"
-      style={{
-        backgroundColor: "rgba(139, 111, 71, 0.1)", // Warna coklat muda yang soft
-        backdropFilter: "blur(2px)", // Efek blur halus
-      }}
+      className="fixed inset-0 flex items-center justify-center p-4 z-50 bg-black/10 backdrop-blur-[2px]"
       onClick={onClose} // Klik di backdrop untuk close
     >
       <div
