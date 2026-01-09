@@ -412,6 +412,11 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
       console.log("[ProductsContext] Updating product:", id, productData);
       setState((prev) => ({ ...prev, error: null }));
 
+      // Remove fields backend doesn't need
+      const { stok, gambars, hari, jenis, sub_jenis, attributes, bahans, addons, vouchers, sales, rating, status, hari_tersedia, created_at, updated_at, ...cleanData } = productData;
+
+      console.log("[ProductsContext] Cleaned payload for update:", cleanData);
+
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000);
 
@@ -421,7 +426,7 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(productData),
+        body: JSON.stringify(cleanData),
       });
 
       clearTimeout(timeoutId);

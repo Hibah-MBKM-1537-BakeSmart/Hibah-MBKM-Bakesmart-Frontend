@@ -34,7 +34,6 @@ export function EditProductModal({
     stok: 0,
     daily_stock: 0,
     ref_sub_jenis_id: null as number | null,
-    hari_ids: [] as number[],
     addons: [] as ProductAddon[],
     images: [] as File[],
     isBestSeller: false,
@@ -52,60 +51,13 @@ export function EditProductModal({
   const [existingImages, setExistingImages] = useState<
     Array<{ id: number; file_path: string }>
   >([]);
-  const [availableHari, setAvailableHari] = useState<
-    Array<{ id: number; nama_id: string; nama_en: string }>
-  >([]);
 
-  // Store initial IDs for change detection
+  // Store initial IDs for change detection (hari removed - comes from sub_jenis)
   const [initialIds, setInitialIds] = useState<{
     sub_jenis: number[];
-    hari: number[];
     attributes: number[];
     ingredients: number[];
-  }>({ sub_jenis: [], hari: [], attributes: [], ingredients: [] });
-
-  // Fetch available hari from backend (jenis/sub_jenis now from context)
-  useEffect(() => {
-    const fetchHari = async () => {
-      try {
-        const response = await fetch("/api/products");
-        const data = await response.json();
-
-        if (data.data && Array.isArray(data.data)) {
-          const hariMap = new Map<
-            number,
-            { id: number; nama_id: string; nama_en: string }
-          >();
-
-          data.data.forEach((prod: any) => {
-            prod.hari?.forEach((h: any) => {
-              if (h.id && h.nama_id) {
-                hariMap.set(h.id, {
-                  id: h.id,
-                  nama_id: h.nama_id,
-                  nama_en: h.nama_en || h.nama_id,
-                });
-              }
-            });
-          });
-
-          setAvailableHari(
-            Array.from(hariMap.values()).sort((a, b) => a.id - b.id)
-          );
-          console.log(
-            "📅 Available Hari loaded:",
-            Array.from(hariMap.values()).sort((a, b) => a.id - b.id)
-          );
-        }
-      } catch (error) {
-        console.error("Error fetching hari:", error);
-      }
-    };
-
-    if (isOpen) {
-      fetchHari();
-    }
-  }, [isOpen]);
+  }>({ sub_jenis: [], attributes: [], ingredients: [] });
 
   // Reset form when product changes
   useEffect(() => {
@@ -124,7 +76,6 @@ export function EditProductModal({
       // Initial IDs from props
       setInitialIds({
         sub_jenis: product.sub_jenis?.map((sj) => sj.id) || [],
-        hari: product.hari?.map((h) => h.id) || [],
         attributes: mappedAddons.map((a) => a.id),
         ingredients: product.bahans?.map((b) => b.id) || [],
       });
@@ -139,7 +90,6 @@ export function EditProductModal({
         stok: product.stok || 0,
         daily_stock: product.daily_stock || 0,
         ref_sub_jenis_id: product.sub_jenis?.[0]?.id || null,
-        hari_ids: product.hari?.map((h) => h.id) || [],
         addons: mappedAddons,
         images: [],
         isBestSeller: product.isBestSeller || false,
@@ -171,7 +121,6 @@ export function EditProductModal({
               setInitialIds((prev) => ({
                 sub_jenis:
                   detail.sub_jenis?.map((sj: any) => sj.id) || prev.sub_jenis,
-                hari: detail.hari?.map((h: any) => h.id) || prev.hari,
                 attributes:
                   detail.attributes?.map((a: any) => a.id) || prev.attributes,
                 ingredients:
@@ -183,7 +132,6 @@ export function EditProductModal({
                 // Update arrays that might be truncated in list view
                 ref_sub_jenis_id:
                   detail.sub_jenis?.[0]?.id || prev.ref_sub_jenis_id,
-                hari_ids: detail.hari?.map((h: any) => h.id) || prev.hari_ids,
                 ingredients:
                   detail.bahans?.map((b: any) => ({
                     id: b.id,
@@ -232,14 +180,16 @@ export function EditProductModal({
 
     try {
       // 1. Update Core Product Data
-      const { addons, hari_ids, images, ...restFormData } = formData;
+      const { addons, images, ...restFormData } = formData;
       const productData = {
         ...restFormData,
         nama: formData.nama_id, // Keep nama for backward compatibility
         deskripsi: formData.deskripsi_id, // Keep deskripsi for backward compatibility
-        stok: formData.stok,
+        // stok removed - backend doesn't need it for update
         ...(formData.isDaily && { daily_stock: formData.daily_stock }),
-        ref_sub_jenis_id: formData.ref_sub_jenis_id!,
+        // Convert single ref_sub_jenis_id to array for backend
+        sub_jenis_ids: formData.ref_sub_jenis_id ? [formData.ref_sub_jenis_id] : [],
+        // hari_ids NOT sent - hari comes from sub_jenis configuration
         harga_diskon: formData.harga_diskon,
         isBestSeller: formData.isBestSeller,
         isDaily: formData.isDaily,
@@ -250,20 +200,7 @@ export function EditProductModal({
 
       const pId = product.id;
 
-      // 2. Sync Hari
-      const hariToAdd = formData.hari_ids.filter(
-        (id) => !initialIds.hari.includes(id)
-      );
-      const hariToRemove = initialIds.hari.filter(
-        (id) => !formData.hari_ids.includes(id)
-      );
-
-      for (const id of hariToAdd)
-        await fetch(`/api/products/${pId}/hari/${id}`, { method: "POST" });
-      for (const id of hariToRemove)
-        await fetch(`/api/products/${pId}/hari/${id}`, { method: "DELETE" });
-
-      // 4. Sync Attributes (Add-ons)
+      // 2. Sync Attributes (Add-ons) - hari sync removed, comes from sub_jenis
       const currentAttrIds = formData.addons.map((a) => a.id);
       const attrToAdd = currentAttrIds.filter(
         (id) => !initialIds.attributes.includes(id)
@@ -392,7 +329,6 @@ export function EditProductModal({
       stok: 0,
       daily_stock: 0,
       ref_sub_jenis_id: null,
-      hari_ids: [],
       addons: [],
       images: [],
       isBestSeller: false,
@@ -471,24 +407,6 @@ export function EditProductModal({
       const newIngredients = [...prev.ingredients];
       newIngredients[index] = { ...newIngredients[index], [field]: value };
       return { ...prev, ingredients: newIngredients };
-    });
-  };
-
-  const toggleHari = (hariId: number) => {
-    console.log("🔵 toggleHari called with ID:", hariId);
-    console.log("🔵 Current hari_ids:", formData.hari_ids);
-
-    setFormData((prev) => {
-      const newHariIds = prev.hari_ids.includes(hariId)
-        ? prev.hari_ids.filter((id) => id !== hariId)
-        : [...prev.hari_ids, hariId];
-
-      console.log("🔵 New hari_ids:", newHariIds);
-
-      return {
-        ...prev,
-        hari_ids: newHariIds,
-      };
     });
   };
 
@@ -972,34 +890,6 @@ export function EditProductModal({
                 </p>
               </div>
             )}
-          </div>
-
-          {/* Hari Ketersediaan */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-3">
-              Hari Ketersediaan
-            </label>
-            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
-              {availableHari.map((hari) => (
-                <button
-                  key={hari.id}
-                  type="button"
-                  onClick={() => toggleHari(hari.id)}
-                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors border ${
-                    formData.hari_ids.includes(hari.id)
-                      ? "bg-orange-500 text-white border-orange-500"
-                      : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
-                  }`}
-                >
-                  {hari.nama_id}
-                </button>
-              ))}
-            </div>
-            <p className="text-xs text-gray-500 mt-2">
-              {formData.hari_ids.length === 0
-                ? "Tidak ada hari dipilih (produk tidak tersedia)"
-                : `Tersedia di ${formData.hari_ids.length} hari`}
-            </p>
           </div>
 
           {/* Manage Addons */}
