@@ -563,19 +563,20 @@ export default function UsersPage() {
         })}
       </div>
 
-      {/* Add User Modal - TODO: Update for backend */}
-      {/* <AddUserModal
+      {/* Add User Modal */}
+      <AddUserModal
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
         onAddUser={handleAddUser}
-      /> */}
+        roles={roles}
+      />
 
       {/* View User Modal */}
       {selectedAdmin && showViewModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           {/* Backdrop */}
           <div
-            className="absolute inset-0 bg-black/40"
+            className="absolute inset-0 bg-black/10 backdrop-blur-[2px]"
             onClick={() => {
               setShowViewModal(false);
               setSelectedAdmin(null);

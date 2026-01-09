@@ -1,19 +1,25 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { X, User, Mail, Phone, Shield, Eye, EyeOff } from "lucide-react";
+import { X, User, Phone, Shield, Eye, EyeOff, Loader2 } from "lucide-react";
+
+interface RoleData {
+  id: number;
+  name: string;
+}
 
 interface AddUserModalProps {
   isOpen: boolean;
   onClose: () => void;
   onAddUser: (userData: NewUserData) => void;
+  roles: RoleData[];
 }
 
 interface NewUserData {
   name: string;
   email: string;
   phone: string;
-  role: "customer" | "admin" | "super_admin";
+  role: string; // comma-separated role names for multiple roles
   password: string;
 }
 
@@ -21,16 +27,18 @@ export function AddUserModal({
   isOpen,
   onClose,
   onAddUser,
+  roles,
 }: AddUserModalProps) {
   const [formData, setFormData] = useState<NewUserData>({
     name: "",
     email: "",
     phone: "",
-    role: "customer",
+    role: "",
     password: "",
   });
+  const [selectedRoles, setSelectedRoles] = useState<number[]>([]);
   const [showPassword, setShowPassword] = useState(false);
-  const [errors, setErrors] = useState<Partial<NewUserData>>({});
+  const [errors, setErrors] = useState<Partial<Record<keyof NewUserData | 'roles', string>>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Prevent body scroll when modal is open
@@ -57,33 +65,26 @@ export function AddUserModal({
   if (!isOpen) return null;
 
   const validateForm = (): boolean => {
-    const newErrors: Partial<NewUserData> = {};
+    const newErrors: Partial<Record<keyof NewUserData | 'roles', string>> = {};
 
     if (!formData.name.trim()) {
       newErrors.name = "Nama wajib diisi";
     }
 
-    if (!formData.email.trim()) {
-      newErrors.email = "Email wajib diisi";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = "Format email tidak valid";
-    }
-
     if (!formData.phone.trim()) {
       newErrors.phone = "Nomor telepon wajib diisi";
-    } else if (
-      !/^(\+62|0)[0-9]{8,13}$/.test(formData.phone.replace(/\s|-/g, ""))
-    ) {
-      newErrors.phone = "Format nomor telepon tidak valid";
+    } else if (!/^[0-9]{10,15}$/.test(formData.phone.replace(/\D/g, ""))) {
+      newErrors.phone = "Format nomor telepon tidak valid (10-15 digit)";
     }
 
-    // Password hanya wajib untuk admin dan super_admin
-    if (formData.role !== "customer") {
-      if (!formData.password.trim()) {
-        newErrors.password = "Password wajib diisi untuk admin";
-      } else if (formData.password.length < 6) {
-        newErrors.password = "Password minimal 6 karakter";
-      }
+    if (selectedRoles.length === 0) {
+      newErrors.roles = "Pilih minimal satu role";
+    }
+
+    if (!formData.password.trim()) {
+      newErrors.password = "Password wajib diisi";
+    } else if (formData.password.length < 6) {
+      newErrors.password = "Password minimal 6 karakter";
     }
 
     setErrors(newErrors);
@@ -98,28 +99,31 @@ export function AddUserModal({
     setIsSubmitting(true);
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // Convert selected role IDs to role names (comma-separated)
+      const roleNames = selectedRoles
+        .map((id) => roles.find((r) => r.id === id)?.name)
+        .filter(Boolean)
+        .join(",");
 
-      onAddUser(formData);
+      const userData: NewUserData = {
+        ...formData,
+        role: roleNames,
+      };
+
+      await onAddUser(userData);
 
       // Reset form
       setFormData({
         name: "",
         email: "",
         phone: "",
-        role: "customer",
+        role: "",
         password: "",
       });
+      setSelectedRoles([]);
       setErrors({});
-
-      onClose();
-
-      // Show success message (you can replace with toast notification)
-      alert("User berhasil ditambahkan!");
     } catch (error) {
       console.error("Error adding user:", error);
-      alert("Gagal menambahkan user. Silakan coba lagi.");
     } finally {
       setIsSubmitting(false);
     }
@@ -131,19 +135,6 @@ export function AddUserModal({
       [field]: value,
     }));
 
-    // Clear password when switching to customer role
-    if (field === "role" && value === "customer") {
-      setFormData((prev) => ({
-        ...prev,
-        [field]: value,
-        password: "",
-      }));
-      setErrors((prev) => ({
-        ...prev,
-        password: undefined,
-      }));
-    }
-
     // Clear error when user starts typing
     if (errors[field]) {
       setErrors((prev) => ({
@@ -153,19 +144,31 @@ export function AddUserModal({
     }
   };
 
-  const formatPhoneNumber = (phone: string) => {
-    // Auto format phone number
-    const cleaned = phone.replace(/\D/g, "");
-    if (cleaned.startsWith("0")) {
-      return (
-        "+62 " + cleaned.slice(1).replace(/(\d{3})(\d{4})(\d{4})/, "$1-$2-$3")
-      );
-    } else if (cleaned.startsWith("62")) {
-      return (
-        "+" + cleaned.replace(/(\d{2})(\d{3})(\d{4})(\d{4})/, "$1 $2-$3-$4")
-      );
+  const handleRoleToggle = (roleId: number) => {
+    setSelectedRoles((prev) => {
+      if (prev.includes(roleId)) {
+        return prev.filter((id) => id !== roleId);
+      } else {
+        return [...prev, roleId];
+      }
+    });
+    // Clear role error
+    if (errors.roles) {
+      setErrors((prev) => ({ ...prev, roles: undefined }));
     }
-    return phone;
+  };
+
+  const getRoleColor = (roleName: string): string => {
+    const colors: Record<string, string> = {
+      owner: "bg-purple-100 text-purple-800 border-purple-300",
+      baker: "bg-orange-100 text-orange-800 border-orange-300",
+      cashier: "bg-blue-100 text-blue-800 border-blue-300",
+      packager: "bg-green-100 text-green-800 border-green-300",
+    };
+    return (
+      colors[roleName.toLowerCase()] ||
+      "bg-gray-100 text-gray-800 border-gray-300"
+    );
   };
 
   if (!isOpen) return null;
@@ -173,7 +176,7 @@ export function AddUserModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/10 backdrop-blur-[2px]" onClick={onClose} />
 
       {/* Modal */}
       <div className="relative z-10 w-full max-w-lg rounded-xl bg-white shadow-xl border border-gray-200 m-4 max-h-[90vh] overflow-y-auto">
@@ -202,7 +205,7 @@ export function AddUserModal({
               htmlFor="name"
               className="block text-sm font-medium text-gray-700 mb-1"
             >
-              Nama Lengkap *
+              Nama Admin *
             </label>
             <div className="relative">
               <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -214,37 +217,11 @@ export function AddUserModal({
                 className={`w-full pl-10 pr-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 ${
                   errors.name ? "border-red-500" : "border-gray-300"
                 }`}
-                placeholder="Masukkan nama lengkap"
+                placeholder="Masukkan nama admin"
               />
             </div>
             {errors.name && (
               <p className="mt-1 text-sm text-red-600">{errors.name}</p>
-            )}
-          </div>
-
-          {/* Email Field */}
-          <div>
-            <label
-              htmlFor="email"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              Email *
-            </label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type="email"
-                id="email"
-                value={formData.email}
-                onChange={(e) => handleInputChange("email", e.target.value)}
-                className={`w-full pl-10 pr-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 ${
-                  errors.email ? "border-red-500" : "border-gray-300"
-                }`}
-                placeholder="contoh@email.com"
-              />
-            </div>
-            {errors.email && (
-              <p className="mt-1 text-sm text-red-600">{errors.email}</p>
             )}
           </div>
 
@@ -254,7 +231,7 @@ export function AddUserModal({
               htmlFor="phone"
               className="block text-sm font-medium text-gray-700 mb-1"
             >
-              Nomor Telepon *
+              Nomor HP *
             </label>
             <div className="relative">
               <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -262,14 +239,11 @@ export function AddUserModal({
                 type="tel"
                 id="phone"
                 value={formData.phone}
-                onChange={(e) => {
-                  const formatted = formatPhoneNumber(e.target.value);
-                  handleInputChange("phone", formatted);
-                }}
+                onChange={(e) => handleInputChange("phone", e.target.value)}
                 className={`w-full pl-10 pr-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 ${
                   errors.phone ? "border-red-500" : "border-gray-300"
                 }`}
-                placeholder="+62 812-3456-7890"
+                placeholder="08123456789"
               />
             </div>
             {errors.phone && (
@@ -277,122 +251,102 @@ export function AddUserModal({
             )}
           </div>
 
-          {/* Role Field */}
+          {/* Role Field - Multi-select */}
           <div>
-            <label
-              htmlFor="role"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              Role *
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Role * (Pilih minimal 1)
             </label>
-            <div className="relative">
-              <Shield className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <select
-                id="role"
-                value={formData.role}
-                onChange={(e) =>
-                  handleInputChange(
-                    "role",
-                    e.target.value as "customer" | "admin" | "super_admin"
-                  )
-                }
-                className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-              >
-                <option value="customer">Customer</option>
-                <option value="admin">Admin</option>
-                <option value="super_admin">Super Admin</option>
-              </select>
+            <div className="space-y-2 bg-gray-50 p-3 rounded-lg border border-gray-200">
+              {roles.map((role) => (
+                <label
+                  key={role.id}
+                  className="flex items-center gap-3 p-2 hover:bg-white rounded-md cursor-pointer transition-colors"
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedRoles.includes(role.id)}
+                    onChange={() => handleRoleToggle(role.id)}
+                    className="w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500"
+                  />
+                  <span
+                    className={`px-2 py-1 text-xs font-medium rounded-md border ${getRoleColor(
+                      role.name
+                    )}`}
+                  >
+                    {role.name.charAt(0).toUpperCase() + role.name.slice(1)}
+                  </span>
+                </label>
+              ))}
             </div>
+            {errors.roles && (
+              <p className="mt-1 text-sm text-red-600">{errors.roles}</p>
+            )}
           </div>
 
-          {/* Password Field - Only for Admin and Super Admin */}
-          {formData.role !== "customer" && (
-            <div>
-              <label
-                htmlFor="password"
-                className="block text-sm font-medium text-gray-700 mb-1"
+          {/* Password Field */}
+          <div>
+            <label
+              htmlFor="password"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              Password *
+            </label>
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                id="password"
+                value={formData.password}
+                onChange={(e) => handleInputChange("password", e.target.value)}
+                className={`w-full pl-3 pr-10 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 ${
+                  errors.password ? "border-red-500" : "border-gray-300"
+                }`}
+                placeholder="Minimal 6 karakter"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
               >
-                Password *
-              </label>
-              <div className="relative">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  id="password"
-                  value={formData.password}
-                  onChange={(e) =>
-                    handleInputChange("password", e.target.value)
-                  }
-                  className={`w-full pl-3 pr-10 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 ${
-                    errors.password ? "border-red-500" : "border-gray-300"
-                  }`}
-                  placeholder="Minimal 6 karakter"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                >
-                  {showPassword ? (
-                    <EyeOff className="w-4 h-4" />
-                  ) : (
-                    <Eye className="w-4 h-4" />
-                  )}
-                </button>
-              </div>
-              {errors.password && (
-                <p className="mt-1 text-sm text-red-600">{errors.password}</p>
-              )}
+                {showPassword ? (
+                  <EyeOff className="w-4 h-4" />
+                ) : (
+                  <Eye className="w-4 h-4" />
+                )}
+              </button>
             </div>
-          )}
-
-          {/* Customer Login Info */}
-          {formData.role === "customer" && (
-            <div className="bg-blue-50 rounded-lg p-3">
-              <div className="flex items-start gap-2">
-                <div className="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <div className="w-2 h-2 rounded-full bg-blue-600"></div>
-                </div>
-                <div>
-                  <h4 className="text-sm font-medium text-blue-900 mb-1">
-                    Info Login Customer
-                  </h4>
-                  <p className="text-xs text-blue-700">
-                    Customer akan login menggunakan <strong>nomor HP</strong>{" "}
-                    tanpa password. Sistem akan mengirim OTP untuk verifikasi
-                    saat login.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
+            {errors.password && (
+              <p className="mt-1 text-sm text-red-600">{errors.password}</p>
+            )}
+          </div>
 
           {/* Role Description */}
-          <div className="bg-gray-50 rounded-lg p-3">
-            <h4 className="text-sm font-medium text-gray-900 mb-2">
-              Deskripsi Role:
+          <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+            <h4 className="text-sm font-medium text-blue-900 mb-2">
+              Keterangan Role:
             </h4>
-            <div className="text-xs text-gray-600 space-y-1">
+            <div className="text-xs text-blue-700 space-y-1">
               <div>
-                <strong>Customer:</strong> Dapat melihat dan memesan produk
-                (Login dengan HP + OTP)
+                <strong>Owner:</strong> Pemilik/Manajer utama toko
               </div>
               <div>
-                <strong>Admin:</strong> Dapat mengelola produk, pesanan, dan
-                customer (Login dengan email + password)
+                <strong>Baker:</strong> Staff produksi/pembuat kue
               </div>
               <div>
-                <strong>Super Admin:</strong> Akses penuh ke semua fitur sistem
-                (Login dengan email + password)
+                <strong>Cashier:</strong> Staff kasir/penjualan
+              </div>
+              <div>
+                <strong>Packager:</strong> Staff pengemasan
               </div>
             </div>
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-end gap-3 pt-4">
+          <div className="flex items-center justify-end gap-3 pt-4 border-t">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500"
+              disabled={isSubmitting}
+              className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 disabled:opacity-50"
             >
               Batal
             </button>
@@ -403,13 +357,13 @@ export function AddUserModal({
             >
               {isSubmitting ? (
                 <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <Loader2 className="w-4 h-4 animate-spin" />
                   Menyimpan...
                 </>
               ) : (
                 <>
                   <User className="w-4 h-4" />
-                  Tambah User
+                  Tambah Admin
                 </>
               )}
             </button>

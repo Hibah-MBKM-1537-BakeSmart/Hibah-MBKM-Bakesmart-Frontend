@@ -564,31 +564,10 @@ export function KasirProvider({ children }: { children: React.ReactNode }) {
           return false;
         }
       } else {
-        // Fallback: Local transaction without backend
-        console.warn('[Kasir] API not connected, creating local transaction only');
-
-        const transaction: Transaction = {
-          id: `TXN${Date.now()}`,
-          items: [...state.cart],
-          subtotal: calculateSubtotal(),
-          tax: 0, // No tax in new kasir
-          discount: state.voucherDiscount,
-          total: calculateTotal(),
-          paymentMethod: state.paymentMethod,
-          customerName: state.customerName,
-          timestamp: new Date(),
-          status: 'completed'
-        };
-
-        setState(prev => ({
-          ...prev,
-          currentTransaction: transaction,
-          isLoading: false
-        }));
-
-        clearCart();
-        alert('⚠️ Pembayaran berhasil (offline mode)');
-        return true;
+        // API not connected
+        setState(prev => ({ ...prev, isLoading: false }));
+        alert('❌ Tidak dapat terhubung ke server. Silakan coba lagi.');
+        return false;
       }
     } catch (error) {
       console.error('[Kasir] Payment processing failed:', error);

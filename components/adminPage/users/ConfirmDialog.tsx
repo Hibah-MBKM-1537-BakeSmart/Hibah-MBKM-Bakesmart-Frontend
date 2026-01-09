@@ -61,7 +61,7 @@ export function ConfirmDialog({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={onClose} />
 
       {/* Dialog */}
       <div className="relative z-10 w-full max-w-md rounded-xl bg-white shadow-xl border border-gray-200 m-4">

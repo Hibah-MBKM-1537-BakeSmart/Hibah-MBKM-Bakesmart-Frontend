@@ -49,16 +49,7 @@ export default function CustomerDetailModal() {
 
   return (
     <div 
-      className="fixed inset-0 z-[9999] flex items-center justify-center p-4" 
-      style={{ 
-        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-        backdropFilter: 'blur(3px)',
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0
-      }}
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/10 backdrop-blur-[2px]"
       onClick={handleBackdropClick}
     >
       <div 

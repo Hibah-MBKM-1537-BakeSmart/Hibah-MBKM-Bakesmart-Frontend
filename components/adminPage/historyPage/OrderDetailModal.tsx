@@ -14,7 +14,8 @@ import {
   XCircle,
   X,
   Calendar,
-} from "lucide-react";
+  AlertCircle
+} from 'lucide-react';
 
 export function OrderDetailModal() {
   const { state, closeOrderDetail } = useHistory();
@@ -317,17 +318,8 @@ export function OrderDetailModal() {
       `}</style>
 
       {/* Modal Background Overlay */}
-      <div
-        className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
-        style={{
-          backgroundColor: "rgba(0, 0, 0, 0.5)",
-          backdropFilter: "blur(3px)",
-          position: "fixed",
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-        }}
+      <div 
+        className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/10 backdrop-blur-[2px]"
         onClick={closeOrderDetail}
       >
         {/* Hidden Print Receipt (Only visible when printing) */}
@@ -392,15 +384,15 @@ export function OrderDetailModal() {
                 ))}
 
                 <div className="totals">
-                  {order.shipping_cost && order.shipping_cost > 0 && (
+                  {order.shipping_cost && Number(order.shipping_cost) > 0 && (
                     <div className="total-row">
                       <span>Ongkos Kirim:</span>
-                      <span>{formatCurrency(order.shipping_cost)}</span>
+                      <span>{formatCurrency(Number(order.shipping_cost))}</span>
                     </div>
                   )}
                   <div className="total-row grand-total">
                     <span>TOTAL:</span>
-                    <span>{formatCurrency(order.total_harga)}</span>
+                    <span>{formatCurrency(Number(order.total_harga))}</span>
                   </div>
                 </div>
               </>
@@ -622,150 +614,86 @@ export function OrderDetailModal() {
               </div>
             </div>
 
-            {/* Order Items */}
-            <div>
-              <h3
-                className="font-semibold mb-4 font-admin-heading"
-                style={{ color: "#5d4037" }}
-              >
-                Detail Pesanan
-              </h3>
-              <div
-                className="border rounded-lg overflow-hidden"
-                style={{ borderColor: "#e0d5c7" }}
-              >
-                <table className="w-full">
-                  <thead style={{ backgroundColor: "#f9f7f4" }}>
-                    <tr>
-                      <th
-                        className="text-left p-3 font-admin-heading"
-                        style={{ color: "#5d4037" }}
-                      >
-                        Produk
-                      </th>
-                      <th
-                        className="text-center p-3 font-admin-heading"
-                        style={{ color: "#5d4037" }}
-                      >
-                        Qty
-                      </th>
-                      <th
-                        className="text-right p-3 font-admin-heading"
-                        style={{ color: "#5d4037" }}
-                      >
-                        Harga
-                      </th>
-                      <th
-                        className="text-right p-3 font-admin-heading"
-                        style={{ color: "#5d4037" }}
-                      >
-                        Subtotal
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {order.products && order.products.length > 0 ? (
-                      order.products.map((item) => (
-                        <tr
-                          key={item.id}
-                          className="border-t"
-                          style={{ borderColor: "#e0d5c7" }}
-                        >
-                          <td
-                            className="p-3 font-admin-body"
-                            style={{ color: "#5d4037" }}
-                          >
-                            {item.product_name_id ||
-                              item.nama_id ||
-                              item.product_name_en ||
-                              item.nama_en ||
-                              "Unknown Product"}
-                            {item.note && (
-                              <div className="text-xs text-gray-500 mt-1">
-                                Note: {item.note}
-                              </div>
-                            )}
-                          </td>
-                          <td
-                            className="p-3 text-center font-admin-body"
-                            style={{ color: "#8b6f47" }}
-                          >
-                            {item.jumlah}
-                          </td>
-                          <td
-                            className="p-3 text-right font-admin-body"
-                            style={{ color: "#8b6f47" }}
-                          >
-                            {formatCurrency(item.harga_beli / item.jumlah)}
-                          </td>
-                          <td
-                            className="p-3 text-right font-admin-body"
-                            style={{ color: "#5d4037" }}
-                          >
-                            {formatCurrency(item.harga_beli)}
-                          </td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td
-                          colSpan={4}
-                          className="p-6 text-center text-gray-500 font-admin-body"
-                        >
-                          Tidak ada item dalam pesanan ini
+          {/* Order Items */}
+          <div>
+            <h3 className="font-semibold mb-4 font-admin-heading" style={{ color: '#5d4037' }}>
+              Detail Pesanan
+            </h3>
+            <div className="border rounded-lg overflow-hidden" style={{ borderColor: '#e0d5c7' }}>
+              <table className="w-full">
+                <thead style={{ backgroundColor: '#f9f7f4' }}>
+                  <tr>
+                    <th className="text-left p-3 font-admin-heading" style={{ color: '#5d4037' }}>
+                      Produk
+                    </th>
+                    <th className="text-center p-3 font-admin-heading" style={{ color: '#5d4037' }}>
+                      Qty
+                    </th>
+                    <th className="text-right p-3 font-admin-heading" style={{ color: '#5d4037' }}>
+                      Harga
+                    </th>
+                    <th className="text-right p-3 font-admin-heading" style={{ color: '#5d4037' }}>
+                      Subtotal
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {order.products && order.products.length > 0 ? (
+                    order.products.map((item) => (
+                      <tr key={item.id} className="border-t" style={{ borderColor: '#e0d5c7' }}>
+                        <td className="p-3 font-admin-body" style={{ color: '#5d4037' }}>
+                          {item.product_name_id || item.nama_id || item.product_name_en || item.nama_en || 'Unknown Product'}
+                          {item.note && (
+                            <div className="text-xs text-gray-500 mt-1">
+                              Note: {item.note}
+                            </div>
+                          )}
+                        </td>
+                        <td className="p-3 text-center font-admin-body" style={{ color: '#8b6f47' }}>
+                          {item.jumlah}
+                        </td>
+                        <td className="p-3 text-right font-admin-body" style={{ color: '#8b6f47' }}>
+                          {formatCurrency(item.harga_beli / item.jumlah)}
+                        </td>
+                        <td className="p-3 text-right font-admin-body" style={{ color: '#5d4037' }}>
+                          {formatCurrency(item.harga_beli)}
                         </td>
                       </tr>
-                    )}
-                    {order.products && order.products.length > 0 && (
-                      <>
-                        {order.shipping_cost && order.shipping_cost > 0 && (
-                          <tr
-                            className="border-t"
-                            style={{ borderColor: "#e0d5c7" }}
-                          >
-                            <td
-                              colSpan={3}
-                              className="p-3 text-right font-admin-body"
-                              style={{ color: "#5d4037" }}
-                            >
-                              Ongkos Kirim:
-                            </td>
-                            <td
-                              className="p-3 text-right font-admin-body"
-                              style={{ color: "#5d4037" }}
-                            >
-                              {formatCurrency(order.shipping_cost)}
-                            </td>
-                          </tr>
-                        )}
-                        <tr
-                          className="border-t font-bold"
-                          style={{
-                            borderColor: "#e0d5c7",
-                            backgroundColor: "#f9f7f4",
-                          }}
-                        >
-                          <td
-                            colSpan={3}
-                            className="p-3 text-right font-admin-heading"
-                            style={{ color: "#5d4037" }}
-                          >
-                            Total:
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={4} className="p-6 text-center text-gray-500 font-admin-body">
+                        Tidak ada item dalam pesanan ini
+                      </td>
+                    </tr>
+                  )}
+                  {order.products && order.products.length > 0 && (
+                    <>
+                      {order.shipping_cost && Number(order.shipping_cost) > 0 && (
+                        <tr className="border-t" style={{ borderColor: '#e0d5c7' }}>
+                          <td colSpan={3} className="p-3 text-right font-admin-body" style={{ color: '#5d4037' }}>
+                            Ongkos Kirim:
                           </td>
-                          <td
-                            className="p-3 text-right font-admin-heading"
-                            style={{ color: "#5d4037" }}
-                          >
-                            {formatCurrency(order.total_harga)}
+                          <td className="p-3 text-right font-admin-body" style={{ color: '#5d4037' }}>
+                            {formatCurrency(Number(order.shipping_cost))}
                           </td>
                         </tr>
-                      </>
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                      )}
+                      <tr className="border-t font-bold" style={{ borderColor: '#e0d5c7', backgroundColor: '#f9f7f4' }}>
+                        <td colSpan={3} className="p-3 text-right font-admin-heading" style={{ color: '#5d4037' }}>
+                          Total:
+                        </td>
+                        <td className="p-3 text-right font-admin-heading" style={{ color: '#5d4037' }}>
+                          {formatCurrency(Number(order.total_harga))}
+                        </td>
+                      </tr>
+                    </>
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
+        </div>
 
           {/* Footer */}
           <div

@@ -22,17 +22,8 @@ export function CategoryFilter() {
       return [allCategory, ...apiCategories];
     }
     
-    // Fallback to hardcoded categories if API not available
-    return [
-      allCategory,
-      { id: 'Kue', name: 'Kue', icon: Package },
-      { id: 'Cupcake', name: 'Cupcake', icon: Package },
-      { id: 'Pastry', name: 'Pastry', icon: Package },
-      { id: 'Donut', name: 'Donut', icon: Package },
-      { id: 'Roti', name: 'Roti', icon: Package },
-      { id: 'Tart', name: 'Tart', icon: Package },
-      { id: 'Pie', name: 'Pie', icon: Package }
-    ];
+    // Return only "Semua Produk" if no categories from API
+    return [allCategory];
   }, [state.categories]);
 
   return (
