@@ -191,6 +191,7 @@ export function EditProductModal({
         sub_jenis_ids: formData.ref_sub_jenis_id
           ? [formData.ref_sub_jenis_id]
           : [],
+
         // hari_ids NOT sent - hari comes from sub_jenis configuration
         harga_diskon: formData.harga_diskon,
         isBestSeller: formData.isBestSeller,

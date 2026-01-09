@@ -94,20 +94,8 @@ interface ProductsContextType {
   loading: boolean;
   error: string | null;
   isBackendConnected: boolean;
-  addProduct: (
-    productData: Partial<Product> & {
-      sub_jenis_ids?: number[];
-      jenis_id?: number;
-      imageFiles?: File[];
-      bahans?: Array<{
-        id?: number;
-        nama_id?: string;
-        nama_en?: string;
-        nama?: string;
-        jumlah?: number;
-      }>;
-    }
-  ) => Promise<void>;
+  addProduct: (productData: Partial<Product>) => Promise<void>;
+
   updateProduct: (id: number, productData: Partial<Product>) => Promise<void>;
   deleteProduct: (id: number) => Promise<void>;
   refreshProducts: () => Promise<void>;
@@ -299,13 +287,7 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
       sub_jenis_ids?: number[];
       jenis_id?: number;
       imageFiles?: File[];
-      bahans?: Array<{
-        id?: number;
-        nama_id?: string;
-        nama_en?: string;
-        nama?: string;
-        jumlah?: number;
-      }>;
+      bahans?: Array<{ nama_id: string; nama_en: string; jumlah: number }>;
     }
   ): Promise<void> => {
     try {
