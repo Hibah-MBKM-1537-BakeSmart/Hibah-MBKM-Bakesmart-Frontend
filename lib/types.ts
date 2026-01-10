@@ -67,7 +67,8 @@ export interface CartItem {
   isDiscount?: boolean;
   image: string; // Primary image from gambars array
   category: string; // From jenis array
-  stock: number; // From stok
+  stock: number; // From stok or daily_stock (if isDaily)
+  isDaily?: boolean; // Flag to indicate if this is a daily product
   availableDays: string[]; // From hari array, transformed to string array
   orderDay: string; // Hari pesanan (senin, selasa, etc.)
   selectedAttributes?: ProductAttribute[];
@@ -98,6 +99,7 @@ export interface ApiProduct {
     nama_en: string;
     nama_id: string;
     jenis_id?: number;
+    is_closed?: boolean;
   }>;
   hari?: Array<{ id: number; nama_en: string; nama_id: string }>;
   attributes?: Array<{
@@ -147,7 +149,9 @@ export interface MenuItem {
     nama_en: string;
     nama_id: string;
     jenis_id?: number;
+    is_closed?: boolean;
   }>;
+  isSubJenisClosed?: boolean; // Flag to indicate if product's sub_jenis is closed
   hari: Array<{ id: number; nama_en: string; nama_id: string }>;
   attributes: Array<{
     id: number;

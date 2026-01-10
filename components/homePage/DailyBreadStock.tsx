@@ -24,8 +24,8 @@ function BreadStockCard(item: MenuItem) {
 
   const name = language === "id" ? item.nama_id : item.nama_en;
   const description = language === "id" ? item.deskripsi_id : item.deskripsi_en;
-  // Card ini secara spesifik menggunakan 'stok'
-  const stock = item.stok;
+  // For daily bread, use dailyStock instead of regular stok
+  const stock = item.isDaily ? item.dailyStock || 0 : item.stok;
   const isLowStock = stock > 0 && stock <= 5;
   const isOutOfStock = stock <= 0;
 
@@ -42,21 +42,6 @@ function BreadStockCard(item: MenuItem) {
             height={200}
             className="h-full w-full object-cover transition-transform hover:scale-105"
           />
-        </div>
-
-        {/* Stock Badge */}
-        <div className="absolute top-3 right-3 flex items-center gap-2">
-          {isLowStock && (
-            <div className="bg-orange-500 text-white text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1">
-              <Flame className="w-3 h-3" />
-              {t("stock.limited") || "Terbatas"}
-            </div>
-          )}
-          {isOutOfStock && (
-            <div className="bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-full">
-              {t("stock.outOfStock") || "Habis"}
-            </div>
-          )}
         </div>
 
         {/* Stock Counter
@@ -186,9 +171,9 @@ export function DailyBreadStock() {
           })
         );
 
-        // 3. Filter HANYA untuk roti harian (isDaily) DAN yang masih ada stok
+        // 3. Filter HANYA untuk roti harian (isDaily) DAN yang masih ada daily_stock
         const filteredDailyBread = allProducts.filter(
-          (item) => item.isDaily && item.stok > 0
+          (item) => item.isDaily && (item.dailyStock || 0) > 0
         );
 
         console.log(

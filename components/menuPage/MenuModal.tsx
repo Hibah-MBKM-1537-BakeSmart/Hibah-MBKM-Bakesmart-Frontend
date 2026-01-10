@@ -86,13 +86,24 @@ export function MenuModal({
 
   const handleQuantityChange = (delta: number) => {
     const newQuantity = Math.max(1, quantity + delta);
-    const currentStock = item?.stok || 0;
+    // Use daily_stock for daily products, regular stok for others
+    const currentStock = item.isDaily ? item.dailyStock || 0 : item?.stok || 0;
     if (newQuantity <= currentStock) {
       setQuantity(newQuantity);
     }
   };
 
   const handleAddToCart = () => {
+    // Check if sub_jenis is closed - product cannot be ordered
+    if (item.isSubJenisClosed) {
+      alert(
+        language === "id"
+          ? "Maaf, produk ini sedang tidak tersedia untuk dipesan."
+          : "Sorry, this product is currently not available for ordering."
+      );
+      return;
+    }
+
     if (isStoreClosed()) {
       alert(
         t("menu.storeIsClosed") || "Toko sedang tutup. Silakan coba lagi nanti."
@@ -132,7 +143,8 @@ export function MenuModal({
             ? item.jenis[0].nama_id
             : item.jenis[0].nama_en
           : "",
-        stock: item.stok,
+        stock: currentStock, // Use currentStock (daily_stock or regular stok)
+        isDaily: item.isDaily, // Add isDaily flag
         availableDays: item.hari.map((h) => h.nama_id),
         orderDay: tempOrderDay,
         selectedAttributes: selectedAttributesData,
@@ -154,7 +166,9 @@ export function MenuModal({
   const shouldShowDiscount =
     item.harga_diskon && item.harga_diskon < item.harga;
   const originalPrice = `Rp${item.harga.toLocaleString("id-ID")}`;
-  const isOutOfStock = item.stok <= 0;
+  // Use daily_stock for daily products
+  const currentStock = item.isDaily ? item.dailyStock || 0 : item.stok;
+  const isOutOfStock = currentStock <= 0;
 
   const getDayLabel = (day: string) => {
     const dayLabels: { [key: string]: string } = {
@@ -209,10 +223,14 @@ export function MenuModal({
                 className="w-full h-full max-w-none object-cover cursor-pointer hover:opacity-90 transition-opacity rounded-t-lg md:rounded-l-lg md:rounded-tr-none"
                 onClick={() => setIsImagePopupOpen(true)}
               />
-              {(isOutOfStock || isStoreClosed()) && (
+              {(isOutOfStock || isStoreClosed() || item.isSubJenisClosed) && (
                 <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded-t-lg md:rounded-l-lg md:rounded-tr-none">
-                  <span className="text-white text-xl font-bold">
-                    {isStoreClosed()
+                  <span className="text-white text-xl font-bold text-center px-4">
+                    {item.isSubJenisClosed
+                      ? language === "id"
+                        ? "Tidak Tersedia untuk Dipesan"
+                        : "Not Available for Order"
+                      : isStoreClosed()
                       ? t("menu.storeIsClosed")
                       : t("menuModal.outOfStock")}
                   </span>
@@ -229,9 +247,19 @@ export function MenuModal({
                   {itemName}
                 </h2>
                 <div className="flex items-center gap-2 mt-2">
+                  {item.isDaily && !isOutOfStock && !isStoreClosed() && (
+                    <span className="text-xs md:text-sm bg-amber-100 text-amber-700 px-2 py-1 rounded font-semibold">
+                      🔥 {language === "id" ? "Roti Hari Ini" : "Today's Bread"}
+                    </span>
+                  )}
                   {!isOutOfStock && !isStoreClosed() ? (
                     <span className="text-xs md:text-sm bg-green-100 text-green-600 px-2 py-1 rounded">
-                      {t("menuModal.stockAvailable")}: {item.stok}
+                      {item.isDaily
+                        ? language === "id"
+                          ? "Stok Hari Ini: "
+                          : "Today's Stock: "
+                        : t("menuModal.stockAvailable") + ": "}
+                      {currentStock}
                     </span>
                   ) : (
                     <span className="text-xs md:text-sm bg-red-100 text-red-600 px-2 py-1 rounded">
@@ -449,11 +477,9 @@ export function MenuModal({
                       </span>
                       <button
                         onClick={() => handleQuantityChange(1)}
-                        disabled={
-                          quantity >= (item?.stok || 0) || isStoreClosed()
-                        }
+                        disabled={quantity >= currentStock || isStoreClosed()}
                         className={`w-8 h-8 flex items-center justify-center rounded-full ${
-                          quantity >= (item?.stok || 0) || isStoreClosed()
+                          quantity >= currentStock || isStoreClosed()
                             ? "bg-gray-100 text-gray-400"
                             : "bg-[#5D4037] text-white hover:bg-[#8B6F47]"
                         }`}
@@ -463,16 +489,26 @@ export function MenuModal({
                     </div>
                     <button
                       className={`px-6 md:px-8 py-3 md:py-3.5 rounded-lg font-medium transition-all duration-300 text-sm md:text-base w-full md:w-auto ${
-                        isOutOfStock || !tempOrderDay || isStoreClosed()
+                        isOutOfStock ||
+                        !tempOrderDay ||
+                        isStoreClosed() ||
+                        item.isSubJenisClosed
                           ? "bg-gray-400 text-gray-600 cursor-not-allowed"
                           : "bg-[#5D4037] text-white hover:bg-[#8B6F47] shadow-md hover:shadow-lg"
                       }`}
                       onClick={handleAddToCart}
                       disabled={
-                        isOutOfStock || !tempOrderDay || isStoreClosed()
+                        isOutOfStock ||
+                        !tempOrderDay ||
+                        isStoreClosed() ||
+                        item.isSubJenisClosed
                       }
                     >
-                      {isStoreClosed()
+                      {item.isSubJenisClosed
+                        ? language === "id"
+                          ? "Tidak Tersedia"
+                          : "Unavailable"
+                        : isStoreClosed()
                         ? t("menu.storeIsClosed")
                         : isOutOfStock
                         ? t("menuModal.stockEmpty")

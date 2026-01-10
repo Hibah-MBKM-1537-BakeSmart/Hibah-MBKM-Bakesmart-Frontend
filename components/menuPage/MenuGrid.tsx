@@ -67,34 +67,45 @@ export function MenuGrid() {
 
         // Transform API response to MenuItem format
         const products: MenuItem[] = (data.data || []).map(
-          (product: ApiProduct) => ({
-            id: product.id,
-            nama_id: product.nama_id,
-            nama_en: product.nama_en,
-            deskripsi_id: product.deskripsi_id || "",
-            deskripsi_en: product.deskripsi_en || "",
-            harga: product.harga,
-            harga_diskon: product.harga_diskon || null,
-            stok: product.stok || 0,
-            isBestSeller: product.isBestSeller || false,
-            // Sesuaikan dengan data dari API (berdasarkan contoh JSON kamu)
-            isDaily: product.isDaily || false,
-            dailyStock: product.daily_stock || 0,
-            created_at: product.created_at || "",
-            updated_at: product.updated_at || "",
-            gambars: (product.gambars || [])
-              .filter((g): g is { id: number; file_path: string } => g !== null)
-              .map((g) => ({
-                ...g,
-                product_id: product.id,
-                created_at: "", // Sesuaikan jika ada datanya
-                updated_at: "", // Sesuaikan jika ada datanya
-              })),
-            jenis: product.jenis || [],
-            hari: product.hari || [],
-            attributes: product.attributes || [],
-            bahans: product.bahans || [],
-          })
+          (product: ApiProduct) => {
+            // Check if any sub_jenis has is_closed = true
+            const isSubJenisClosed = (product.sub_jenis || []).some(
+              (sj) => sj?.is_closed === true
+            );
+
+            return {
+              id: product.id,
+              nama_id: product.nama_id,
+              nama_en: product.nama_en,
+              deskripsi_id: product.deskripsi_id || "",
+              deskripsi_en: product.deskripsi_en || "",
+              harga: product.harga,
+              harga_diskon: product.harga_diskon || null,
+              stok: product.stok || 0,
+              isBestSeller: product.isBestSeller || false,
+              // Sesuaikan dengan data dari API (berdasarkan contoh JSON kamu)
+              isDaily: product.isDaily || false,
+              dailyStock: product.daily_stock || 0,
+              created_at: product.created_at || "",
+              updated_at: product.updated_at || "",
+              isSubJenisClosed, // Add the flag
+              sub_jenis: product.sub_jenis || [],
+              gambars: (product.gambars || [])
+                .filter(
+                  (g): g is { id: number; file_path: string } => g !== null
+                )
+                .map((g) => ({
+                  ...g,
+                  product_id: product.id,
+                  created_at: "", // Sesuaikan jika ada datanya
+                  updated_at: "", // Sesuaikan jika ada datanya
+                })),
+              jenis: product.jenis || [],
+              hari: product.hari || [],
+              attributes: product.attributes || [],
+              bahans: product.bahans || [],
+            };
+          }
         );
 
         setMenuItems(products);
@@ -132,8 +143,6 @@ export function MenuGrid() {
 
     fetchProducts();
   }, []);
-
-
 
   const menuCategories = [
     {
@@ -276,9 +285,36 @@ export function MenuGrid() {
             .filter((day) => day !== null)
             .map((day) => day.nama_id);
           return (
-            availableDays.length === 0 || availableDays.includes(selectedOrderDay)
+            availableDays.length === 0 ||
+            availableDays.includes(selectedOrderDay)
           );
         });
+
+  // Group products by jenis (category) for display with separators
+  const groupedByJenis = dayFilteredItems.reduce((acc, item) => {
+    const jenisKey =
+      item.jenis.length > 0 ? `${item.jenis[0].id}` : "uncategorized";
+    const jenisName =
+      item.jenis.length > 0
+        ? language === "id"
+          ? item.jenis[0].nama_id
+          : item.jenis[0].nama_en
+        : language === "id"
+        ? "Lainnya"
+        : "Others";
+
+    if (!acc[jenisKey]) {
+      acc[jenisKey] = {
+        id: jenisKey,
+        name: jenisName,
+        items: [],
+      };
+    }
+    acc[jenisKey].items.push(item);
+    return acc;
+  }, {} as Record<string, { id: string; name: string; items: MenuItem[] }>);
+
+  const groupedCategories = Object.values(groupedByJenis);
 
   return (
     <>
@@ -299,7 +335,8 @@ export function MenuGrid() {
                 onClick={() => handleViewModeChange("order")}
                 className="px-6 py-2.5 text-base font-bold rounded-full text-white shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105"
                 style={{
-                  background: "linear-gradient(135deg, #8B6F47 0%, #6B5535 100%)",
+                  background:
+                    "linear-gradient(135deg, #8B6F47 0%, #6B5535 100%)",
                 }}
               >
                 🛒 Pesan Sekarang
@@ -361,27 +398,43 @@ export function MenuGrid() {
 
       <div className="bg-white">
         <div className="container mx-auto px-0">
-          <div className="px-4 py-4 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900">
-              {t("menuGrid.promoSection")}
-            </h2>
-          </div>
+          {/* Show grouped products by jenis category */}
+          {groupedCategories.length > 0 ? (
+            groupedCategories.map((group) => (
+              <div key={group.id} className="mb-6">
+                {/* Category Header/Separator */}
+                <div className="sticky top-[140px] z-[5] px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-amber-50 to-white">
+                  <div className="flex items-center gap-3">
+                    <div className="w-1 h-6 rounded-full bg-amber-600"></div>
+                    <h2 className="text-lg font-bold text-gray-900">
+                      {group.name}
+                    </h2>
+                    <span className="text-sm text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                      {group.items.length}{" "}
+                      {language === "id" ? "produk" : "products"}
+                    </span>
+                  </div>
+                </div>
 
-          <div className="divide-y divide-gray-100">
-            {dayFilteredItems.map((item) => (
-              <MenuCard
-                key={item.id}
-                item={item}
-                onClick={() => handleItemClick(item)}
-                onShowExistingCustomization={handleShowExistingCustomization}
-                onShowRemoveCustomization={handleShowRemoveCustomization}
-                onShowDateValidation={handleShowDateValidation}
-                viewMode={viewMode}
-              />
-            ))}
-          </div>
-
-          {dayFilteredItems.length === 0 && (
+                {/* Products in this category */}
+                <div className="divide-y divide-gray-100">
+                  {group.items.map((item) => (
+                    <MenuCard
+                      key={item.id}
+                      item={item}
+                      onClick={() => handleItemClick(item)}
+                      onShowExistingCustomization={
+                        handleShowExistingCustomization
+                      }
+                      onShowRemoveCustomization={handleShowRemoveCustomization}
+                      onShowDateValidation={handleShowDateValidation}
+                      viewMode={viewMode}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))
+          ) : (
             <div className="text-center py-16">
               <p className="text-gray-500 text-lg">
                 {t("menuGrid.noProductsAvailable")}

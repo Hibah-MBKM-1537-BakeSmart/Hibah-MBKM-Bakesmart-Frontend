@@ -58,12 +58,16 @@ export function MenuCard({
         ? item.jenis[0].nama_id
         : item.jenis[0].nama_en
       : "";
-  const stock = item.stok;
+  // Use daily_stock for daily products, regular stok for others
+  const stock = item.isDaily ? item.dailyStock || 0 : item.stok;
   const attributes = item.attributes.map((attr) => ({
     id: attr.id,
     name: language === "id" ? attr.nama_id : attr.nama_en,
     additionalPrice: attr.harga,
   }));
+
+  // Check if product's sub_jenis is closed (cannot be ordered)
+  const isSubJenisClosed = item.isSubJenisClosed || false;
 
   // Calculate total quantity for this product across all customizations
   const totalQuantity = cartItems
@@ -120,7 +124,8 @@ export function MenuCard({
     isDiscount: isDiscount,
     image: image,
     category: category,
-    stock: stock,
+    stock: stock, // This already uses daily_stock if isDaily
+    isDaily: item.isDaily,
     availableDays: availableDays,
     orderDay: selectedOrderDay || "",
   });
@@ -134,6 +139,16 @@ export function MenuCard({
       "- Total qty:",
       totalQuantity
     );
+
+    // Check if sub_jenis is closed - product cannot be ordered
+    if (isSubJenisClosed) {
+      alert(
+        language === "id"
+          ? "Maaf, produk ini sedang tidak tersedia untuk dipesan."
+          : "Sorry, this product is currently not available for ordering."
+      );
+      return;
+    }
 
     if (isStoreClosed()) {
       alert(
@@ -192,6 +207,7 @@ export function MenuCard({
       image: image,
       category: category,
       stock: stock,
+      isDaily: item.isDaily, // Add isDaily flag
       availableDays: availableDays,
       orderDay: selectedOrderDay || "",
       selectedAttributes: [],
@@ -232,19 +248,23 @@ export function MenuCard({
   return (
     <div
       className={`bg-white border-b border-gray-100 p-4 md:p-6 cursor-pointer transition-all duration-300 ${
-        isDisabled || isStoreClosed() ? "opacity-50" : ""
+        isDisabled || isStoreClosed() || isSubJenisClosed ? "opacity-60" : ""
       }`}
       style={{
-        backgroundColor: "white",
+        backgroundColor: isSubJenisClosed ? "#f9fafb" : "white",
         boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.boxShadow = "0 8px 16px rgba(139,111,71,0.1)";
-        e.currentTarget.style.backgroundColor = "#fafaf9";
+        if (!isSubJenisClosed) {
+          e.currentTarget.style.boxShadow = "0 8px 16px rgba(139,111,71,0.1)";
+          e.currentTarget.style.backgroundColor = "#fafaf9";
+        }
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.boxShadow = "0 1px 2px rgba(0,0,0,0.05)";
-        e.currentTarget.style.backgroundColor = "white";
+        e.currentTarget.style.backgroundColor = isSubJenisClosed
+          ? "#f9fafb"
+          : "white";
       }}
       onClick={onClick}
     >
@@ -257,10 +277,14 @@ export function MenuCard({
               alt={name}
               className="w-full h-full object-cover"
             />
-            {(stock <= 0 || isStoreClosed()) && (
+            {(stock <= 0 || isStoreClosed() || isSubJenisClosed) && (
               <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-                <span className="text-white text-sm font-medium">
-                  {isStoreClosed()
+                <span className="text-white text-sm font-medium text-center px-2">
+                  {isSubJenisClosed
+                    ? language === "id"
+                      ? "Tidak Tersedia"
+                      : "Unavailable"
+                    : isStoreClosed()
                     ? t("menu.storeIsClosed")
                     : t("menu.outOfStock")}
                 </span>
@@ -276,9 +300,24 @@ export function MenuCard({
               <h3 className="font-medium text-gray-900 text-base md:text-lg lg:text-xl line-clamp-2">
                 {name}
               </h3>
-              {stock > 0 && (
+              {isSubJenisClosed && (
+                <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded whitespace-nowrap">
+                  {language === "id" ? "Tidak Tersedia" : "Unavailable"}
+                </span>
+              )}
+              {item.isDaily && !isSubJenisClosed && (
+                <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded whitespace-nowrap font-semibold">
+                  🔥 {language === "id" ? "Roti Hari Ini" : "Today's Bread"}
+                </span>
+              )}
+              {!isSubJenisClosed && stock > 0 && (
                 <span className="text-xs bg-green-100 text-green-600 px-2 py-0.5 rounded">
-                  Stok: {stock}
+                  {item.isDaily
+                    ? language === "id"
+                      ? "Stok Hari Ini"
+                      : "Today's Stock"
+                    : "Stok"}
+                  : {stock}
                 </span>
               )}
             </div>
@@ -365,25 +404,37 @@ export function MenuCard({
                   {totalQuantity === 0 ? (
                     <button
                       className={`px-6 py-2.5 lg:px-8 lg:py-3 text-base font-medium rounded-full text-white transition-all duration-200 ${
-                        isDisabled || isStoreClosed()
+                        isDisabled || isStoreClosed() || isSubJenisClosed
                           ? "bg-gray-400 cursor-not-allowed"
                           : "hover:opacity-90 hover:scale-105 active:scale-95"
                       }`}
                       style={{
                         backgroundColor:
-                          isDisabled || isStoreClosed() ? undefined : "#8b6f47",
+                          isDisabled || isStoreClosed() || isSubJenisClosed
+                            ? undefined
+                            : "#8b6f47",
                       }}
                       onClick={handleAddItem}
-                      disabled={isDisabled || isStoreClosed()}
+                      disabled={
+                        isDisabled || isStoreClosed() || isSubJenisClosed
+                      }
                       title={
-                        !validation.canAdd
+                        isSubJenisClosed
+                          ? language === "id"
+                            ? "Produk tidak tersedia"
+                            : "Product unavailable"
+                          : !validation.canAdd
                           ? validation.reason
                           : isStoreClosed()
                           ? "Toko sedang tutup"
                           : undefined
                       }
                     >
-                      {isStoreClosed()
+                      {isSubJenisClosed
+                        ? language === "id"
+                          ? "Tidak Tersedia"
+                          : "Unavailable"
+                        : isStoreClosed()
                         ? t("menu.storeIsClosed")
                         : stock <= 0
                         ? t("menu.outOfStock")
@@ -443,25 +494,35 @@ export function MenuCard({
                 {totalQuantity === 0 ? (
                   <button
                     className={`px-4 py-2 text-sm font-medium rounded-full text-white transition-all duration-200 ${
-                      isDisabled || isStoreClosed()
+                      isDisabled || isStoreClosed() || isSubJenisClosed
                         ? "bg-gray-400 cursor-not-allowed"
                         : "hover:opacity-90 hover:scale-105 active:scale-95"
                     }`}
                     style={{
                       backgroundColor:
-                        isDisabled || isStoreClosed() ? undefined : "#8b6f47",
+                        isDisabled || isStoreClosed() || isSubJenisClosed
+                          ? undefined
+                          : "#8b6f47",
                     }}
                     onClick={handleAddItem}
-                    disabled={isDisabled || isStoreClosed()}
+                    disabled={isDisabled || isStoreClosed() || isSubJenisClosed}
                     title={
-                      !validation.canAdd
+                      isSubJenisClosed
+                        ? language === "id"
+                          ? "Produk tidak tersedia"
+                          : "Product unavailable"
+                        : !validation.canAdd
                         ? validation.reason
                         : isStoreClosed()
                         ? "Toko sedang tutup"
                         : undefined
                     }
                   >
-                    {isStoreClosed()
+                    {isSubJenisClosed
+                      ? language === "id"
+                        ? "Tidak Tersedia"
+                        : "Unavailable"
+                      : isStoreClosed()
                       ? t("menu.storeIsClosed")
                       : stock <= 0
                       ? t("menu.outOfStock")
