@@ -34,6 +34,7 @@ import {
   ArrowUpDown,
   ChevronUp,
   Hourglass,
+  Phone,
 } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -122,6 +123,12 @@ const transformBackendData = (groups: OrderGroup[]): Order[] => {
 
   groups.forEach((group) => {
     group.orders.forEach((order) => {
+      // Skip orders with empty products array (nothing to produce)
+      if (!order.products || order.products.length === 0) {
+        console.log(`[Production] Skipping order #${order.id} - no products to produce`);
+        return;
+      }
+
       allOrders.push({
         id: order.id,
         user: {
@@ -294,8 +301,8 @@ function ProductionOrderCard({
 
       {/* Contact Info */}
       <div className="text-xs text-gray-600 mb-3 space-y-1">
-        <p>📞 {order.user.no_hp}</p>
-        <p>📦 {totalItems} items</p>
+        <p className="flex items-center gap-1"><Phone size={12} /> {order.user.no_hp}</p>
+        <p className="flex items-center gap-1"><Package size={12} /> {totalItems} items</p>
       </div>
 
       {/* Products List */}
@@ -308,7 +315,7 @@ function ProductionOrderCard({
               <span className="text-blue-600 font-bold">x{item.jumlah}</span>
             </p>
             {item.note && (
-              <p className="text-xs text-gray-600">📝 {item.note}</p>
+              <p className="text-xs text-gray-600 flex items-center gap-1"><FileText size={12} /> {item.note}</p>
             )}
           </div>
         ))}
@@ -2041,13 +2048,13 @@ export default function ProductionPage() {
                                     textAlign: "center",
                                   }}
                                 >
-                                  <option value="pending">⏳ Pending</option>
-                                  <option value="ongoing">🔥 Ongoing</option>
+                                  <option value="pending">Pending</option>
+                                  <option value="ongoing">Ongoing</option>
                                   <option value="completed">
-                                    ✅ Completed
+                                    Completed
                                   </option>
                                   <option value="cancelled">
-                                    ❌ Cancelled
+                                    Cancelled
                                   </option>
                                 </select>
                                 <div className="absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none text-current opacity-50">
@@ -2605,11 +2612,11 @@ export default function ProductionPage() {
                                   : "bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
                               }`}
                             >
-                              <option value="pending">⏳ Menunggu</option>
+                              <option value="pending">Menunggu</option>
                               <option value="in_production">
-                                🔥 Proses Masak
+                                Proses Masak
                               </option>
-                              <option value="completed">✅ Selesai</option>
+                              <option value="completed">Selesai</option>
                             </select>
                           </div>
                         </div>
@@ -2698,7 +2705,7 @@ export default function ProductionPage() {
               {/* Products List */}
               <div className="border border-gray-200 rounded-lg p-4">
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-bold text-gray-900">📦 Produk</h3>
+                  <h3 className="font-bold text-gray-900 flex items-center gap-2"><Package size={16} /> Produk</h3>
                   {editedOrder.status === "verifying" && (
                     <button
                       onClick={() => setIsEditingOrder(!isEditingOrder)}
@@ -2786,10 +2793,10 @@ export default function ProductionPage() {
                   <div>
                     <p className="text-xs text-gray-600">Status</p>
                     <p className="font-bold text-lg text-gray-900">
-                      {editedOrder.status === "verifying" && "🔍 Verifikasi"}
-                      {editedOrder.status === "pending" && "⏳ Menunggu"}
-                      {editedOrder.status === "paid" && "💳 Dibayar"}
-                      {editedOrder.status === "completed" && "✅ Selesai"}
+                      {editedOrder.status === "verifying" && "Verifikasi"}
+                      {editedOrder.status === "pending" && "Menunggu"}
+                      {editedOrder.status === "paid" && "Dibayar"}
+                      {editedOrder.status === "completed" && "Selesai"}
                     </p>
                   </div>
                   <div>
@@ -2933,8 +2940,8 @@ function OrderManagementCard({
 
       {/* Info Row */}
       <div className="text-xs text-gray-600 space-y-1 mb-3 pb-3 border-b border-gray-300">
-        <p>📞 {order.user.no_hp}</p>
-        <p>📦 {totalItems} items</p>
+        <p className="flex items-center gap-1"><Phone size={12} /> {order.user.no_hp}</p>
+        <p className="flex items-center gap-1"><Package size={12} /> {totalItems} items</p>
       </div>
 
       {/* Products Preview */}
