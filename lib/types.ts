@@ -49,7 +49,7 @@ export interface SubJenis {
   jenis?: Jenis; // Optional: populated when fetching with relations
   min_amount?: number;
   max_amount?: number;
-  po_closed?: string; // Time string in HH:mm:ss format
+  PO_closed?: string; // Time string in HH:mm:ss format
 }
 
 // Legacy Category interface (for backwards compatibility)

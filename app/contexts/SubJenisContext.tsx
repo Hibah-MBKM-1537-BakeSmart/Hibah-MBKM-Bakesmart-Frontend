@@ -167,7 +167,7 @@ export function SubJenisProvider({ children }: { children: ReactNode }) {
             jenis_id: Number(item.jenis_id ?? item.ref_jenis_id ?? 0), // Handle both field names
             min_amount: item.min_amount ? Number(item.min_amount) : undefined,
             max_amount: item.max_amount ? Number(item.max_amount) : undefined,
-            po_closed: item.PO_closed ? String(item.PO_closed) : undefined,
+            PO_closed: item.PO_closed ? String(item.PO_closed) : undefined,
           }))
         : [];
 
