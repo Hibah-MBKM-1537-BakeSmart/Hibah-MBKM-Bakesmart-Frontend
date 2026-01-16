@@ -1,6 +1,7 @@
 "use client"
 import { TrendingUp, Users, ShoppingCart, DollarSign } from "lucide-react"
 import type { CustomerStatistics, MonthlySalesData } from "@/app/contexts/StatisticsContext"
+import { useAdminTranslation } from "@/app/contexts/AdminTranslationContext"
 
 interface StatisticsSummaryCardsProps {
   totalRevenue: number
@@ -17,6 +18,8 @@ export function StatisticsSummaryCards({
   highestMonth,
   customerStats,
 }: StatisticsSummaryCardsProps) {
+  const { t } = useAdminTranslation()
+
   // Format currency to full Rupiah with thousand separators
   const formatRupiah = (value: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -29,36 +32,36 @@ export function StatisticsSummaryCards({
 
   const summaryCards = [
     {
-      title: "Total Revenue",
+      title: t("statistics.totalRevenue"),
       value: formatRupiah(totalRevenue),
-      subtitle: "All time sales",
+      subtitle: t("statistics.allTimeSales"),
       icon: DollarSign,
       color: "#10B981",
       bgColor: "#ECFDF5",
       borderColor: "#6EE7B7",
     },
     {
-      title: "Total Sales",
+      title: t("statistics.totalSales"),
       value: totalSales.toString(),
-      subtitle: "Items sold",
+      subtitle: t("statistics.itemsSold"),
       icon: ShoppingCart,
       color: "#3B82F6",
       bgColor: "#EFF6FF",
       borderColor: "#93C5FD",
     },
     {
-      title: "Avg Monthly Revenue",
+      title: t("statistics.avgMonthlyRevenue"),
       value: formatRupiah(averageMonthlyRevenue),
-      subtitle: `Highest: ${highestMonth.month}`,
+      subtitle: `${t("statistics.highest")}: ${highestMonth.month}`,
       icon: TrendingUp,
       color: "#F59E0B",
       bgColor: "#FFF7ED",
       borderColor: "#FCD34D",
     },
     {
-      title: "Repeat Customers",
+      title: t("statistics.repeatCustomers"),
       value: customerStats.repeatCustomers.toString(),
-      subtitle: `${((customerStats.repeatCustomers / customerStats.totalCustomers) * 100).toFixed(0)}% of total`,
+      subtitle: `${((customerStats.repeatCustomers / customerStats.totalCustomers) * 100).toFixed(0)}% ${t("statistics.ofTotal")}`,
       icon: Users,
       color: "#8B5CF6",
       bgColor: "#F5F3FF",

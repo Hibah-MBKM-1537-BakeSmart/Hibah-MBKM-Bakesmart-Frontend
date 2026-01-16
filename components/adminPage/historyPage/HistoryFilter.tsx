@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { useHistory } from '@/app/contexts/HistoryContext';
+import { useAdminTranslation } from '@/app/contexts/AdminTranslationContext';
 import {
   Search,
   Filter,
@@ -10,6 +11,7 @@ import {
 } from 'lucide-react';
 
 export function HistoryFilter() {
+  const { t } = useAdminTranslation();
   const { state, updateFilters, exportToCSV, refreshOrders } = useHistory();
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -59,7 +61,7 @@ export function HistoryFilter() {
         <div className="flex items-center space-x-2">
           <Filter className="w-5 h-5" style={{ color: '#8b6f47' }} />
           <h2 className="text-lg font-semibold font-admin-heading" style={{ color: '#5d4037' }}>
-            Filter Pesanan
+            {t("history.filterOrders")}
           </h2>
         </div>
         <div className="flex items-center space-x-3">
@@ -73,7 +75,7 @@ export function HistoryFilter() {
             }}
           >
             <RefreshCw className={`w-4 h-4 ${state.isLoading ? 'animate-spin' : ''}`} />
-            <span>Refresh</span>
+            <span>{t("history.refresh")}</span>
           </button>
           <button
             onClick={exportToCSV}
@@ -81,7 +83,7 @@ export function HistoryFilter() {
             style={{ backgroundColor: '#8b6f47' }}
           >
             <Download className="w-4 h-4" />
-            <span>Export CSV</span>
+            <span>{t("history.exportCSV")}</span>
           </button>
         </div>
       </div>
@@ -91,7 +93,7 @@ export function HistoryFilter() {
         {/* Search */}
         <div className="lg:col-span-2">
           <label className="block text-sm font-medium mb-2 font-admin-body" style={{ color: '#5d4037' }}>
-            Search
+            {t("history.search")}
           </label>
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -99,7 +101,7 @@ export function HistoryFilter() {
             </div>
             <input
               type="text"
-              placeholder="Order ID, nama, atau nomor telepon..."
+              placeholder={t("history.searchHistory")}
               value={state.filters.searchQuery}
               onChange={handleSearchChange}
               className="w-full pl-10 pr-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-opacity-50 font-admin-body"
@@ -113,7 +115,7 @@ export function HistoryFilter() {
         {/* Period Filter */}
         <div>
           <label className="block text-sm font-medium mb-2 font-admin-body" style={{ color: '#5d4037' }}>
-            Periode
+            {t("history.period")}
           </label>
           <select
             value={state.filters.period}
@@ -123,18 +125,18 @@ export function HistoryFilter() {
               borderColor: '#e0d5c7'
             }}
           >
-            <option value="all">Semua</option>
-            <option value="today">Hari Ini</option>
-            <option value="week">7 Hari Terakhir</option>
-            <option value="month">Bulan Ini</option>
-            <option value="custom">Custom Range</option>
+            <option value="all">{t("history.all")}</option>
+            <option value="today">{t("history.today")}</option>
+            <option value="week">{t("history.last7Days")}</option>
+            <option value="month">{t("history.thisMonth")}</option>
+            <option value="custom">{t("history.customRange")}</option>
           </select>
         </div>
 
         {/* Order Status */}
         <div>
           <label className="block text-sm font-medium mb-2 font-admin-body" style={{ color: '#5d4037' }}>
-            Status Pesanan
+            {t("history.orderStatus")}
           </label>
           <select
             value={state.filters.status}
@@ -144,9 +146,9 @@ export function HistoryFilter() {
               borderColor: '#e0d5c7'
             }}
           >
-            <option value="">Semua</option>
-            <option value="completed">Selesai</option>
-            <option value="cancelled">Dibatalkan</option>
+            <option value="">{t("history.all")}</option>
+            <option value="completed">{t("history.completed")}</option>
+            <option value="cancelled">{t("history.cancelled")}</option>
           </select>
         </div>
       </div>
@@ -156,7 +158,7 @@ export function HistoryFilter() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div>
             <label className="block text-sm font-medium mb-2 font-admin-body" style={{ color: '#5d4037' }}>
-              Dari Tanggal
+              {t("history.fromDate")}
             </label>
             <input
               type="date"
@@ -170,7 +172,7 @@ export function HistoryFilter() {
           </div>
           <div>
             <label className="block text-sm font-medium mb-2 font-admin-body" style={{ color: '#5d4037' }}>
-              Sampai Tanggal
+              {t("history.toDate")}
             </label>
             <input
               type="date"
@@ -188,11 +190,11 @@ export function HistoryFilter() {
       {/* Results Count */}
       <div className="flex items-center justify-between text-sm font-admin-body" style={{ color: '#8b6f47' }}>
         <span>
-          Menampilkan {state.filteredOrders.length} dari {state.orders.length} pesanan
+          {t("history.showing")} {state.filteredOrders.length} {t("history.of")} {state.orders.length} {t("history.orders")}
         </span>
         {state.filters.searchQuery && (
           <span>
-            untuk "{state.filters.searchQuery}"
+            {t("history.for")} "{state.filters.searchQuery}"
           </span>
         )}
       </div>

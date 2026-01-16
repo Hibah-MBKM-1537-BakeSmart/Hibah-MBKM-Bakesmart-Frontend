@@ -404,6 +404,15 @@ export default function VouchersPage() {
                         {getSortIcon("usage")}
                       </button>
                     </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <button
+                        onClick={() => handleSort("status")}
+                        className="flex items-center space-x-1 hover:text-gray-700 transition-colors"
+                      >
+                        <span>{t("vouchers.status")}</span>
+                        {getSortIcon("status")}
+                      </button>
+                    </th>
                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                       {t("common.actions")}
                     </th>
@@ -416,7 +425,7 @@ export default function VouchersPage() {
                         {groupByAlphabet && (
                           <tr className="bg-gray-100">
                             <td
-                              colSpan={7}
+                              colSpan={8}
                               className="px-6 py-3 text-sm font-semibold text-gray-700"
                             >
                               {group} ({vouchersInGroup.length} voucher
@@ -491,6 +500,14 @@ export default function VouchersPage() {
                                       : ""}
                                   </span>
                                 </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span
+                                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusInfo.color}`}
+                                  title={statusInfo.tooltip}
+                                >
+                                  {statusInfo.status}
+                                </span>
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                 <div className="flex items-center justify-end space-x-2">

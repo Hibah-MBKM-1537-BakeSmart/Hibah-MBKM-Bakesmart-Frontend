@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { useKasir } from "@/app/contexts/KasirContext";
+import { useAdminTranslation } from "@/app/contexts/AdminTranslationContext";
 import {
   ShoppingCart,
   Plus,
@@ -32,7 +33,7 @@ import {
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
-import { id } from "date-fns/locale";
+import { id as idLocale, enUS } from "date-fns/locale";
 
 export function KasirCart() {
   const {
@@ -57,6 +58,19 @@ export function KasirCart() {
     calculateSubtotal,
     calculateTotal,
   } = useKasir();
+  
+  const { t, language } = useAdminTranslation();
+  const dateLocale = language === 'id' ? idLocale : enUS;
+
+  // Helper to get product name based on language
+  const getProductName = (product: any) => {
+    return language === 'id' ? product.nama_id : (product.nama_en || product.nama_id);
+  };
+
+  // Helper to get attribute name based on language
+  const getAttributeName = (attr: any) => {
+    return language === 'id' ? (attr.nama_id || attr.nama) : (attr.nama_en || attr.nama_id || attr.nama);
+  };
 
   const [selectedDate, setSelectedDate] = useState<Date>();
   const [voucherInput, setVoucherInput] = useState("");
@@ -78,19 +92,20 @@ export function KasirCart() {
   const handlePrintReceipt = () => {
     // Current date and time formatting
     const now = new Date();
-    const formattedDate = now.toLocaleDateString("id-ID", {
+    const locale = language === 'id' ? 'id-ID' : 'en-US';
+    const formattedDate = now.toLocaleDateString(locale, {
       weekday: "long",
       year: "numeric",
       month: "long",
       day: "numeric",
     });
-    const formattedTime = now.toLocaleTimeString("id-ID");
+    const formattedTime = now.toLocaleTimeString(locale);
 
     const receiptContent = `
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Struk Pembayaran - ${
+          <title>${t("kasir.receipt")} - ${
             state.currentTransaction?.id || "ORDER"
           }</title>
           <style>
@@ -212,31 +227,31 @@ export function KasirCart() {
           </div>
 
           <div class="receipt-section">
-            <div class="section-title">INFORMASI PESANAN</div>
+            <div class="section-title">${t("kasir.orderInfo")}</div>
             <div class="info-row">
-              <span>Pelanggan:</span>
-              <span>${state.customerName || "Umum"}</span>
+              <span>${t("kasir.customer")}:</span>
+              <span>${state.customerName || t("kasir.general")}</span>
             </div>
             <div class="info-row">
-              <span>Metode:</span>
+              <span>${t("kasir.method")}:</span>
               <span>${
-                state.deliveryMode === "pickup" ? "Ambil Sendiri" : "Pengiriman"
+                state.deliveryMode === "pickup" ? t("kasir.selfPickup") : t("kasir.deliveryMethod")
               }</span>
             </div>
             <div class="info-row">
-              <span>Status:</span>
-              <span>Selesai (Lunas)</span>
+              <span>${t("kasir.orderStatus")}:</span>
+              <span>${t("kasir.completedPaid")}</span>
             </div>
           </div>
 
           <div class="receipt-section">
-            <div class="section-title">DETAIL PESANAN</div>
+            <div class="section-title">${t("kasir.orderDetails")}</div>
             ${state.cart
               .map(
                 (item) => `
               <div class="product-item">
                 <div class="product-name">
-                  ${item.product.nama_id}
+                  ${getProductName(item.product)}
                 </div>
                 <div class="product-details">
                   <span>
@@ -251,7 +266,7 @@ export function KasirCart() {
                 ${
                   item.customizations?.length
                     ? `<div style="font-size: 8pt; font-style: italic; margin-top: 1mm;">
-                        + ${item.customizations.map((c) => c.nama).join(", ")}
+                        + ${item.customizations.map((c) => getAttributeName(c)).join(", ")}
                        </div>`
                     : ""
                 }
@@ -262,7 +277,7 @@ export function KasirCart() {
 
             <div class="totals">
               <div class="total-row">
-                <span>Subtotal:</span>
+                <span>${t("common.subtotal")}:</span>
                 <span>${formatPrice(calculateSubtotal())}</span>
               </div>
               
@@ -270,7 +285,7 @@ export function KasirCart() {
                 state.voucherDiscount > 0
                   ? `
               <div class="total-row">
-                <span>Diskon:</span>
+                <span>${t("kasir.discount")}:</span>
                 <span>-${formatPrice(state.voucherDiscount)}</span>
               </div>
               `
@@ -278,12 +293,12 @@ export function KasirCart() {
               }
               
               <div class="total-row">
-                <span>Ongkos Kirim:</span>
+                <span>${t("kasir.shippingFee")}:</span>
                 <span>${formatPrice(state.deliveryFee)}</span>
               </div>
               
               <div class="total-row grand-total">
-                <span>TOTAL:</span>
+                <span>${t("common.total").toUpperCase()}:</span>
                 <span>${formatPrice(lastTotal)}</span>
               </div>
               
@@ -292,11 +307,11 @@ export function KasirCart() {
                   ? `
                  <div style="margin-top: 2mm; border-top: 1px dashed #000; padding-top: 2mm;">
                   <div class="total-row">
-                    <span>Tunai:</span>
+                    <span>${t("kasir.cash")}:</span>
                     <span>${formatPrice(lastTotal + changeAmount)}</span>
                   </div>
                   <div class="total-row">
-                    <span>Kembali:</span>
+                    <span>${t("kasir.change")}:</span>
                     <span>${formatPrice(changeAmount)}</span>
                   </div>
                  </div>
@@ -307,8 +322,8 @@ export function KasirCart() {
           </div>
 
           <div class="receipt-footer">
-            <div>Terima kasih atas pesanan Anda!</div>
-            <div style="margin-top: 2px;">BakeSmart - Roti Berkualitas</div>
+            <div>${t("kasir.thankYouOrder")}</div>
+            <div style="margin-top: 2px;">${t("kasir.qualityBread")}</div>
           </div>
         </body>
       </html>
@@ -335,23 +350,17 @@ export function KasirCart() {
     }
   };
 
-  const getIndonesianDayName = (date: Date): string => {
-    const dayNames = [
-      "Minggu",
-      "Senin",
-      "Selasa",
-      "Rabu",
-      "Kamis",
-      "Jumat",
-      "Sabtu",
-    ];
+  const getDayName = (date: Date): string => {
+    const dayNamesId = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+    const dayNamesEn = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    const dayNames = language === 'id' ? dayNamesId : dayNamesEn;
     return dayNames[date.getDay()];
   };
 
   const handleDateSelect = (date: Date | undefined) => {
     if (date) {
       setSelectedDate(date);
-      setOrderDay(getIndonesianDayName(date));
+      setOrderDay(getDayName(date));
       setOrderDate(format(date, "yyyy-MM-dd"));
       setIsCalendarOpen(false); // Close calendar after selection
     }
@@ -359,7 +368,7 @@ export function KasirCart() {
 
   const handleApplyVoucher = async () => {
     if (!voucherInput.trim()) {
-      setVoucherError("Masukkan kode voucher");
+      setVoucherError(t("kasir.enterVoucherCode"));
       return;
     }
 
@@ -420,7 +429,7 @@ export function KasirCart() {
       return;
     }
     if (!state.customerWhatsApp.trim()) {
-      alert("Nomor WhatsApp pelanggan wajib diisi!");
+      alert(t("kasir.whatsappRequired"));
       return;
     }
 
@@ -430,7 +439,7 @@ export function KasirCart() {
 
     if (state.paymentMethod === "cash" && receivedAmount > 0) {
       if (receivedAmount < currentTotal) {
-        alert("Uang yang diterima kurang dari total pembayaran!");
+        alert(t("kasir.moneyNotEnough"));
         return;
       }
       setChangeAmount(receivedAmount - currentTotal);
@@ -481,32 +490,32 @@ export function KasirCart() {
   const paymentMethods = [
     {
       id: "cash",
-      label: "Bayar Tunai",
-      description: "Bayar langsung saat pengiriman/pickup",
+      label: t("kasir.cashPayment"),
+      description: t("kasir.payOnDelivery"),
       icon: Banknote,
     },
     {
       id: "transfer",
-      label: "Transfer Bank",
-      description: "Transfer ke rekening toko",
+      label: t("kasir.transferBank"),
+      description: t("kasir.transferToStore"),
       icon: Building,
     },
     {
       id: "gopay",
-      label: "GoPay",
-      description: "Pembayaran melalui GoPay",
+      label: t("kasir.gopayPayment"),
+      description: t("kasir.gopayVia"),
       icon: Smartphone,
     },
     {
       id: "ovo",
-      label: "OVO",
-      description: "Pembayaran melalui OVO",
+      label: t("kasir.ovoPayment"),
+      description: t("kasir.ovoVia"),
       icon: Smartphone,
     },
     {
       id: "dana",
-      label: "DANA",
-      description: "Pembayaran melalui DANA",
+      label: t("kasir.danaPayment"),
+      description: t("kasir.danaVia"),
       icon: Smartphone,
     },
   ];
@@ -518,13 +527,13 @@ export function KasirCart() {
         <div className="flex items-center justify-between mb-2">
           <h2 className="text-lg font-semibold text-gray-900 flex items-center">
             <ShoppingCart className="w-5 h-5 mr-2" />
-            Keranjang ({state.cart.length})
+            {t("kasir.cart")} ({state.cart.length})
           </h2>
           {state.cart.length > 0 && (
             <button
               onClick={clearCart}
               className="text-red-600 hover:text-red-700 p-1"
-              title="Kosongkan keranjang"
+              title={t("kasir.clearCart")}
             >
               <Trash2 className="w-4 h-4" />
             </button>
@@ -537,9 +546,9 @@ export function KasirCart() {
         {state.cart.length === 0 ? (
           <div className="text-center py-12">
             <ShoppingCart className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600">Keranjang masih kosong</p>
+            <p className="text-gray-600">{t("kasir.emptyCart")}</p>
             <p className="text-sm text-gray-500">
-              Pilih produk untuk ditambahkan
+              {t("kasir.selectProductToAdd")}
             </p>
           </div>
         ) : (
@@ -554,20 +563,20 @@ export function KasirCart() {
                   <div className="flex items-start justify-between">
                     <div className="flex-1 min-w-0">
                       <h4 className="font-medium text-gray-900 text-sm mb-1">
-                        {item.product.nama_id}
+                        {getProductName(item.product)}
                       </h4>
 
                       {item.customizations &&
                         item.customizations.length > 0 && (
                           <div className="mb-2">
                             <p className="text-xs text-blue-600 font-medium">
-                              Kustomisasi:
+                              {t("kasir.customization")}:
                             </p>
                             <ul className="text-xs text-gray-600 ml-2">
                               {item.customizations.map(
                                 (custom, customIndex) => (
                                   <li key={customIndex}>
-                                    • {custom.nama}{" "}
+                                    • {getAttributeName(custom)}{" "}
                                     {custom.harga_tambahan > 0 &&
                                       `(+${formatPrice(
                                         custom.harga_tambahan
@@ -581,7 +590,7 @@ export function KasirCart() {
 
                       {item.note && (
                         <p className="text-xs text-gray-600 italic mb-2">
-                          Catatan: {item.note}
+                          {t("kasir.specialNote")}: {item.note}
                         </p>
                       )}
 
@@ -590,7 +599,7 @@ export function KasirCart() {
                         {item.customizations &&
                           item.customizations.length > 0 && (
                             <span className="text-xs text-gray-500 ml-1">
-                              (termasuk kustomisasi)
+                              ({t("kasir.includingCustomization")})
                             </span>
                           )}
                       </p>
@@ -651,7 +660,7 @@ export function KasirCart() {
       {state.cart.length > 0 && (
         <div className="border-t border-gray-200 p-4 flex-shrink-0 bg-white">
           <div className="flex justify-between items-center mb-4">
-            <span className="text-gray-600 font-medium">Total Estimasi</span>
+            <span className="text-gray-600 font-medium">{t("kasir.estimatedTotal")}</span>
             <span className="text-xl font-bold text-orange-600">
               {formatPrice(calculateSubtotal())}
             </span>
@@ -660,7 +669,7 @@ export function KasirCart() {
             onClick={() => setIsCheckoutModalOpen(true)}
             className="w-full py-3 bg-orange-500 text-white rounded-lg font-semibold hover:bg-orange-600 transition-colors flex items-center justify-center space-x-2"
           >
-            <span>Lanjut ke Pembayaran</span>
+            <span>{t("kasir.proceedToPayment")}</span>
             <Ticket className="w-4 h-4 ml-1" />
           </button>
         </div>
@@ -672,7 +681,7 @@ export function KasirCart() {
           <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
             <div className="flex items-center justify-between p-4 border-b border-gray-100">
               <h2 className="text-lg font-bold text-gray-900">
-                Detail Pembayaran
+                {t("kasir.paymentDetails")}
               </h2>
               <button
                 onClick={() => setIsCheckoutModalOpen(false)}
@@ -688,7 +697,7 @@ export function KasirCart() {
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm font-semibold text-gray-900 flex items-center gap-2">
                     <CalendarIcon className="h-4 w-4" />
-                    Tanggal Pesanan
+                    {t("kasir.orderDate")}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -703,10 +712,10 @@ export function KasirCart() {
                       >
                         {selectedDate ? (
                           format(selectedDate, "EEEE, dd MMMM yyyy", {
-                            locale: id,
+                            locale: dateLocale,
                           })
                         ) : (
-                          <span>Pilih tanggal pesanan</span>
+                          <span>{t("kasir.selectOrderDate")}</span>
                         )}
                       </Button>
                     </PopoverTrigger>
@@ -731,34 +740,34 @@ export function KasirCart() {
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm font-semibold text-gray-900">
-                    Informasi Penerima
+                    {t("kasir.recipientInfo")}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div>
                     <Label htmlFor="customerName" className="text-sm">
-                      Nama Penerima <span className="text-red-500">*</span>
+                      {t("kasir.recipientName")} <span className="text-red-500">*</span>
                     </Label>
                     <Input
                       id="customerName"
                       type="text"
                       value={state.customerName}
                       onChange={(e) => setCustomerName(e.target.value)}
-                      placeholder="Masukkan nama penerima"
+                      placeholder={t("kasir.enterRecipientName")}
                       className="mt-1"
                       required
                     />
                   </div>
                   <div>
                     <Label htmlFor="customerWhatsApp" className="text-sm">
-                      Nomor Telepon <span className="text-red-500">*</span>
+                      {t("kasir.phoneNumber")} <span className="text-red-500">*</span>
                     </Label>
                     <Input
                       id="customerWhatsApp"
                       type="text"
                       value={state.customerWhatsApp}
                       onChange={(e) => setCustomerWhatsApp(e.target.value)}
-                      placeholder="Contoh: 08123456789"
+                      placeholder={t("kasir.phoneExample")}
                       className="mt-1"
                       required
                     />
@@ -770,7 +779,7 @@ export function KasirCart() {
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm font-semibold text-gray-900">
-                    Mode Pengiriman
+                    {t("kasir.deliveryMode")}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -790,7 +799,7 @@ export function KasirCart() {
                         htmlFor="delivery"
                         className="cursor-pointer font-normal"
                       >
-                        Antar (Delivery)
+                        {t("kasir.deliveryMethod")}
                       </Label>
                     </div>
                     <div className="flex items-center space-x-2">
@@ -799,7 +808,7 @@ export function KasirCart() {
                         htmlFor="pickup"
                         className="cursor-pointer font-normal"
                       >
-                        Ambil Sendiri (Pickup)
+                        {t("kasir.selfPickup")}
                       </Label>
                     </div>
                   </RadioGroup>
@@ -812,19 +821,19 @@ export function KasirCart() {
                   <CardHeader className="pb-3">
                     <CardTitle className="text-sm font-semibold text-gray-900 flex items-center gap-2">
                       <MapPin className="h-4 w-4" />
-                      Alamat Pengiriman
+                      {t("kasir.deliveryAddress")}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <Textarea
                       value={state.customerAddress}
                       onChange={(e) => setCustomerAddress(e.target.value)}
-                      placeholder="Masukkan alamat lengkap pengiriman"
+                      placeholder={t("kasir.enterFullAddress")}
                       className="resize-none"
                       rows={3}
                     />
                     <p className="text-xs text-gray-500 mt-2">
-                      * Ongkir akan dihitung sesuai jarak pengiriman
+                      * {t("kasir.deliveryFeeNote")}
                     </p>
                   </CardContent>
                 </Card>
@@ -834,14 +843,14 @@ export function KasirCart() {
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm font-semibold text-gray-900">
-                    Catatan Tambahan
+                    {t("kasir.additionalNotes")}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <Textarea
                     value={state.catatan}
                     onChange={(e) => setCatatan(e.target.value)}
-                    placeholder="Tambahkan catatan untuk pesanan (opsional)"
+                    placeholder={t("kasir.addNotesPlaceholder")}
                     className="resize-none"
                     rows={2}
                   />
@@ -853,7 +862,7 @@ export function KasirCart() {
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm font-semibold text-gray-900 flex items-center gap-2">
                     <Ticket className="h-4 w-4" />
-                    Voucher / Kupon
+                    {t("kasir.voucherCoupon")}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -866,13 +875,13 @@ export function KasirCart() {
                           </div>
                           <div>
                             <p className="font-semibold text-green-800 text-sm mb-1">
-                              Voucher Diterapkan
+                              {t("kasir.voucherApplied")}
                             </p>
                             <p className="text-xs text-green-700 font-mono font-bold">
                               {state.voucherCode}
                             </p>
                             <p className="text-xs text-green-600 mt-1">
-                              Diskon:{" "}
+                              {t("kasir.discount")}:{" "}
                               <span className="font-bold">
                                 {formatPrice(state.voucherDiscount)}
                               </span>
@@ -899,7 +908,7 @@ export function KasirCart() {
                             setVoucherInput(e.target.value.toUpperCase());
                             setVoucherError("");
                           }}
-                          placeholder="Masukkan kode voucher"
+                          placeholder={t("kasir.enterVoucherCode")}
                           className="flex-1 font-mono"
                           disabled={isValidatingVoucher}
                         />
@@ -911,10 +920,10 @@ export function KasirCart() {
                           {isValidatingVoucher ? (
                             <>
                               <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                              Validasi...
+                              {t("kasir.validating")}
                             </>
                           ) : (
-                            "Terapkan"
+                            t("kasir.apply")
                           )}
                         </Button>
                       </div>
@@ -933,7 +942,7 @@ export function KasirCart() {
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm font-semibold text-gray-900">
-                    Metode Pembayaran
+                    {t("kasir.paymentMethod")}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -998,17 +1007,17 @@ export function KasirCart() {
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm font-semibold text-gray-900">
-                    Ringkasan Pesanan
+                    {t("kasir.orderSummary")}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Subtotal:</span>
+                    <span className="text-gray-600">{t("kasir.subtotal")}:</span>
                     <span className="font-medium">{formatPrice(subtotal)}</span>
                   </div>
                   {state.deliveryMode === "delivery" && (
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Ongkir:</span>
+                      <span className="text-gray-600">{t("kasir.shippingFee")}:</span>
                       <span className="font-medium">
                         {formatPrice(finalDeliveryFee)}
                       </span>
@@ -1016,14 +1025,14 @@ export function KasirCart() {
                   )}
                   {state.voucherDiscount > 0 && (
                     <div className="flex justify-between text-sm text-green-600">
-                      <span>Diskon Voucher:</span>
+                      <span>{t("kasir.voucherDiscountLabel")}:</span>
                       <span className="font-medium">
                         -{formatPrice(state.voucherDiscount)}
                       </span>
                     </div>
                   )}
                   <div className="border-t pt-2 flex justify-between font-bold text-base">
-                    <span>Total:</span>
+                    <span>{t("kasir.total")}:</span>
                     <span className="text-orange-600">
                       {formatPrice(total)}
                     </span>
@@ -1037,7 +1046,7 @@ export function KasirCart() {
                   <CardHeader className="pb-3">
                     <CardTitle className="text-sm font-semibold text-gray-900 flex items-center gap-2">
                       <Banknote className="h-4 w-4" />
-                      Uang Diterima
+                      {t("kasir.cashReceivedLabel")}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -1060,7 +1069,7 @@ export function KasirCart() {
                         <div className="bg-blue-50 rounded-lg p-3">
                           <div className="flex justify-between items-center">
                             <span className="text-sm text-gray-600">
-                              Kembalian:
+                              {t("kasir.changeLabel")}:
                             </span>
                             <span
                               className={`text-lg font-bold ${
@@ -1082,7 +1091,7 @@ export function KasirCart() {
                           {(parseInt(cashReceived.replace(/\D/g, "")) || 0) <
                             total && (
                             <p className="text-xs text-red-500 mt-1">
-                              Uang kurang Rp{" "}
+                              {t("kasir.moneyShort")} Rp{" "}
                               {(
                                 total -
                                 (parseInt(cashReceived.replace(/\D/g, "")) || 0)
@@ -1111,7 +1120,7 @@ export function KasirCart() {
                         }
                         className="w-full py-2 text-sm bg-orange-100 text-orange-700 hover:bg-orange-200 rounded-lg transition-colors"
                       >
-                        Uang Pas ({formatPrice(total)})
+                        {t("kasir.exactAmount")} ({formatPrice(total)})
                       </button>
                     </div>
                   </CardContent>
@@ -1124,7 +1133,7 @@ export function KasirCart() {
                 onClick={() => setIsCheckoutModalOpen(false)}
                 className="flex-1 py-3 bg-white border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
               >
-                Batal
+                {t("kasir.cancel")}
               </button>
               <button
                 onClick={() => {
@@ -1145,11 +1154,11 @@ export function KasirCart() {
                 {state.isLoading || processingPayment ? (
                   <>
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    <span>Memproses...</span>
+                    <span>{t("kasir.processing")}</span>
                   </>
                 ) : (
                   <>
-                    <span>Bayar Sekarang</span>
+                    <span>{t("kasir.payNow")}</span>
                   </>
                 )}
               </button>
@@ -1166,15 +1175,15 @@ export function KasirCart() {
               <Check className="w-8 h-8 text-green-600" />
             </div>
             <h3 className="text-xl font-bold text-green-700 mb-2">
-              Pembayaran Berhasil!
+              {t("kasir.paymentSuccessTitle")}
             </h3>
             <p className="text-gray-600 mb-4">
-              Transaksi telah diproses dengan sukses
+              {t("kasir.transactionProcessed")}
             </p>
 
             <div className="bg-gray-50 rounded-lg p-4 mb-4 space-y-2">
               <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Total Bayar:</span>
+                <span className="text-gray-600">{t("kasir.totalPaid")}:</span>
                 <span className="font-semibold text-gray-900">
                   {formatPrice(lastTotal)}
                 </span>
@@ -1182,14 +1191,14 @@ export function KasirCart() {
               {changeAmount > 0 && (
                 <>
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Uang Diterima:</span>
+                    <span className="text-gray-600">{t("kasir.cashReceivedLabel")}:</span>
                     <span className="font-semibold text-gray-900">
                       {formatPrice(lastTotal + changeAmount)}
                     </span>
                   </div>
                   <div className="border-t pt-2 flex justify-between">
                     <span className="text-gray-700 font-medium">
-                      Kembalian:
+                      {t("kasir.changeLabel")}:
                     </span>
                     <span className="text-xl font-bold text-green-600">
                       {formatPrice(changeAmount)}
@@ -1205,13 +1214,13 @@ export function KasirCart() {
                 className="flex-1 py-3 bg-white border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
               >
                 <Printer className="w-4 h-4" />
-                Cetak Struk
+                {t("kasir.printReceipt")}
               </button>
               <button
                 onClick={handleCloseSuccessModal}
                 className="flex-1 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors"
               >
-                Selesai
+                {t("kasir.done")}
               </button>
             </div>
           </div>

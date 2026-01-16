@@ -1,8 +1,10 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { format } from "date-fns";
-import { id as idLocale } from "date-fns/locale";
+import { id as idLocale, enUS } from "date-fns/locale";
+import { useRBAC } from "@/lib/rbac";
+import { useAdminTranslation } from "@/app/contexts/AdminTranslationContext";
 import {
   Printer,
   Check,
@@ -34,6 +36,7 @@ import {
   ArrowUpDown,
   ChevronUp,
   Hourglass,
+  Phone,
 } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -122,6 +125,12 @@ const transformBackendData = (groups: OrderGroup[]): Order[] => {
 
   groups.forEach((group) => {
     group.orders.forEach((order) => {
+      // Skip orders with empty products array (nothing to produce)
+      if (!order.products || order.products.length === 0) {
+        console.log(`[Production] Skipping order #${order.id} - no products to produce`);
+        return;
+      }
+
       allOrders.push({
         id: order.id,
         user: {
@@ -226,12 +235,14 @@ function ProductionOrderCard({
   onMarkComplete,
   onDownloadPDF,
   onShareWA,
+  t,
 }: {
   order: Order;
   onPrint: (order: Order) => void;
   onMarkComplete: (orderId: number) => void;
   onDownloadPDF: (order: Order) => void;
   onShareWA: (order: Order) => void;
+  t: (key: string) => string;
 }) {
   const [isEditingNotes, setIsEditingNotes] = useState(false);
   const [showPrintOptions, setShowPrintOptions] = useState(false);
@@ -294,13 +305,13 @@ function ProductionOrderCard({
 
       {/* Contact Info */}
       <div className="text-xs text-gray-600 mb-3 space-y-1">
-        <p>📞 {order.user.no_hp}</p>
-        <p>📦 {totalItems} items</p>
+        <p className="flex items-center gap-1"><Phone size={12} /> {order.user.no_hp}</p>
+        <p className="flex items-center gap-1"><Package size={12} /> {totalItems} {t("production.itemsCount")}</p>
       </div>
 
       {/* Products List */}
       <div className="bg-white rounded p-3 border border-gray-200 mb-3 text-sm space-y-1">
-        <p className="font-semibold text-gray-900 mb-2">Produk:</p>
+        <p className="font-semibold text-gray-900 mb-2">{t("production.products")}:</p>
         {order.order_products.map((item) => (
           <div key={item.id}>
             <p className="text-gray-900">
@@ -308,7 +319,7 @@ function ProductionOrderCard({
               <span className="text-blue-600 font-bold">x{item.jumlah}</span>
             </p>
             {item.note && (
-              <p className="text-xs text-gray-600">📝 {item.note}</p>
+              <p className="text-xs text-gray-600 flex items-center gap-1"><FileText size={12} /> {item.note}</p>
             )}
           </div>
         ))}
@@ -326,7 +337,7 @@ function ProductionOrderCard({
       <div className="text-xs text-gray-600 mb-4 space-y-1">
         <p>Dibuat: {new Date(order.created_at).toLocaleDateString("id-ID")}</p>
         <p>
-          Jadwal:{" "}
+          {t("production.schedule")}:{" "}
           {new Date(order.scheduled_date || new Date()).toLocaleDateString(
             "id-ID"
           )}
@@ -380,6 +391,22 @@ function ProductionOrderCard({
 }
 
 export default function ProductionPage() {
+  // RBAC hook for permission checks
+  const { canAccessSubPage } = useRBAC();
+  const { t, language } = useAdminTranslation();
+  const dateLocale = language === "id" ? idLocale : enUS;
+  
+  // Determine accessible tabs based on user role
+  const canAccessProductionList = canAccessSubPage('production:list');
+  const canAccessManageOrder = canAccessSubPage('production:manage');
+  
+  // Set initial active tab based on what the user can access
+  const getInitialTab = (): "orders" | "production" => {
+    if (canAccessManageOrder) return "orders";
+    if (canAccessProductionList) return "production";
+    return "orders"; // fallback
+  };
+
   const [selectedDate, setSelectedDate] = useState<string>(
     format(new Date(), "yyyy-MM-dd")
   );
@@ -399,7 +426,7 @@ export default function ProductionPage() {
     Record<string, string>
   >({});
   const [generalNotes, setGeneralNotes] = useState("");
-  const [activeTab, setActiveTab] = useState<"orders" | "production">("orders");
+  const [activeTab, setActiveTab] = useState<"orders" | "production">(getInitialTab);
   const [expandedCategory, setExpandedCategory] = useState<string | null>(
     "verifying"
   );
@@ -866,7 +893,7 @@ export default function ProductionPage() {
       </head>
       <body>
         <div class="header">
-          <h2>DAFTAR PRODUKSI</h2>
+          <h2>${t("production.list").toUpperCase()} PRODUKSI</h2>
           <p>Tanggal: ${
             showAllProductionDates || selectedProductionDates.size === 0
               ? "Semua Tanggal"
@@ -882,7 +909,7 @@ export default function ProductionPage() {
 
         ${
           generalNotes
-            ? `<div class="notes"><div class="notes-title">📌 CATATAN UMUM:</div>${generalNotes
+            ? `<div class="notes"><div class="notes-title">📌 ${t("production.generalNotes").toUpperCase()}:</div>${generalNotes
                 .split("\\n")
                 .join("<br>")}</div>`
             : ""
@@ -891,8 +918,8 @@ export default function ProductionPage() {
         <table>
           <thead>
             <tr>
-              <th class="product-col">PRODUK</th>
-              <th class="addon-col">ADDON</th>
+              <th class="product-col">{t("production.products").toUpperCase()}</th>
+              <th class="addon-col">{t("production.addons").toUpperCase()}</th>
               <th class="qty-col">QUANTITY</th>
               <th class="qty-col">TOTAL</th>
               <th class="target-col">TARGET</th>
@@ -1373,45 +1400,49 @@ export default function ProductionPage() {
       {/* Header */}
       <div>
         <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-          <Package className="w-6 h-6" /> Manajemen Order & Produksi
+          <Package className="w-6 h-6" /> {t("production.pageTitle")}
         </h1>
       </div>
 
       {/* Tab Navigation - Compact */}
       <div className="flex gap-1 border-b border-gray-200">
-        <button
-          onClick={() => setActiveTab("orders")}
-          className={`px-4 py-2 text-sm font-medium transition-colors flex items-center gap-2 ${
-            activeTab === "orders"
-              ? "border-b-2 border-[#9B6D49] text-[#9B6D49] -mb-px"
-              : "text-gray-500 hover:text-gray-700"
-          }`}
-        >
-          <ClipboardList size={16} /> Kelola Order
-        </button>
-        <button
-          onClick={() => setActiveTab("production")}
-          className={`px-4 py-2 text-sm font-medium transition-colors flex items-center gap-2 ${
-            activeTab === "production"
-              ? "border-b-2 border-[#9B6D49] text-[#9B6D49] -mb-px"
-              : "text-gray-500 hover:text-gray-700"
-          }`}
-        >
-          <ChefHat size={16} /> Daftar Produksi
-        </button>
+        {canAccessManageOrder && (
+          <button
+            onClick={() => setActiveTab("orders")}
+            className={`px-4 py-2 text-sm font-medium transition-colors flex items-center gap-2 ${
+              activeTab === "orders"
+                ? "border-b-2 border-[#9B6D49] text-[#9B6D49] -mb-px"
+                : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            <ClipboardList size={16} /> {t("production.manageOrders")}
+          </button>
+        )}
+        {canAccessProductionList && (
+          <button
+            onClick={() => setActiveTab("production")}
+            className={`px-4 py-2 text-sm font-medium transition-colors flex items-center gap-2 ${
+              activeTab === "production"
+                ? "border-b-2 border-[#9B6D49] text-[#9B6D49] -mb-px"
+                : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            <ChefHat size={16} /> {t("production.productionList")}
+          </button>
+        )}
       </div>
 
       {/* ORDERS TAB */}
-      {activeTab === "orders" && (
+      {activeTab === "orders" && canAccessManageOrder && (
         <div className="space-y-3">
           {/* 7-Day Calendar View - Compact */}
           <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-3">
             <div className="mb-2">
               <h3 className="text-sm font-bold text-gray-900 mb-2 flex items-center gap-2">
-                <Calendar size={16} /> Filter
+                <Calendar size={16} /> {t("production.filter")}
                 {selectedOrderDates.size > 0 && !showAllDates && (
                   <span className="text-[10px] text-gray-500 font-normal ml-2">
-                    ({selectedOrderDates.size}/7 tanggal dipilih)
+                    ({selectedOrderDates.size}/7 {t("production.datesSelected")})
                   </span>
                 )}
               </h3>
@@ -1422,7 +1453,7 @@ export default function ProductionPage() {
                   );
                   const dateStr = format(currentDate, "yyyy-MM-dd");
                   const dayName = format(currentDate, "EEE", {
-                    locale: idLocale,
+                    locale: dateLocale,
                   });
                   const dayNum = format(currentDate, "d");
                   const isSelected =
@@ -1469,7 +1500,7 @@ export default function ProductionPage() {
                     : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
                 }`}
               >
-                Semua
+                {t("production.allStatus")}
               </button>
               <button
                 onClick={() => {
@@ -1485,7 +1516,7 @@ export default function ProductionPage() {
                     : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
                 }`}
               >
-                Hari Ini
+                {t("production.today")}
               </button>
               <button
                 onClick={() => {
@@ -1510,18 +1541,18 @@ export default function ProductionPage() {
                     : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
                 }`}
               >
-                7 Hari
+                {t("production.sevenDays")}
               </button>
               <select
                 value={orderStatusFilter}
                 onChange={(e) => setOrderStatusFilter(e.target.value as any)}
                 className="px-3 py-2 text-sm border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-[#9B6D49] bg-white text-gray-700 font-medium"
               >
-                <option value="all">Semua Status</option>
-                <option value="pending">Pending</option>
-                <option value="ongoing">Ongoing</option>
-                <option value="completed">Completed</option>
-                <option value="cancelled">Cancelled</option>
+                <option value="all">{t("production.allStatus")}</option>
+                <option value="pending">{t("production.pending")}</option>
+                <option value="ongoing">{t("production.ongoing")}</option>
+                <option value="completed">{t("production.completed")}</option>
+                <option value="cancelled">{t("production.cancelled")}</option>
               </select>
               <input
                 type="date"
@@ -1535,11 +1566,11 @@ export default function ProductionPage() {
               />
               <span className="text-gray-400 ml-auto">
                 {showAllDates || selectedOrderDates.size === 0
-                  ? "Semua Tanggal"
+                  ? t("production.allDates")
                   : Array.from(selectedOrderDates)
                       .sort()
                       .map((d) =>
-                        format(new Date(d), "d MMM", { locale: idLocale })
+                        format(new Date(d), "d MMM", { locale: dateLocale })
                       )
                       .join(", ")}
               </span>
@@ -1551,7 +1582,7 @@ export default function ProductionPage() {
             <div className="bg-white rounded-xl p-3 border border-gray-100 shadow-sm flex items-center justify-between">
               <div>
                 <p className="text-[10px] text-gray-500 font-semibold uppercase tracking-wider">
-                  Total Order
+                  {t("production.totalOrders")}
                 </p>
                 <p className="text-xl font-bold text-gray-900 mt-0.5">
                   {groupedOrders.verifying.length +
@@ -1567,7 +1598,7 @@ export default function ProductionPage() {
             <div className="bg-white rounded-xl p-3 border border-gray-100 shadow-sm flex items-center justify-between">
               <div>
                 <p className="text-[10px] text-gray-500 font-semibold uppercase tracking-wider">
-                  Verifikasi
+                  {t("production.verification")}
                 </p>
                 <p className="text-xl font-bold text-orange-600 mt-0.5">
                   {groupedOrders.verifying.length}
@@ -1580,7 +1611,7 @@ export default function ProductionPage() {
             <div className="bg-white rounded-xl p-3 border border-gray-100 shadow-sm flex items-center justify-between">
               <div>
                 <p className="text-[10px] text-gray-500 font-semibold uppercase tracking-wider">
-                  Pembayaran
+                  {t("production.payment")}
                 </p>
                 <p className="text-xl font-bold text-yellow-600 mt-0.5">
                   {groupedOrders.pending.length}
@@ -1593,7 +1624,7 @@ export default function ProductionPage() {
             <div className="bg-white rounded-xl p-3 border border-gray-100 shadow-sm flex items-center justify-between">
               <div>
                 <p className="text-[10px] text-gray-500 font-semibold uppercase tracking-wider">
-                  Selesai
+                  {t("production.completed")}
                 </p>
                 <p className="text-xl font-bold text-green-600 mt-0.5">
                   {groupedOrders.completed.length}
@@ -1651,7 +1682,7 @@ export default function ProductionPage() {
                       }}
                     >
                       <div className="flex items-center gap-1">
-                        Pelanggan
+                        {t("production.customer")}
                         {orderSortField === "pelanggan" ? (
                           orderSortDirection === "asc" ? (
                             <ChevronUp size={14} />
@@ -2041,13 +2072,13 @@ export default function ProductionPage() {
                                     textAlign: "center",
                                   }}
                                 >
-                                  <option value="pending">⏳ Pending</option>
-                                  <option value="ongoing">🔥 Ongoing</option>
+                                  <option value="pending">Pending</option>
+                                  <option value="ongoing">Ongoing</option>
                                   <option value="completed">
-                                    ✅ Completed
+                                    Completed
                                   </option>
                                   <option value="cancelled">
-                                    ❌ Cancelled
+                                    Cancelled
                                   </option>
                                 </select>
                                 <div className="absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none text-current opacity-50">
@@ -2102,18 +2133,18 @@ export default function ProductionPage() {
       )}
 
       {/* PRODUCTION TAB */}
-      {activeTab === "production" && (
+      {activeTab === "production" && canAccessProductionList && (
         <div className="space-y-3">
           <div className="flex flex-col gap-3">
             {/* 7-Day Calendar View */}
             <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-3">
               <div className="mb-2">
                 <h3 className="text-sm font-bold text-gray-900 mb-2 flex items-center gap-2">
-                  <Calendar size={16} /> Jadwal
+                  <Calendar size={16} /> {t("production.schedule")}
                   {selectedProductionDates.size > 0 &&
                     !showAllProductionDates && (
                       <span className="text-[10px] text-gray-500 font-normal ml-2">
-                        ({selectedProductionDates.size}/7 tanggal dipilih)
+                        ({selectedProductionDates.size}/7 {t("production.datesSelected")})
                       </span>
                     )}
                 </h3>
@@ -2124,7 +2155,7 @@ export default function ProductionPage() {
                     );
                     const dateStr = format(currentDate, "yyyy-MM-dd");
                     const dayName = format(currentDate, "EEE", {
-                      locale: idLocale,
+                      locale: dateLocale,
                     });
                     const dayNum = format(currentDate, "d");
                     const isSelected =
@@ -2172,7 +2203,7 @@ export default function ProductionPage() {
                       : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
                   }`}
                 >
-                  Semua
+                  {t("production.allStatus")}
                 </button>
                 <button
                   onClick={() => {
@@ -2190,7 +2221,7 @@ export default function ProductionPage() {
                       : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
                   }`}
                 >
-                  Hari Ini
+                  {t("production.today")}
                 </button>
                 <button
                   onClick={() => {
@@ -2216,7 +2247,7 @@ export default function ProductionPage() {
                       : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
                   }`}
                 >
-                  7 Hari
+                  {t("production.sevenDays")}
                 </button>
                 <select
                   value={productionStatusFilter}
@@ -2231,9 +2262,9 @@ export default function ProductionPage() {
                   }
                   className="px-3 py-2 text-sm border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-[#9B6D49] bg-white text-gray-700 font-medium"
                 >
-                  <option value="all">Semua Status</option>
-                  <option value="in_production">Proses Masak</option>
-                  <option value="completed">Selesai Masak</option>
+                  <option value="all">{t("production.allStatus")}</option>
+                  <option value="in_production">{t("production.cookingProcess")}</option>
+                  <option value="completed">{t("production.cookingFinished")}</option>
                 </select>
                 <input
                   type="date"
@@ -2261,19 +2292,19 @@ export default function ProductionPage() {
             {/* Stats - More Compact */}
             <div className="grid grid-cols-3 gap-2">
               <div className="bg-white rounded-lg px-3 py-2 shadow-sm border border-gray-200">
-                <p className="text-[10px] text-gray-500">Order</p>
+                <p className="text-[10px] text-gray-500">{t("production.totalOrder")}</p>
                 <p className="text-lg font-bold text-blue-600">
                   {filteredProductionOrders.length}
                 </p>
               </div>
               <div className="bg-white rounded-lg px-3 py-2 shadow-sm border border-gray-200">
-                <p className="text-[10px] text-gray-500">Produk</p>
+                <p className="text-[10px] text-gray-500">{t("production.products")}</p>
                 <p className="text-lg font-bold text-green-600">
                   {totalProducts}
                 </p>
               </div>
               <div className="bg-white rounded-lg px-3 py-2 shadow-sm border border-gray-200">
-                <p className="text-[10px] text-gray-500">Addon</p>
+                <p className="text-[10px] text-gray-500">{t("production.addon")}</p>
                 <p className="text-lg font-bold text-amber-600">
                   {totalAddons}
                 </p>
@@ -2287,7 +2318,7 @@ export default function ProductionPage() {
                 className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-medium transition-colors w-fit"
               >
                 <Printer className="w-3.5 h-3.5" />
-                Cetak Semua ({filteredProductionOrders.length})
+                {t("production.printAll")} ({filteredProductionOrders.length})
               </button>
             )}
           </div>
@@ -2296,7 +2327,7 @@ export default function ProductionPage() {
           {filteredProductionOrders.length > 0 && (
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 space-y-2">
               <h2 className="text-sm font-bold text-yellow-900 flex items-center gap-2">
-                <Star size={16} className="text-yellow-600" /> TARGET PRODUKSI
+                <Star size={16} className="text-yellow-600" /> {t("production.productionTarget")}
               </h2>
 
               {/* General Notes */}
@@ -2306,7 +2337,7 @@ export default function ProductionPage() {
                   onChange={(e) => setGeneralNotes(e.target.value)}
                   className="w-full px-3 py-2 border border-yellow-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-yellow-400"
                   rows={2}
-                  placeholder="Catatan umum (opsional)..."
+                  placeholder={t("production.generalNotesPlaceholder")}
                 />
               </div>
 
@@ -2335,7 +2366,7 @@ export default function ProductionPage() {
                         </p>
                         <div className="flex items-center gap-2 mt-1">
                           <span className="text-[10px] text-gray-500">
-                            Order: {totalQty}
+                            {t("production.order")}: {totalQty}
                           </span>
                           <input
                             type="number"
@@ -2376,7 +2407,7 @@ export default function ProductionPage() {
             <div className="space-y-2">
               <div className="flex items-center justify-between gap-2">
                 <h2 className="text-sm font-bold text-gray-900 flex items-center gap-2">
-                  <ClipboardList size={16} /> Daftar (
+                  <ClipboardList size={16} /> {t("production.list")} (
                   {
                     filteredProductionOrders.filter((o) => {
                       const status = o.production_status || "pending";
@@ -2471,12 +2502,12 @@ export default function ProductionPage() {
                               {(status === "pending" ||
                                 status === "in_production") && (
                                 <>
-                                  <Flame size={10} /> Proses Masak
+                                  <Flame size={10} /> {t("production.cookingProcess")}
                                 </>
                               )}
                               {status === "completed" && (
                                 <>
-                                  <CheckCircle size={10} /> Selesai
+                                  <CheckCircle size={10} /> {t("production.completed")}
                                 </>
                               )}
                             </span>
@@ -2487,10 +2518,10 @@ export default function ProductionPage() {
                             <h3 className="text-sm font-bold text-gray-900 line-clamp-1">
                               {order.order_products[0]?.product.nama}
                               {order.order_products.length > 1 &&
-                                ` +${order.order_products.length - 1} lainnya`}
+                                ` +${order.order_products.length - 1} ${t("production.others")}`}
                             </h3>
                             <p className="text-xs text-gray-500 mt-0.5">
-                              {totalItems} Items • Rp{" "}
+                              {totalItems} {t("production.itemsCount")} • Rp{" "}
                               {totalPrice.toLocaleString("id-ID")}
                             </p>
                           </div>
@@ -2605,11 +2636,11 @@ export default function ProductionPage() {
                                   : "bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
                               }`}
                             >
-                              <option value="pending">⏳ Menunggu</option>
+                              <option value="pending">Menunggu</option>
                               <option value="in_production">
-                                🔥 Proses Masak
+                                Proses Masak
                               </option>
-                              <option value="completed">✅ Selesai</option>
+                              <option value="completed">Selesai</option>
                             </select>
                           </div>
                         </div>
@@ -2698,7 +2729,7 @@ export default function ProductionPage() {
               {/* Products List */}
               <div className="border border-gray-200 rounded-lg p-4">
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-bold text-gray-900">📦 Produk</h3>
+                  <h3 className="font-bold text-gray-900 flex items-center gap-2"><Package size={16} /> Produk</h3>
                   {editedOrder.status === "verifying" && (
                     <button
                       onClick={() => setIsEditingOrder(!isEditingOrder)}
@@ -2786,10 +2817,10 @@ export default function ProductionPage() {
                   <div>
                     <p className="text-xs text-gray-600">Status</p>
                     <p className="font-bold text-lg text-gray-900">
-                      {editedOrder.status === "verifying" && "🔍 Verifikasi"}
-                      {editedOrder.status === "pending" && "⏳ Menunggu"}
-                      {editedOrder.status === "paid" && "💳 Dibayar"}
-                      {editedOrder.status === "completed" && "✅ Selesai"}
+                      {editedOrder.status === "verifying" && "Verifikasi"}
+                      {editedOrder.status === "pending" && "Menunggu"}
+                      {editedOrder.status === "paid" && "Dibayar"}
+                      {editedOrder.status === "completed" && "Selesai"}
                     </p>
                   </div>
                   <div>
@@ -2857,6 +2888,7 @@ function OrderManagementCard({
   onReject,
   onVerifyPayment,
   onDone,
+  t,
 }: {
   order: Order;
   type: "verifying" | "pending" | "paid" | "completed";
@@ -2864,6 +2896,7 @@ function OrderManagementCard({
   onReject?: (orderId: number) => void;
   onVerifyPayment?: (orderId: number) => void;
   onDone?: (orderId: number) => void;
+  t: (key: string) => string;
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -2933,13 +2966,13 @@ function OrderManagementCard({
 
       {/* Info Row */}
       <div className="text-xs text-gray-600 space-y-1 mb-3 pb-3 border-b border-gray-300">
-        <p>📞 {order.user.no_hp}</p>
-        <p>📦 {totalItems} items</p>
+        <p className="flex items-center gap-1"><Phone size={12} /> {order.user.no_hp}</p>
+        <p className="flex items-center gap-1"><Package size={12} /> {totalItems} {t("production.itemsCount")}</p>
       </div>
 
       {/* Products Preview */}
       <div className="bg-white rounded p-3 border border-gray-200 mb-3 text-sm space-y-1">
-        <p className="font-semibold text-gray-900 text-xs mb-2">Produk:</p>
+        <p className="font-semibold text-gray-900 text-xs mb-2">{t("production.products")}:</p>
         {order.order_products.map((item) => (
           <div key={item.id} className="text-xs">
             <p className="text-gray-900">

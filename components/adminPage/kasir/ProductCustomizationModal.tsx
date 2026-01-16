@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Plus, Minus, Settings } from 'lucide-react';
 import { useKasir } from '@/app/contexts/KasirContext';
+import { useAdminTranslation } from '@/app/contexts/AdminTranslationContext';
 
 interface ProductCustomizationModalProps {
   product: any | null;
@@ -21,9 +22,27 @@ interface ProductAttribute {
 
 export function ProductCustomizationModal({ product, isOpen, onClose }: ProductCustomizationModalProps) {
   const { addToCart } = useKasir();
+  const { t, language } = useAdminTranslation();
   const [quantity, setQuantity] = useState(1);
   const [selectedAttributes, setSelectedAttributes] = useState<number[]>([]);
   const [customNote, setCustomNote] = useState('');
+
+  // Helper to get product name based on language
+  const getProductName = (prod: any) => {
+    if (!prod) return '';
+    return language === 'id' ? prod.nama_id : (prod.nama_en || prod.nama_id);
+  };
+
+  // Helper to get product description based on language
+  const getProductDescription = (prod: any) => {
+    if (!prod) return '';
+    return language === 'id' ? prod.deskripsi_id : (prod.deskripsi_en || prod.deskripsi_id);
+  };
+
+  // Helper to get attribute name based on language
+  const getAttributeName = (attr: ProductAttribute) => {
+    return language === 'id' ? (attr.nama_id || attr.nama) : (attr.nama_en || attr.nama_id || attr.nama);
+  };
 
   // Get attributes from backend product data
   const availableAttributes: ProductAttribute[] = React.useMemo(() => {
@@ -115,10 +134,10 @@ export function ProductCustomizationModal({ product, isOpen, onClose }: ProductC
             </div>
             <div>
               <h2 className="text-xl font-semibold font-admin-heading" style={{ color: '#5d4037' }}>
-                Kustomisasi Produk
+                {t("kasir.productCustomization")}
               </h2>
               <p className="text-sm font-admin-body" style={{ color: '#8b6f47' }}>
-                {product.nama_id}
+                {getProductName(product)}
               </p>
             </div>
           </div>
@@ -137,15 +156,15 @@ export function ProductCustomizationModal({ product, isOpen, onClose }: ProductC
             <div className="flex gap-4">
               <img
                 src={product.gambars?.[0]?.file_path || '/placeholder.svg'}
-                alt={product.nama_id}
+                alt={getProductName(product)}
                 className="w-20 h-20 object-cover rounded-lg"
               />
               <div className="flex-1">
                 <h3 className="font-medium font-admin-heading" style={{ color: '#5d4037' }}>
-                  {product.nama_id}
+                  {getProductName(product)}
                 </h3>
                 <p className="text-sm font-admin-body" style={{ color: '#8b6f47' }}>
-                  {product.deskripsi_id}
+                  {getProductDescription(product)}
                 </p>
                 <p className="text-lg font-semibold mt-1" style={{ color: '#8b6f47' }}>
                   {formatPrice(product.harga || 0)}
@@ -156,7 +175,7 @@ export function ProductCustomizationModal({ product, isOpen, onClose }: ProductC
             {/* Quantity */}
             <div>
               <label className="block text-sm font-medium mb-3 font-admin-body" style={{ color: '#5d4037' }}>
-                Jumlah
+                {t("kasir.quantity")}
               </label>
               <div className="flex items-center gap-3">
                 <button
@@ -182,11 +201,11 @@ export function ProductCustomizationModal({ product, isOpen, onClose }: ProductC
             {/* Customization Options */}
             <div>
               <label className="block text-sm font-medium mb-3 font-admin-body" style={{ color: '#5d4037' }}>
-                Pilihan Kustomisasi
+                {t("kasir.customizationOptions")}
               </label>
               {availableAttributes.length === 0 ? (
                 <div className="p-4 text-center border border-gray-200 rounded-lg" style={{ borderColor: '#e0d5c7' }}>
-                  <p className="text-sm text-gray-500">Produk ini tidak memiliki opsi kustomisasi</p>
+                  <p className="text-sm text-gray-500">{t("kasir.noCustomizationOptions")}</p>
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -213,11 +232,11 @@ export function ProductCustomizationModal({ product, isOpen, onClose }: ProductC
                             className="w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500"
                           />
                           <span className="font-medium font-admin-body" style={{ color: '#5d4037' }}>
-                            {attribute.nama}
+                            {getAttributeName(attribute)}
                           </span>
                         </div>
                         <span className="text-sm font-admin-body" style={{ color: '#8b6f47' }}>
-                          {attribute.harga_tambahan > 0 ? `+${formatPrice(attribute.harga_tambahan)}` : 'Gratis'}
+                          {attribute.harga_tambahan > 0 ? `+${formatPrice(attribute.harga_tambahan)}` : t("kasir.free")}
                         </span>
                       </div>
                     </div>
@@ -229,12 +248,12 @@ export function ProductCustomizationModal({ product, isOpen, onClose }: ProductC
             {/* Custom Note */}
             <div>
               <label className="block text-sm font-medium mb-2 font-admin-body" style={{ color: '#5d4037' }}>
-                Catatan Khusus
+                {t("kasir.specialNote")}
               </label>
               <textarea
                 value={customNote}
                 onChange={(e) => setCustomNote(e.target.value)}
-                placeholder="Tambahkan catatan khusus untuk produk ini..."
+                placeholder={t("kasir.addSpecialNote")}
                 className="w-full p-3 border border-gray-200 rounded-lg resize-none font-admin-body"
                 style={{ borderColor: '#e0d5c7', minHeight: '80px' }}
                 rows={3}
@@ -245,12 +264,12 @@ export function ProductCustomizationModal({ product, isOpen, onClose }: ProductC
             <div className="bg-gray-50 rounded-lg p-4" style={{ backgroundColor: '#fefdf8' }}>
               <div className="space-y-2">
                 <div className="flex justify-between text-sm font-admin-body">
-                  <span style={{ color: '#8b6f47' }}>Harga Dasar</span>
+                  <span style={{ color: '#8b6f47' }}>{t("kasir.basePrice")}</span>
                   <span style={{ color: '#8b6f47' }}>{formatPrice((product.harga || 0) * quantity)}</span>
                 </div>
                 {selectedAttributes.length > 0 && (
                   <div className="flex justify-between text-sm font-admin-body">
-                    <span style={{ color: '#8b6f47' }}>Kustomisasi</span>
+                    <span style={{ color: '#8b6f47' }}>{t("kasir.customizationPrice")}</span>
                     <span style={{ color: '#8b6f47' }}>
                       +{formatPrice(selectedAttributes.reduce((total, attrId) => {
                         const attr = availableAttributes.find(a => a.id === attrId);
@@ -261,7 +280,7 @@ export function ProductCustomizationModal({ product, isOpen, onClose }: ProductC
                 )}
                 <hr style={{ borderColor: '#e0d5c7' }} />
                 <div className="flex justify-between text-lg font-semibold font-admin-heading">
-                  <span style={{ color: '#5d4037' }}>Total</span>
+                  <span style={{ color: '#5d4037' }}>{t("common.total")}</span>
                   <span style={{ color: '#5d4037' }}>{formatPrice(calculateTotalPrice())}</span>
                 </div>
               </div>
@@ -276,14 +295,14 @@ export function ProductCustomizationModal({ product, isOpen, onClose }: ProductC
             className="px-6 py-2 border border-gray-300 rounded-lg font-admin-body hover:bg-gray-50 transition-colors"
             style={{ color: '#8b6f47', borderColor: '#e0d5c7' }}
           >
-            Batal
+            {t("common.cancel")}
           </button>
           <button
             onClick={handleAddToCart}
             className="px-6 py-2 bg-orange-600 text-white rounded-lg font-admin-body hover:bg-orange-700 transition-colors flex items-center gap-2"
           >
             <Plus className="w-4 h-4" />
-            Tambah ke Keranjang
+            {t("kasir.addToCart")}
           </button>
         </div>
       </div>

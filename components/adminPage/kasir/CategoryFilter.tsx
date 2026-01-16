@@ -2,29 +2,31 @@
 
 import React, { useMemo } from 'react';
 import { useKasir } from '@/app/contexts/KasirContext';
+import { useAdminTranslation } from '@/app/contexts/AdminTranslationContext';
 import { Package, Search } from 'lucide-react';
 
 export function CategoryFilter() {
   const { state, setSelectedCategory } = useKasir();
+  const { t, language } = useAdminTranslation();
   const [searchTerm, setSearchTerm] = React.useState('');
 
   // Build categories from API data
   const categories = useMemo(() => {
-    const allCategory = { id: 'All', name: 'Semua Produk', icon: Package };
+    const allCategory = { id: 'All', name: t("kasir.allProducts"), icon: Package };
     
     if (state.categories && state.categories.length > 0) {
-      // Use categories from API
+      // Use categories from API - show nama based on language
       const apiCategories = state.categories.map((cat: any) => ({
-        id: cat.nama_id,
-        name: cat.nama_id,
+        id: cat.nama_id, // Keep id as nama_id for filtering
+        name: language === 'id' ? cat.nama_id : (cat.nama_en || cat.nama_id),
         icon: Package
       }));
       return [allCategory, ...apiCategories];
     }
     
-    // Return only "Semua Produk" if no categories from API
+    // Return only "All Products" if no categories from API
     return [allCategory];
-  }, [state.categories]);
+  }, [state.categories, t, language]);
 
   return (
     <div className="mb-4 2xl:mb-2">
@@ -36,7 +38,7 @@ export function CategoryFilter() {
           </div>
           <input
             type="text"
-            placeholder="Cari produk..."
+            placeholder={t("kasir.searchProducts")}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="block w-full pl-10 2xl:pl-8 pr-3 2xl:pr-2 py-2.5 2xl:py-1.5 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 2xl:text-sm"
@@ -70,7 +72,7 @@ export function CategoryFilter() {
       {/* Search Results Info */}
       {searchTerm && (
         <div className="mt-3 2xl:mt-2 text-sm 2xl:text-xs text-gray-600">
-          Menampilkan hasil pencarian untuk "{searchTerm}"
+          {t("kasir.searchResults")} "{searchTerm}"
         </div>
       )}
     </div>

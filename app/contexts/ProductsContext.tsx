@@ -82,6 +82,19 @@ export interface Product {
   hari_tersedia?: string[];
 }
 
+// Tambahkan tipe definisi baru untuk menghindari konflik tipe pada properti 'bahans'
+export type ProductCreateData = Partial<Omit<Product, "bahans">> & {
+  sub_jenis_ids?: number[];
+  jenis_id?: number;
+  imageFiles?: File[];
+  bahans?: Array<{ nama_id: string; nama_en: string; jumlah: number }>;
+};
+
+export type ProductUpdateData = Partial<Omit<Product, "bahans">> & {
+  sub_jenis_ids?: number[];
+  bahans?: Array<{ nama_id: string; nama_en: string; jumlah: number }>;
+};
+
 interface ProductsState {
   products: Product[];
   loading: boolean;
@@ -94,9 +107,9 @@ interface ProductsContextType {
   loading: boolean;
   error: string | null;
   isBackendConnected: boolean;
-  addProduct: (productData: Partial<Product>) => Promise<void>;
+  addProduct: (productData: ProductCreateData) => Promise<void>;
 
-  updateProduct: (id: number, productData: Partial<Product>) => Promise<void>;
+  updateProduct: (id: number, productData: ProductUpdateData) => Promise<void>;
   deleteProduct: (id: number) => Promise<void>;
   refreshProducts: () => Promise<void>;
   exportProduct: () => Promise<void>;
@@ -283,12 +296,7 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
   // POST /products with complete payload
   // Note: hari_ids NOT needed - hari configuration comes from sub_jenis
   const addProduct = async (
-    productData: Partial<Product> & {
-      sub_jenis_ids?: number[];
-      jenis_id?: number;
-      imageFiles?: File[];
-      bahans?: Array<{ nama_id: string; nama_en: string; jumlah: number }>;
-    }
+    productData: ProductCreateData
   ): Promise<void> => {
     try {
       console.log("[ProductsContext] Creating product:", productData);
@@ -407,10 +415,7 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
   // Update product
   const updateProduct = async (
     id: number,
-    productData: Partial<Product> & {
-      sub_jenis_ids?: number[];
-      bahans?: Array<{ nama_id: string; nama_en: string; jumlah: number }>;
-    }
+    productData: ProductUpdateData
   ): Promise<void> => {
     try {
       console.log("[ProductsContext] Updating product:", id, productData);
@@ -473,7 +478,27 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
         );
         const updatedProducts = prev.products.map((product) => {
           if (product.id === id) {
-            const updated = { ...product, ...productData };
+            // Transformasi 'bahans' agar sesuai interface Product (perlu id dan nama)
+            const updatedBahans = productData.bahans
+              ? productData.bahans.map((b) => ({
+                  id: Math.random(), // ID sementara untuk UI
+                  nama: b.nama_en || b.nama_id, // Default nama dari nama_en/id
+                  nama_id: b.nama_id,
+                  nama_en: b.nama_en,
+                  jumlah: b.jumlah,
+                }))
+              : product.bahans;
+
+            // Pisahkan properti yang tidak kompatibel (bahans & sub_jenis_ids)
+            // sub_jenis_ids tidak bisa langsung di-spread ke Product karena Product butuh sub_jenis (array objek)
+            const { bahans, sub_jenis_ids, ...restData } = productData;
+
+            const updated: Product = {
+              ...product,
+              ...restData,
+              bahans: updatedBahans,
+            };
+
             console.log(`[ProductsContext] Updating product ${id}:`, updated);
             return updated;
           }

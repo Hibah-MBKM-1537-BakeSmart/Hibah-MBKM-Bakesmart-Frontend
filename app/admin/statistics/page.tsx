@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { RefreshCw } from "lucide-react";
 import { useStatistics } from "@/app/contexts/StatisticsContext";
+import { useAdminTranslation } from "@/app/contexts/AdminTranslationContext";
 import {
   StatisticsSummaryCards,
   MonthlySalesChart,
@@ -14,6 +15,7 @@ import {
 export default function StatisticsPage() {
   const { state, refreshStatistics } = useStatistics();
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const { t } = useAdminTranslation();
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -48,10 +50,10 @@ export default function StatisticsPage() {
             className="text-3xl font-bold font-admin-heading"
             style={{ color: "#5d4037" }}
           >
-            Analytics & Statistics
+            {t("statistics.title")}
           </h1>
           <p className="font-admin-body mt-1" style={{ color: "#8b6f47" }}>
-            Track your business performance and sales metrics
+            {t("statistics.subtitle")}
           </p>
         </div>
         <button
@@ -66,7 +68,7 @@ export default function StatisticsPage() {
           <RefreshCw
             className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`}
           />
-          <span>{isRefreshing ? "Refreshing..." : "Refresh Data"}</span>
+          <span>{isRefreshing ? t("statistics.refreshing") : t("statistics.refreshData")}</span>
         </button>
       </div>
 

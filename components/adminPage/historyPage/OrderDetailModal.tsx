@@ -2,6 +2,7 @@
 
 import React, { useEffect } from "react";
 import { useHistory } from "@/app/contexts/HistoryContext";
+import { useAdminTranslation } from "@/app/contexts/AdminTranslationContext";
 import {
   Clock,
   Phone,
@@ -19,6 +20,7 @@ import {
 
 export function OrderDetailModal() {
   const { state, closeOrderDetail } = useHistory();
+  const { t } = useAdminTranslation();
 
   // Handle escape key to close modal
   useEffect(() => {
@@ -52,7 +54,7 @@ export function OrderDetailModal() {
       window.print();
     } catch (error) {
       console.error("Print failed:", error);
-      alert("Gagal mencetak. Silakan coba lagi.");
+      alert(t("orderDetail.printFailed"));
     }
   };
 
@@ -166,15 +168,15 @@ export function OrderDetailModal() {
   const getStatusText = (status: string) => {
     switch (status) {
       case "completed":
-        return "Selesai";
+        return t("history.completed");
       case "cancelled":
-        return "Dibatalkan";
+        return t("history.cancelled");
       case "paid":
-        return "Dibayar";
+        return t("orderCard.statusPaid");
       case "processing":
-        return "Diproses";
+        return t("orderCard.processing");
       case "verifying":
-        return "Verifikasi";
+        return t("orderCard.verifying");
       default:
         return status;
     }
@@ -451,7 +453,7 @@ export function OrderDetailModal() {
                   className="text-xl font-bold font-admin-heading"
                   style={{ color: "#5d4037" }}
                 >
-                  Detail Pesanan
+                  {t("orderDetail.title")}
                 </h2>
                 <p
                   className="text-sm font-admin-body"
@@ -466,7 +468,7 @@ export function OrderDetailModal() {
                 onClick={handlePrint}
                 className="p-2 rounded-lg border transition-colors"
                 style={{ borderColor: "#e0d5c7", color: "#8b6f47" }}
-                title="Print"
+                title={t("orderCard.print")}
               >
                 <Printer className="w-5 h-5" />
               </button>
@@ -490,7 +492,7 @@ export function OrderDetailModal() {
                   className="font-semibold font-admin-heading"
                   style={{ color: "#5d4037" }}
                 >
-                  Informasi Pesanan
+                  {t("orderCard.orderInfo")}
                 </h3>
                 <div className="space-y-2">
                   <div
@@ -515,7 +517,7 @@ export function OrderDetailModal() {
                       >
                         <Clock className="w-3 h-3" />
                         <span>
-                          Diupdate: {formatDateTime(order.updated_at)}
+                          {t("orderDetail.updated")}: {formatDateTime(order.updated_at)}
                         </span>
                       </div>
                     )}
@@ -528,7 +530,7 @@ export function OrderDetailModal() {
                   className="font-semibold font-admin-heading"
                   style={{ color: "#5d4037" }}
                 >
-                  Detail Pembayaran & Pengiriman
+                  {t("orderDetail.paymentAndShipping")}
                 </h3>
                 <div className="space-y-2">
                   <div
@@ -536,7 +538,7 @@ export function OrderDetailModal() {
                     style={{ color: "#8b6f47" }}
                   >
                     <CreditCard className="w-4 h-4" />
-                    <span>Provider: {order.provider || "N/A"}</span>
+                    <span>{t("orderDetail.provider")}: {order.provider || "N/A"}</span>
                   </div>
                   {order.courier_name && (
                     <div
@@ -544,7 +546,7 @@ export function OrderDetailModal() {
                       style={{ color: "#8b6f47" }}
                     >
                       <Package className="w-4 h-4" />
-                      <span>Kurir: {order.courier_name}</span>
+                      <span>{t("orderDetail.courier")}: {order.courier_name}</span>
                     </div>
                   )}
                   {order.tracking_link && (
@@ -558,7 +560,7 @@ export function OrderDetailModal() {
                         rel="noopener noreferrer"
                         className="underline"
                       >
-                        Lacak Paket
+                        {t("orderDetail.trackPackage")}
                       </a>
                     </div>
                   )}
@@ -577,7 +579,7 @@ export function OrderDetailModal() {
                   className="font-medium mb-2 font-admin-heading"
                   style={{ color: "#5d4037" }}
                 >
-                  Status Pesanan
+                  {t("history.orderStatus")}
                 </h4>
                 <div className="flex items-center space-x-2">
                   <StatusIcon
@@ -600,7 +602,7 @@ export function OrderDetailModal() {
                     className="text-sm mt-2 font-admin-body"
                     style={{ color: "#8b6f47" }}
                   >
-                    Waktu Ambil: {formatDateTime(order.waktu_ambil)}
+                    {t("orderDetail.pickupTime")}: {formatDateTime(order.waktu_ambil)}
                   </p>
                 )}
                 {order.note && (
@@ -608,7 +610,7 @@ export function OrderDetailModal() {
                     className="text-sm mt-2 font-admin-body"
                     style={{ color: "#8b6f47" }}
                   >
-                    Catatan: {order.note}
+                    {t("orderDetail.note")}: {order.note}
                   </p>
                 )}
               </div>
@@ -617,23 +619,23 @@ export function OrderDetailModal() {
           {/* Order Items */}
           <div>
             <h3 className="font-semibold mb-4 font-admin-heading" style={{ color: '#5d4037' }}>
-              Detail Pesanan
+              {t("orderCard.orderDetails")}
             </h3>
             <div className="border rounded-lg overflow-hidden" style={{ borderColor: '#e0d5c7' }}>
               <table className="w-full">
                 <thead style={{ backgroundColor: '#f9f7f4' }}>
                   <tr>
                     <th className="text-left p-3 font-admin-heading" style={{ color: '#5d4037' }}>
-                      Produk
+                      {t("orderDetail.product")}
                     </th>
                     <th className="text-center p-3 font-admin-heading" style={{ color: '#5d4037' }}>
-                      Qty
+                      {t("orderDetail.qty")}
                     </th>
                     <th className="text-right p-3 font-admin-heading" style={{ color: '#5d4037' }}>
-                      Harga
+                      {t("common.price")}
                     </th>
                     <th className="text-right p-3 font-admin-heading" style={{ color: '#5d4037' }}>
-                      Subtotal
+                      {t("common.subtotal")}
                     </th>
                   </tr>
                 </thead>
@@ -663,7 +665,7 @@ export function OrderDetailModal() {
                   ) : (
                     <tr>
                       <td colSpan={4} className="p-6 text-center text-gray-500 font-admin-body">
-                        Tidak ada item dalam pesanan ini
+                        {t("orderDetail.noItemsInOrder")}
                       </td>
                     </tr>
                   )}
@@ -672,7 +674,7 @@ export function OrderDetailModal() {
                       {order.shipping_cost && Number(order.shipping_cost) > 0 && (
                         <tr className="border-t" style={{ borderColor: '#e0d5c7' }}>
                           <td colSpan={3} className="p-3 text-right font-admin-body" style={{ color: '#5d4037' }}>
-                            Ongkos Kirim:
+                            {t("orderCard.shippingCost")}:
                           </td>
                           <td className="p-3 text-right font-admin-body" style={{ color: '#5d4037' }}>
                             {formatCurrency(Number(order.shipping_cost))}
@@ -681,7 +683,7 @@ export function OrderDetailModal() {
                       )}
                       <tr className="border-t font-bold" style={{ borderColor: '#e0d5c7', backgroundColor: '#f9f7f4' }}>
                         <td colSpan={3} className="p-3 text-right font-admin-heading" style={{ color: '#5d4037' }}>
-                          Total:
+                          {t("common.total")}:
                         </td>
                         <td className="p-3 text-right font-admin-heading" style={{ color: '#5d4037' }}>
                           {formatCurrency(Number(order.total_harga))}
@@ -705,14 +707,14 @@ export function OrderDetailModal() {
               className="px-4 py-2 border rounded-lg transition-colors font-admin-body"
               style={{ borderColor: "#e0d5c7", color: "#8b6f47" }}
             >
-              Tutup
+              {t("common.close")}
             </button>
             <button
               onClick={handlePrint}
               className="px-4 py-2 rounded-lg text-white transition-colors font-admin-body"
               style={{ backgroundColor: "#8b6f47" }}
             >
-              Print Struk
+              {t("orderDetail.printReceipt")}
             </button>
           </div>
         </div>

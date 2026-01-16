@@ -102,7 +102,7 @@ function SubJenisFormModal({
       setJenisId(editingSubJenis?.jenis_id || jenisList[0]?.id || 0);
       setMinAmount(editingSubJenis?.min_amount || 1);
       setMaxAmount(editingSubJenis?.max_amount || 100);
-      setPoClosed(editingSubJenis?.po_closed || "15:00:00");
+      setPoClosed(editingSubJenis?.PO_closed || "15:00:00");
       setSelectedDays(editingSubJenis?.available_days || [1, 2, 3, 4, 5, 6, 7]);
       setAttributes(editingSubJenis?.attributes || []);
       setError("");
@@ -192,7 +192,7 @@ function SubJenisFormModal({
         jenis_id: jenisId,
         min_amount: minAmount,
         max_amount: maxAmount,
-        po_closed: poClosed,
+        PO_closed: poClosed,
         available_days: selectedDays,
         attributes: attributes,
       });
@@ -769,7 +769,7 @@ export function SubJenisTab() {
           ref_jenis_id: data.jenis_id,
           min_amount: data.min_amount,
           max_amount: data.max_amount,
-          PO_closed: data.po_closed, // Time string in HH:mm:ss format
+          PO_closed: data.PO_closed, // Time string in HH:mm:ss format
         }),
       });
 
@@ -851,7 +851,7 @@ export function SubJenisTab() {
           ref_jenis_id: data.jenis_id,
           min_amount: data.min_amount,
           max_amount: data.max_amount,
-          PO_closed: data.po_closed, // Time string in HH:mm:ss format
+          PO_closed: data.PO_closed, // Time string in HH:mm:ss format
         }),
       });
 

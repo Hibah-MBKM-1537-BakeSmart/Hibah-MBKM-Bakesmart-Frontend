@@ -26,7 +26,7 @@ export function PrintModal({ isOpen, onClose, orders }: PrintModalProps) {
 
   // Filter orders that need baking (incompleted, paid, baked status)
   const ordersToBake = ordersByDate.filter(order => 
-    ['incompleted', 'paid', 'baked'].includes(order.status)
+    ['incompleted', 'paid', 'baked'].includes(order.status as string)
   );
 
   const toggleOrderSelection = (orderId: number) => {
@@ -249,9 +249,9 @@ export function PrintModal({ isOpen, onClose, orders }: PrintModalProps) {
                     <td>${waktuAmbil}</td>
                     <td>
                       <span class="status ${order.status}">
-                        ${order.status === 'incompleted' ? 'Belum Selesai' : 
-                          order.status === 'paid' ? 'Sudah Dibayar' : 
-                          order.status === 'baked' ? 'Sedang Dipanggang' : order.status}
+                        ${(order.status as string) === 'incompleted' ? 'Belum Selesai' : 
+                          (order.status as string) === 'paid' ? 'Sudah Dibayar' : 
+                          (order.status as string) === 'baked' ? 'Sedang Dipanggang' : order.status}
                       </span>
                     </td>
                     <td style="border: 2px solid #333; text-align: center; font-size: 18px;">☐</td>
@@ -388,14 +388,14 @@ export function PrintModal({ isOpen, onClose, orders }: PrintModalProps) {
                       </div>
                     </div>
                     <span className={`px-2 py-1 text-xs rounded-full ${
-                      order.status === 'incompleted' ? 'bg-yellow-100 text-yellow-800' :
-                      order.status === 'paid' ? 'bg-purple-100 text-purple-800' :
-                      order.status === 'baked' ? 'bg-blue-100 text-blue-800' :
+                      (order.status as string) === 'incompleted' ? 'bg-yellow-100 text-yellow-800' :
+                      (order.status as string) === 'paid' ? 'bg-purple-100 text-purple-800' :
+                      (order.status as string) === 'baked' ? 'bg-blue-100 text-blue-800' :
                       'bg-gray-100 text-gray-800'
                     }`}>
-                      {order.status === 'incompleted' ? 'Belum Selesai' :
-                       order.status === 'paid' ? 'Sudah Dibayar' :
-                       order.status === 'baked' ? 'Sedang Dipanggang' : order.status}
+                      {(order.status as string) === 'incompleted' ? 'Belum Selesai' :
+                       (order.status as string) === 'paid' ? 'Sudah Dibayar' :
+                       (order.status as string) === 'baked' ? 'Sedang Dipanggang' : order.status}
                     </span>
                   </label>
                 ))}

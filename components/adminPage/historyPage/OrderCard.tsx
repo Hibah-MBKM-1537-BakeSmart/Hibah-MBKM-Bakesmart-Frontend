@@ -2,6 +2,7 @@
 
 import React from "react";
 import { useHistory } from "@/app/contexts/HistoryContext";
+import { useAdminTranslation } from "@/app/contexts/AdminTranslationContext";
 import type { Order } from "@/app/contexts/HistoryContext";
 import {
   Eye,
@@ -19,6 +20,7 @@ interface OrderCardProps {
 
 export function OrderCard({ order }: OrderCardProps) {
   const { selectOrder } = useHistory();
+  const { t } = useAdminTranslation();
 
   const getPaymentStatusColor = (status: string) => {
     switch (status) {
@@ -53,11 +55,11 @@ export function OrderCard({ order }: OrderCardProps) {
   const getPaymentStatusText = (status: string) => {
     switch (status) {
       case "paid":
-        return "Lunas";
+        return t("history.paid");
       case "unpaid":
-        return "Belum Bayar";
+        return t("history.unpaid");
       case "partial":
-        return "Sebagian";
+        return t("orderCard.partial");
       default:
         return status;
     }
@@ -66,15 +68,15 @@ export function OrderCard({ order }: OrderCardProps) {
   const getOrderStatusText = (status: string) => {
     switch (status) {
       case "completed":
-        return "Selesai";
+        return t("history.completed");
       case "cancelled":
-        return "Dibatalkan";
+        return t("history.cancelled");
       case "paid":
-        return "Dibayar";
+        return t("orderCard.statusPaid");
       case "processing":
-        return "Diproses";
+        return t("orderCard.processing");
       case "verifying":
-        return "Verifikasi";
+        return t("orderCard.verifying");
       default:
         return status;
     }
@@ -83,9 +85,9 @@ export function OrderCard({ order }: OrderCardProps) {
   const getStatusText = (status: string, type: "payment" | "order") => {
     switch (status) {
       case "completed":
-        return "Selesai";
+        return t("history.completed");
       case "cancelled":
-        return "Dibatalkan";
+        return t("history.cancelled");
       default:
         return status;
     }
@@ -94,11 +96,11 @@ export function OrderCard({ order }: OrderCardProps) {
   const getPaymentMethodText = (method: string) => {
     switch (method) {
       case "cash":
-        return "Tunai";
+        return t("orderCard.cash");
       case "transfer":
-        return "Transfer";
+        return t("orderCard.transfer");
       case "card":
-        return "Kartu";
+        return t("orderCard.card");
       default:
         return method;
     }
@@ -152,7 +154,7 @@ export function OrderCard({ order }: OrderCardProps) {
               onClick={handleViewDetail}
               className="p-1.5 rounded-lg border transition-colors"
               style={{ borderColor: "#e0d5c7", color: "#8b6f47" }}
-              title="Detail"
+              title={t("orderCard.detail")}
             >
               <Eye className="w-4 h-4" />
             </button>
@@ -160,7 +162,7 @@ export function OrderCard({ order }: OrderCardProps) {
               onClick={handlePrint}
               className="p-1.5 rounded-lg border transition-colors"
               style={{ borderColor: "#e0d5c7", color: "#8b6f47" }}
-              title="Print"
+              title={t("orderCard.print")}
             >
               <Printer className="w-4 h-4" />
             </button>
@@ -195,7 +197,7 @@ export function OrderCard({ order }: OrderCardProps) {
           className="font-semibold text-sm font-admin-heading"
           style={{ color: "#5d4037" }}
         >
-          Informasi Pesanan
+          {t("orderCard.orderInfo")}
         </p>
         <div
           className="flex items-center gap-1 text-xs font-admin-body mt-1"
@@ -221,7 +223,7 @@ export function OrderCard({ order }: OrderCardProps) {
           className="text-xs font-semibold mb-2 font-admin-heading"
           style={{ color: "#5d4037" }}
         >
-          Detail Pesanan:
+          {t("orderCard.orderDetails")}:
         </h4>
         <div className="space-y-1 max-h-24 overflow-y-auto">
           {order.products?.slice(0, 3).map((item, index) => (
@@ -243,7 +245,7 @@ export function OrderCard({ order }: OrderCardProps) {
               className="text-xs italic font-admin-body"
               style={{ color: "#8b6f47" }}
             >
-              +{(order.products?.length || 0) - 3} item lainnya
+              +{(order.products?.length || 0) - 3} {t("orderCard.otherItems")}
             </p>
           )}
           {(!order.products || order.products.length === 0) && (
@@ -251,7 +253,7 @@ export function OrderCard({ order }: OrderCardProps) {
               className="text-xs italic font-admin-body"
               style={{ color: "#8b6f47" }}
             >
-              Tidak ada item
+              {t("orderCard.noItems")}
             </p>
           )}
         </div>
@@ -268,7 +270,7 @@ export function OrderCard({ order }: OrderCardProps) {
             className="text-xs font-admin-body mb-1"
             style={{ color: "#8b6f47" }}
           >
-            Total
+            {t("common.total")}
           </p>
           <p
             className="text-lg font-bold font-admin-heading"
@@ -281,7 +283,7 @@ export function OrderCard({ order }: OrderCardProps) {
               className="text-xs font-admin-body mt-1"
               style={{ color: "#8b6f47" }}
             >
-              (+ Ongkir: Rp{" "}
+              (+ {t("orderCard.shippingCost")}: Rp{" "}
               {Number(order.shipping_cost).toLocaleString("id-ID")})
             </p>
           )}

@@ -3,8 +3,10 @@
 import React from 'react';
 import { Eye, Phone, Mail, MapPin, Star, Crown } from 'lucide-react';
 import { useCustomers } from '../../../app/contexts/CustomersContext';
+import { useAdminTranslation } from '../../../app/contexts/AdminTranslationContext';
 
 export default function CustomersTable() {
+  const { t } = useAdminTranslation();
   const { state, selectCustomer, setCurrentPage } = useCustomers();
 
   // Pagination calculations
@@ -37,8 +39,8 @@ export default function CustomersTable() {
     return (
       <div className="flex items-center justify-between px-4 py-3 bg-white border-t border-gray-200">
         <div className="flex items-center text-sm text-gray-700 font-inter">
-          Showing {startIndex + 1} to {Math.min(endIndex, state.filteredCustomers.length)} of{' '}
-          {state.filteredCustomers.length} results
+          {t("customers.showing")} {startIndex + 1} {t("customers.to")} {Math.min(endIndex, state.filteredCustomers.length)} {t("customers.of")}{' '}
+          {state.filteredCustomers.length} {t("customers.results")}
         </div>
         <div className="flex items-center space-x-2">
           <button
@@ -46,7 +48,7 @@ export default function CustomersTable() {
             disabled={state.currentPage === 1}
             className="px-3 py-1 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed font-inter"
           >
-            Previous
+            {t("customers.previous")}
           </button>
           {pages.map(page => (
             <button
@@ -66,7 +68,7 @@ export default function CustomersTable() {
             disabled={state.currentPage === state.totalPages}
             className="px-3 py-1 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed font-inter"
           >
-            Next
+            {t("customers.next")}
           </button>
         </div>
       </div>
@@ -79,7 +81,7 @@ export default function CustomersTable() {
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#9B6D49] mx-auto"></div>
-            <p className="mt-2 text-gray-600 font-inter">Loading customers...</p>
+            <p className="mt-2 text-gray-600 font-inter">{t("customers.loading")}</p>
           </div>
         </div>
       </div>
@@ -96,9 +98,9 @@ export default function CustomersTable() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
               </svg>
             </div>
-            <h3 className="mt-2 text-sm font-medium text-gray-900 font-poppins">No customers found</h3>
+            <h3 className="mt-2 text-sm font-medium text-gray-900 font-poppins">{t("customers.noCustomers")}</h3>
             <p className="mt-1 text-sm text-gray-500 font-inter">
-              Try adjusting your search or filter criteria
+              {t("customers.adjustFilter")}
             </p>
           </div>
         </div>
@@ -114,25 +116,25 @@ export default function CustomersTable() {
           <thead className="bg-gray-50">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider font-inter">
-                Customer
+                {t("customers.customer")}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider font-inter">
-                Contact Info
+                {t("customers.contactInfo")}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider font-inter">
-                Join Date
+                {t("customers.joinDate")}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider font-inter">
-                Purchases
+                {t("customers.purchases")}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider font-inter">
-                Total Spent
+                {t("customers.totalSpent")}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider font-inter">
-                Last Purchase
+                {t("customers.lastPurchase")}
               </th>
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-inter">
-                Actions
+                {t("customers.actions")}
               </th>
             </tr>
           </thead>
@@ -154,7 +156,7 @@ export default function CustomersTable() {
                           {customer.nama}
                         </div>
                         {customer.role === 'admin' && (
-                          <div title="Admin User">
+                          <div title={t("users.admin")}>
                             <Crown className="h-4 w-4 text-yellow-500" />
                           </div>
                         )}
@@ -198,7 +200,7 @@ export default function CustomersTable() {
                       </div>
                     </div>
                   ) : (
-                    <span className="text-sm text-gray-500 font-inter">No purchases</span>
+                    <span className="text-sm text-gray-500 font-inter">{t("customers.noPurchaseYet")}</span>
                   )}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -207,7 +209,7 @@ export default function CustomersTable() {
                     className="inline-flex items-center gap-1 text-[#9B6D49] hover:text-[#8b6f47] font-inter"
                   >
                     <Eye className="h-4 w-4" />
-                    View
+                    {t("customers.viewDetails")}
                   </button>
                 </td>
               </tr>

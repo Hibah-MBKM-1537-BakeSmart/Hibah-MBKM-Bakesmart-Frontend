@@ -15,6 +15,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { useAdmin, AdminData, RoleData } from "@/app/contexts/UsersContext";
+import { useAdminTranslation } from "@/app/contexts/AdminTranslationContext";
 import { AddUserModal } from "@/components/adminPage/users/AddUserModal";
 import { ViewUserModal } from "@/components/adminPage/users/ViewUserModal";
 import { EditAdminModal } from "@/components/adminPage/users/EditAdminModal";
@@ -47,6 +48,7 @@ const getRoleColor = (roleName: string | undefined): string => {
 };
 
 export default function UsersPage() {
+  const { t } = useAdminTranslation();
   const { state, fetchAdmins, createAdmin, updateAdmin, deleteAdmin } =
     useAdmin();
   const { admins, loading, error } = state;
@@ -178,14 +180,14 @@ export default function UsersPage() {
     try {
       await updateAdmin(adminId, { role_ids: newRoleIds });
       showSuccess(
-        "Role berhasil diperbarui!",
-        "Perubahan role telah disimpan."
+        t("users.roleUpdated"),
+        t("users.roleUpdateSaved")
       );
     } catch (error) {
       console.error("Error updating role:", error);
       const errorMessage =
-        error instanceof Error ? error.message : "Gagal memperbarui role";
-      showError("Gagal memperbarui role", errorMessage);
+        error instanceof Error ? error.message : t("users.roleUpdateFailed");
+      showError(t("users.roleUpdateFailed"), errorMessage);
     }
   };
 
@@ -206,7 +208,7 @@ export default function UsersPage() {
       for (const roleName of roleNames) {
         const role = roles.find((r) => r.name.toLowerCase() === roleName);
         if (!role) {
-          showError("Role tidak valid", `Role "${roleName}" tidak ditemukan`);
+          showError(t("users.roleNotValid"), t("users.roleNotFound").replace("{role}", roleName));
           return;
         }
         roleIds.push(role.id);
@@ -220,14 +222,14 @@ export default function UsersPage() {
       });
 
       showSuccess(
-        "Admin berhasil ditambahkan!",
-        `User ${userData.name} telah dibuat`
+        t("users.adminAdded"),
+        t("users.userCreated").replace("{name}", userData.name)
       );
       setShowAddModal(false);
     } catch (error) {
       const errorMessage =
-        error instanceof Error ? error.message : "Gagal menambahkan admin";
-      showError("Gagal menambahkan admin", errorMessage);
+        error instanceof Error ? error.message : t("users.addAdminFailed");
+      showError(t("users.addAdminFailed"), errorMessage);
     }
   };
 
@@ -278,37 +280,37 @@ export default function UsersPage() {
 
       await updateAdmin(userId, updateData);
 
-      showSuccess("Admin berhasil diperbarui!", "Perubahan telah disimpan");
+      showSuccess(t("users.adminUpdated"), t("users.changesSaved"));
       setShowEditModal(false);
       setSelectedAdmin(null);
     } catch (error) {
       const errorMessage =
-        error instanceof Error ? error.message : "Gagal memperbarui admin";
-      showError("Gagal memperbarui admin", errorMessage);
+        error instanceof Error ? error.message : t("users.updateFailed");
+      showError(t("users.updateFailed"), errorMessage);
     }
   };
 
   const handleDeleteUser = (userId: number, userName: string) => {
     setConfirmDialog({
       isOpen: true,
-      title: "Hapus User",
-      message: `Apakah Anda yakin ingin menghapus user ${userName}?\n\nTindakan ini tidak dapat dibatalkan.`,
+      title: t("users.confirmDeleteTitle"),
+      message: t("users.confirmDeleteMessage").replace("{name}", userName),
       onConfirm: async () => {
         try {
           await deleteAdmin(userId);
           showSuccess(
-            "Admin berhasil dihapus!",
-            `User ${userName} telah dihapus`
+            t("users.adminDeleted"),
+            t("users.userDeleted").replace("{name}", userName)
           );
           setConfirmDialog({ ...confirmDialog, isOpen: false });
         } catch (error) {
           const errorMessage =
-            error instanceof Error ? error.message : "Gagal menghapus admin";
-          showError("Gagal menghapus admin", errorMessage);
+            error instanceof Error ? error.message : t("users.deleteFailed");
+          showError(t("users.deleteFailed"), errorMessage);
         }
       },
       type: "danger",
-      confirmText: "Hapus",
+      confirmText: t("common.delete"),
     });
   };
 
@@ -317,7 +319,7 @@ export default function UsersPage() {
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4 text-orange-500" />
-          <p className="text-lg text-gray-600">Memuat data admin...</p>
+          <p className="text-lg text-gray-600">{t("users.loading")}</p>
         </div>
       </div>
     );
@@ -328,26 +330,26 @@ export default function UsersPage() {
       {/* Page Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Admin Users</h1>
+          <h1 className="text-2xl font-bold text-gray-900">{t("users.title")}</h1>
           <p className="text-gray-600">
-            Kelola akun admin dan staff yang bekerja
+            {t("users.subtitle")}
           </p>
         </div>
         <div className="flex gap-2">
           <button
             onClick={fetchAdmins}
             className="flex items-center space-x-2 bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors"
-            title="Refresh Data"
+            title={t("users.refresh")}
           >
             <RefreshCw className="w-4 h-4" />
-            <span>Refresh</span>
+            <span>{t("users.refresh")}</span>
           </button>
           <button
             onClick={() => setShowAddModal(true)}
             className="flex items-center space-x-2 bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition-colors"
           >
             <Plus className="w-4 h-4" />
-            <span>Tambah Admin</span>
+            <span>{t("users.addUser")}</span>
           </button>
         </div>
       </div>
@@ -363,7 +365,7 @@ export default function UsersPage() {
               </div>
               <input
                 type="text"
-                placeholder="Cari nama, no HP, atau role..."
+                placeholder={t("users.searchUsers")}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-orange-500 focus:border-orange-500 sm:text-sm"
@@ -380,7 +382,7 @@ export default function UsersPage() {
               >
                 {roleOptions.map((role) => (
                   <option key={role} value={role}>
-                    {role === "all" ? "Semua Role" : role.toUpperCase()}
+                    {role === "all" ? t("users.allRoles") : role.toUpperCase()}
                   </option>
                 ))}
               </select>
@@ -388,12 +390,12 @@ export default function UsersPage() {
           </div>
 
           <div className="text-sm text-gray-600">
-            {filteredAdmins.length} dari{" "}
+            {filteredAdmins.length} {t("users.of")}{" "}
             {
               admins.filter((a) => !a.roles?.some((r) => r.name === "customer"))
                 .length
             }{" "}
-            admin
+            {t("users.admins")}
           </div>
         </div>
       </div>
@@ -405,16 +407,16 @@ export default function UsersPage() {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Admin
+                  {t("users.admin")}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  No HP
+                  {t("users.userPhone")}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Role
+                  {t("users.userRole")}
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
+                  {t("users.actions")}
                 </th>
               </tr>
             </thead>
@@ -461,7 +463,7 @@ export default function UsersPage() {
                       ) : (
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
                           <Shield className="w-3 h-3 mr-1" />
-                          NO ROLE
+                          {t("users.noRole").toUpperCase()}
                         </span>
                       )}
                     </div>
@@ -471,21 +473,21 @@ export default function UsersPage() {
                       <button
                         onClick={() => handleViewUser(admin)}
                         className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700 transition-colors"
-                        title="Lihat Detail"
+                        title={t("users.viewDetail")}
                       >
                         <Eye className="w-4 h-4 lg:w-5 lg:h-5" />
                       </button>
                       <button
                         onClick={() => handleEditUser(admin)}
                         className="p-2 rounded-lg bg-orange-50 text-orange-600 hover:bg-orange-100 hover:text-orange-700 transition-colors"
-                        title="Edit Admin"
+                        title={t("users.editAdmin")}
                       >
                         <Edit className="w-4 h-4 lg:w-5 lg:h-5" />
                       </button>
                       <button
                         onClick={() => handleDeleteUser(admin.id, admin.nama)}
                         className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 transition-colors"
-                        title="Hapus Admin"
+                        title={t("users.deleteAdmin")}
                       >
                         <Trash2 className="w-4 h-4 lg:w-5 lg:h-5" />
                       </button>
@@ -501,10 +503,10 @@ export default function UsersPage() {
           <div className="text-center py-12">
             <User className="w-12 h-12 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">
-              Tidak ada admin ditemukan
+              {t("users.noUsers")}
             </h3>
             <p className="text-gray-600">
-              Coba ubah kriteria pencarian atau filter
+              {t("users.tryChangeSearch")}
             </p>
           </div>
         )}
@@ -515,7 +517,7 @@ export default function UsersPage() {
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Total Admin</p>
+              <p className="text-sm font-medium text-gray-600">{t("users.totalAdmins")}</p>
               <p className="text-2xl font-bold text-gray-900">
                 {
                   admins.filter(
@@ -586,12 +588,12 @@ export default function UsersPage() {
           {/* Modal */}
           <div className="relative z-10 bg-white rounded-lg p-6 max-w-md w-full shadow-xl border border-gray-200">
             <h2 className="text-xl font-bold mb-4 text-gray-900">
-              Detail Admin
+              {t("users.adminDetail")}
             </h2>
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-600 mb-1">
-                  Nama
+                  {t("users.userName")}
                 </label>
                 <p className="text-gray-900 bg-gray-50 px-3 py-2 rounded-lg">
                   {selectedAdmin.nama}
@@ -599,7 +601,7 @@ export default function UsersPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-600 mb-1">
-                  No HP
+                  {t("users.userPhone")}
                 </label>
                 <p className="text-gray-900 bg-gray-50 px-3 py-2 rounded-lg">
                   {selectedAdmin.no_hp}
@@ -607,7 +609,7 @@ export default function UsersPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-600 mb-1">
-                  Role
+                  {t("users.userRole")}
                 </label>
                 <div className="bg-gray-50 px-3 py-2 rounded-lg flex flex-wrap gap-1">
                   {selectedAdmin.roles && selectedAdmin.roles.length > 0 ? (
@@ -623,7 +625,7 @@ export default function UsersPage() {
                       </span>
                     ))
                   ) : (
-                    <span className="text-gray-500">No Role</span>
+                    <span className="text-gray-500">{t("users.noRole")}</span>
                   )}
                 </div>
               </div>
@@ -635,7 +637,7 @@ export default function UsersPage() {
               }}
               className="mt-6 w-full bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors font-medium"
             >
-              Tutup
+              {t("users.close")}
             </button>
           </div>
         </div>

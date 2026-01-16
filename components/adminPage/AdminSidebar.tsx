@@ -7,6 +7,7 @@ import { useAdmin } from "@/app/contexts/AdminContext";
 import { useAuth } from "@/app/contexts/AuthContext";
 import { useAdminTranslation } from "@/app/contexts/AdminTranslationContext";
 import { usePageTransition } from "@/hooks/usePageTransition";
+import { MenuId, canAccessMenu, ROLES } from "@/lib/rbac";
 import {
   LayoutDashboard,
   Package,
@@ -25,7 +26,7 @@ import {
 } from "lucide-react";
 
 interface MenuItem {
-  id: string;
+  id: MenuId;
   labelKey: string;
   href: string;
   icon: React.ComponentType<{ className?: string }>;
@@ -101,9 +102,25 @@ export function AdminSidebar() {
   const { startTransition } = usePageTransition();
   const pathname = usePathname();
 
+  // Filter menu items based on user's roles
+  const filteredMenuItems = useMemo(() => {
+    if (!user?.roles || user.roles.length === 0) {
+      return [];
+    }
+    
+    return menuItems.filter(item => canAccessMenu(user.roles, item.id));
+  }, [user?.roles]);
+
+  // Get display name for primary role
+  const roleDisplayName = useMemo(() => {
+    if (!user?.roles || user.roles.length === 0) return '';
+    const primaryRole = user.roles[0];
+    return ROLES[primaryRole]?.displayName || primaryRole;
+  }, [user?.roles]);
+
   // Memoize menu items to prevent re-creation on every render
   const menuElements = useMemo(() => {
-    return menuItems.map((item) => {
+    return filteredMenuItems.map((item) => {
       const Icon = item.icon;
       const isActive = pathname === item.href;
       const label = t(item.labelKey);
@@ -141,7 +158,7 @@ export function AdminSidebar() {
         </Link>
       );
     });
-  }, [pathname, state.sidebarCollapsed, startTransition, t]);
+  }, [pathname, state.sidebarCollapsed, startTransition, t, filteredMenuItems]);
 
   return (
     <div
@@ -241,7 +258,7 @@ export function AdminSidebar() {
                     {user.username}
                   </p>
                   <p className="text-xs text-gray-200 truncate font-admin-body">
-                    {user.role === "super_admin" ? t("users.superAdmin") : t("users.admin")}
+                    {roleDisplayName}
                   </p>
                 </div>
               </div>

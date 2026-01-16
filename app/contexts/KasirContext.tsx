@@ -188,13 +188,21 @@ export function KasirProvider({ children }: { children: React.ReactNode }) {
         const productsData = result?.data || [];
         console.log(`[Kasir] Received ${productsData.length} products from backend`);
 
-        // Filter products with stock > 0
-        const availableProducts = productsData.filter((p: Product) => p.stok > 0);
-        console.log(`[Kasir] ${availableProducts.length} products with stock available`);
+        // Filter products that are daily items (isDaily=true) with available daily_stock
+        const availableProducts = productsData.filter((p: Product) => 
+          p.isDaily === true && p.daily_stock != null && p.daily_stock > 0
+        );
+        console.log(`[Kasir] ${availableProducts.length} daily products with stock available`);
+
+        // Map daily_stock to stok field for compatibility with existing cart logic
+        const mappedProducts = availableProducts.map((p: Product) => ({
+          ...p,
+          stok: p.daily_stock || 0
+        }));
 
         // Extract unique categories from products' jenis field
         const uniqueCategories = new Map<number, RefJenis>();
-        productsData.forEach((product: Product) => {
+        mappedProducts.forEach((product: Product) => {
           if (product.jenis && Array.isArray(product.jenis)) {
             product.jenis.forEach((jenis: RefJenis) => {
               if (jenis && jenis.id) {
@@ -208,7 +216,7 @@ export function KasirProvider({ children }: { children: React.ReactNode }) {
 
         setState(prev => ({
           ...prev,
-          products: availableProducts,
+          products: mappedProducts,
           categories: categories,
           isLoadingProducts: false,
           isApiConnected: true
@@ -247,14 +255,20 @@ export function KasirProvider({ children }: { children: React.ReactNode }) {
 
         const result = await response.json();
         const productsData = result?.data || [];
-        const availableProducts = productsData.filter((p: Product) => p.stok > 0);
+        const availableProducts = productsData.filter((p: Product) => 
+          p.isDaily === true && p.daily_stock != null && p.daily_stock > 0
+        );
+        const mappedProducts = availableProducts.map((p: Product) => ({
+          ...p,
+          stok: p.daily_stock || 0
+        }));
 
         setState(prev => {
           // Only update if data has changed
-          const hasChanges = JSON.stringify(prev.products) !== JSON.stringify(availableProducts);
+          const hasChanges = JSON.stringify(prev.products) !== JSON.stringify(mappedProducts);
           if (hasChanges) {
             console.log('[Kasir] Products synced from backend');
-            return { ...prev, products: availableProducts };
+            return { ...prev, products: mappedProducts };
           }
           return prev;
         });

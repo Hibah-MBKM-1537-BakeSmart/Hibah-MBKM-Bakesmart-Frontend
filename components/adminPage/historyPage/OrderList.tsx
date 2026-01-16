@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { useHistory } from '@/app/contexts/HistoryContext';
+import { useAdminTranslation } from '@/app/contexts/AdminTranslationContext';
 import { OrderCard } from './OrderCard';
 import { 
   Package, 
@@ -11,6 +12,7 @@ import {
 
 export function OrderList() {
   const { state } = useHistory();
+  const { t } = useAdminTranslation();
 
   if (state.isLoading) {
     return (
@@ -18,7 +20,7 @@ export function OrderList() {
         <div className="text-center">
           <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" style={{ color: '#8b6f47' }} />
           <p className="text-lg font-admin-body" style={{ color: '#8b6f47' }}>
-            Memuat pesanan...
+            {t("history.loadingOrders")}
           </p>
         </div>
       </div>
@@ -43,23 +45,19 @@ export function OrderList() {
          state.filters.period !== 'all' ? (
           <div>
             <h3 className="text-xl font-semibold mb-2 font-admin-heading" style={{ color: '#5d4037' }}>
-              Tidak Ada Pesanan Ditemukan
+              {t("history.noOrdersFound")}
             </h3>
             <p className="font-admin-body" style={{ color: '#8b6f47' }}>
-              Tidak ada pesanan yang sesuai dengan filter yang dipilih.
-              <br />
-              Coba ubah atau reset filter untuk melihat lebih banyak pesanan.
+              {t("history.noOrdersFilterMessage")}
             </p>
           </div>
         ) : (
           <div>
             <h3 className="text-xl font-semibold mb-2 font-admin-heading" style={{ color: '#5d4037' }}>
-              Belum Ada Pesanan
+              {t("history.noOrdersYet")}
             </h3>
             <p className="font-admin-body" style={{ color: '#8b6f47' }}>
-              Belum ada pesanan yang masuk ke sistem.
-              <br />
-              Pesanan akan muncul di sini setelah customer melakukan pemesanan.
+              {t("history.noOrdersYetMessage")}
             </p>
           </div>
         )}
@@ -77,7 +75,7 @@ export function OrderList() {
               {state.filteredOrders.length}
             </p>
             <p className="text-xs lg:text-sm font-admin-body mt-1" style={{ color: '#8b6f47' }}>
-              Total Pesanan
+              {t("history.totalOrders")}
             </p>
           </div>
           <div className="text-center">
@@ -85,7 +83,7 @@ export function OrderList() {
               {state.filteredOrders.filter(o => o.status === 'completed').length}
             </p>
             <p className="text-xs lg:text-sm font-admin-body mt-1" style={{ color: '#8b6f47' }}>
-              Selesai
+              {t("history.completed")}
             </p>
           </div>
           <div className="text-center">
@@ -93,7 +91,7 @@ export function OrderList() {
               {state.filteredOrders.filter(o => o.status === 'cancelled').length}
             </p>
             <p className="text-xs lg:text-sm font-admin-body mt-1" style={{ color: '#8b6f47' }}>
-              Dibatalkan
+              {t("history.cancelled")}
             </p>
           </div>
           <div className="text-center col-span-2 lg:col-span-1">
@@ -103,7 +101,7 @@ export function OrderList() {
               }, 0).toLocaleString('id-ID')}
             </p>
             <p className="text-xs lg:text-sm font-admin-body mt-1" style={{ color: '#8b6f47' }}>
-              Total Nilai
+              {t("history.totalValue")}
             </p>
           </div>
         </div>
@@ -126,7 +124,7 @@ export function OrderList() {
               color: '#8b6f47'
             }}
           >
-            Muat Lebih Banyak
+            {t("history.loadMore")}
           </button>
         </div>
       )}
