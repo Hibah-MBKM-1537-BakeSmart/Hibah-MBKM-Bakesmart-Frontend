@@ -29,12 +29,12 @@ interface StatCard {
   changeType: "increase" | "decrease";
   icon: React.ComponentType<{ className?: string }>;
   color: string;
-  key: string;
+  titleKey: string;
 }
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { language, tAdminSync } = useAdminTranslation();
+  const { t } = useAdminTranslation();
   const { addProduct } = useProducts();
   const { createAdmin } = useAdmin();
   const { addToast } = useToast();
@@ -58,31 +58,6 @@ export default function DashboardPage() {
     };
     fetchRoles();
   }, []);
-
-  // State tunggal untuk menampung SEMUA teks UI statis agar bisa ditranslate API
-  const [uiText, setUiText] = useState({
-    dashboardTitle: "Dashboard",
-    dashboardSubtitle:
-      "Welcome back! Here's what's happening with your bakery.",
-    vsLastMonth: "vs last month",
-    recentOrders: "Recent Orders",
-    viewAllOrders: "View All Orders",
-    topProducts: "Top Products",
-    quickActions: "Quick Actions",
-    addProduct: "Add Product",
-    manageUsers: "Manage Users",
-    waBlast: "WA Blast",
-    minutesAgo: "minutes ago",
-    hoursAgo: "hours ago",
-    daysAgo: "days ago",
-    sales: "sales",
-    stock: "Stock",
-  });
-
-  // State untuk menyimpan hasil terjemahan API untuk Stats (Title)
-  const [apiTranslations, setApiTranslations] = useState<{
-    [key: string]: string;
-  }>({});
 
   // State untuk data real dari API
   const [dashboardStats, setDashboardStats] = useState<any>(null);
@@ -142,8 +117,8 @@ export default function DashboardPage() {
 
     return [
       {
-        title: "Total Revenue",
-        key: "Total Revenue",
+        title: t("dashboard.totalRevenue"),
+        titleKey: "dashboard.totalRevenue",
         value: `Rp ${parseInt(dashboardStats.total_revenue || 0).toLocaleString(
           "id-ID"
         )}`,
@@ -158,8 +133,8 @@ export default function DashboardPage() {
         color: "#10B981",
       },
       {
-        title: "Total Orders",
-        key: "Total Orders",
+        title: t("dashboard.totalOrders"),
+        titleKey: "dashboard.totalOrders",
         value: dashboardStats.total_orders?.toString() || "0",
         change: dashboardStats.orders_growth
           ? `${dashboardStats.orders_growth > 0 ? "+" : ""}${
@@ -172,8 +147,8 @@ export default function DashboardPage() {
         color: "#3B82F6",
       },
       {
-        title: "Total Products",
-        key: "Total Products",
+        title: t("dashboard.totalProducts"),
+        titleKey: "dashboard.totalProducts",
         value: dashboardStats.total_products?.toString() || "0",
         change: "+0%", // Backend belum kirim growth produk
         changeType: "increase",
@@ -181,8 +156,8 @@ export default function DashboardPage() {
         color: "#8B5CF6",
       },
       {
-        title: "Total Customers",
-        key: "Total Customers",
+        title: t("dashboard.totalCustomers"),
+        titleKey: "dashboard.totalCustomers",
         value: dashboardStats.total_customers?.toString() || "0",
         change: dashboardStats.customers_growth
           ? `${dashboardStats.customers_growth > 0 ? "+" : ""}${
@@ -195,232 +170,31 @@ export default function DashboardPage() {
         color: "#F59E0B",
       },
     ];
-  }, [dashboardStats]);
+  }, [dashboardStats, t]);
 
-  const [translatedOrders, setTranslatedOrders] = useState<any[]>([]);
-  const [translatedProducts, setTranslatedProducts] = useState<any[]>([]);
-  const [translatedStatusMap, setTranslatedStatusMap] = useState<{
-    [key: string]: string;
-  }>({});
+  // Helper function untuk translate status menggunakan static translations
+  const getStatusDisplay = (status: string) => {
+    const statusKey = `status.${status}` as const;
+    return t(statusKey);
+  };
 
-  useEffect(() => {
-    const translateAllContent = async () => {
-      // 1. JIKA BAHASA INDONESIA (Manual Mapping agar cepat & akurat)
-      if (language === "id") {
-        setUiText({
-          dashboardTitle: "Dasbor",
-          dashboardSubtitle:
-            "Selamat datang kembali! Inilah situasi toko roti Anda.",
-          vsLastMonth: "vs bulan lalu",
-          recentOrders: "Pesanan Terbaru",
-          viewAllOrders: "Lihat Semua Pesanan",
-          topProducts: "Produk Terlaris",
-          quickActions: "Aksi Cepat",
-          addProduct: "Tambah Produk",
-          manageUsers: "Kelola Pengguna",
-          waBlast: "WA Blast",
-          minutesAgo: "menit lalu",
-          hoursAgo: "jam lalu",
-          daysAgo: "hari lalu",
-          sales: "penjualan",
-          stock: "Stok",
-        });
+  // Helper function untuk format waktu relatif
+  const getRelativeTime = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
 
-        // Mapping Status
-        setTranslatedStatusMap({
-          completed: "Selesai",
-          baked: "Dipanggang",
-          paid: "Dibayar",
-          verifying: "Memverifikasi",
-          pending: "Tertunda",
-          cancelled: "Dibatalkan",
-        });
-
-        // Mapping Stats Titles
-        setApiTranslations({
-          "Total Revenue": "Total Pendapatan",
-          "Total Orders": "Total Pesanan",
-          "Total Products": "Total Produk",
-          "Total Customers": "Total Pelanggan",
-        });
-
-        // Data Dinamis
-        if (recentOrdersData.length > 0) {
-          setTranslatedOrders(
-            recentOrdersData.map((order) => ({
-              ...order,
-              displayText: `${order.customer?.nama || "Guest"} (${
-                order.customer?.no_hp || "-"
-              }) • ${order.items?.[0]?.productName || "Item"} (${
-                order.items?.[0]?.quantity || 1
-              }x)`,
-            }))
-          );
-        }
-
-        if (topProductsData.length > 0) {
-          setTranslatedProducts(
-            topProductsData.map((product) => ({
-              ...product,
-              displayText: `${product.sales || 0} penjualan • Stok: ${
-                product.stok
-              }`,
-            }))
-          );
-        }
-        return;
-      }
-
-      // 2. JIKA BAHASA LAIN (Gunakan API)
-      try {
-        // A. Translate UI Text (Header, Buttons, etc)
-        const uiKeys = Object.keys(uiText);
-        const uiValues = Object.values(uiText); // Mengambil nilai default Inggris
-
-        // Kita fetch translate untuk setiap value default UI
-        const translatedUiValues = await Promise.all(
-          uiValues.map((text) =>
-            fetch("/api/translate", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                text,
-                targetLanguage: language,
-                sourceLanguage: "en",
-              }),
-            })
-              .then((r) => r.json())
-              .then((d) => d.translatedText || text)
-          )
-        );
-
-        // Gabungkan kembali ke object state
-        const newUiText: any = {};
-        uiKeys.forEach((key, index) => {
-          newUiText[key] = translatedUiValues[index];
-        });
-        setUiText(newUiText);
-
-        // B. Translate Stats Titles
-        const statsTranslations = await Promise.all(
-          stats.map((stat) =>
-            fetch("/api/translate", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                text: stat.key,
-                targetLanguage: language,
-              }),
-            })
-              .then((r) => r.json())
-              .then((d) => ({ key: stat.key, text: d.translatedText }))
-          )
-        );
-
-        setApiTranslations((prev) => {
-          const next = { ...prev };
-          statsTranslations.forEach((t) => {
-            if (t.text) {
-              next[t.key] = t.text;
-            }
-          });
-          return next;
-        });
-
-        // C. Translate Status Map
-        const statusKeys = [
-          "Completed",
-          "Baked",
-          "Paid",
-          "Verifying",
-          "Pending",
-          "Cancelled",
-        ];
-        const statusRes = await Promise.all(
-          statusKeys.map((s) =>
-            fetch("/api/translate", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ text: s, targetLanguage: language }),
-            }).then((r) => r.json())
-          )
-        );
-
-        setTranslatedStatusMap({
-          completed: statusRes[0].translatedText || "Completed",
-          baked: statusRes[1].translatedText || "Baked",
-          paid: statusRes[2].translatedText || "Paid",
-          verifying: statusRes[3].translatedText || "Verifying",
-          pending: statusRes[4].translatedText || "Pending",
-          cancelled: statusRes[5].translatedText || "Cancelled",
-        });
-
-        // D. Translate Orders & Products (Dynamic Data)
-        if (recentOrdersData.length > 0) {
-          const ordersTranslated = await Promise.all(
-            recentOrdersData.map((order) =>
-              fetch("/api/translate", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  text: `${order.customer?.nama || "Guest"} • ${
-                    order.items?.[0]?.productName || "Item"
-                  }`,
-                  targetLanguage: language,
-                }),
-              })
-                .then((r) => r.json())
-                .then((d) => ({
-                  displayText: `${
-                    d.translatedText ||
-                    `${order.customer?.nama || "Guest"} • ${
-                      order.items?.[0]?.productName || "Item"
-                    }`
-                  } (${order.items?.[0]?.quantity || 1}x)`,
-                }))
-            )
-          );
-          setTranslatedOrders(
-            recentOrdersData.map((order, index) => ({
-              ...order,
-              displayText: ordersTranslated[index].displayText,
-            }))
-          );
-        }
-
-        if (topProductsData.length > 0) {
-          const productsTranslated = await Promise.all(
-            topProductsData.map((product) =>
-              fetch("/api/translate", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  text: `${product.sales || 0} sales • Stock: ${product.stok}`,
-                  targetLanguage: language,
-                }),
-              })
-                .then((r) => r.json())
-                .then((d) => ({
-                  displayText:
-                    d.translatedText ||
-                    `${product.sales || 0} sales • Stock: ${product.stok}`,
-                }))
-            )
-          );
-          setTranslatedProducts(
-            topProductsData.map((product, index) => ({
-              ...product,
-              displayText: productsTranslated[index].displayText,
-            }))
-          );
-        }
-      } catch (error) {
-        console.error("[v0] Translation error:", error);
-      }
-    };
-
-    translateAllContent();
-  }, [language, recentOrdersData, topProductsData, stats]);
+    if (diffMins < 60) {
+      return `${diffMins} ${t("dashboard.minutesAgo")}`;
+    } else if (diffHours < 24) {
+      return `${diffHours} ${t("dashboard.hoursAgo")}`;
+    } else {
+      return `${diffDays} ${t("dashboard.daysAgo")}`;
+    }
+  };
 
   const handleQuickAction = (action: string) => {
     switch (action) {
@@ -487,10 +261,6 @@ export default function DashboardPage() {
     }
   };
 
-  const getStatusDisplay = (status: string) => {
-    return translatedStatusMap[status] || status;
-  };
-
   const getStatusStyle = (status: string) => {
     switch (status) {
       case "completed":
@@ -505,22 +275,6 @@ export default function DashboardPage() {
         return "bg-gray-100 text-gray-800";
       default:
         return "bg-gray-100 text-gray-800";
-    }
-  };
-
-  const timeAgo = (createdAt: string) => {
-    const now = new Date();
-    const orderTime = new Date(createdAt);
-    const diffInMinutes = Math.floor(
-      (now.getTime() - orderTime.getTime()) / (1000 * 60)
-    );
-
-    if (diffInMinutes < 60) {
-      return `${diffInMinutes} ${uiText.minutesAgo}`;
-    } else if (diffInMinutes < 1440) {
-      return `${Math.floor(diffInMinutes / 60)} ${uiText.hoursAgo}`;
-    } else {
-      return `${Math.floor(diffInMinutes / 1440)} ${uiText.daysAgo}`;
     }
   };
 
@@ -540,27 +294,22 @@ export default function DashboardPage() {
       <div className="bg-gradient-to-r from-blue-400 to-purple-400 rounded-2xl p-8 shadow-md">
         <div className="flex justify-between items-center">
           <div>
-            {/* Menggunakan state uiText untuk Title */}
             <h1 className="text-3xl font-bold font-admin-heading text-white">
-              {uiText.dashboardTitle}
+              {t("dashboard.title")}
             </h1>
-            {/* Menggunakan state uiText untuk Subtitle */}
             <p className="font-admin-body text-white/90 mt-2">
-              {uiText.dashboardSubtitle}
+              {t("dashboard.subtitle")}
             </p>
           </div>
           <div className="flex items-center space-x-2 text-sm font-admin-body bg-white/30 backdrop-blur-sm px-4 py-2 rounded-lg text-white">
             <Calendar className="w-4 h-4" />
             <span>
-              {new Date().toLocaleDateString(
-                language === "id" ? "id-ID" : "en-US",
-                {
-                  weekday: "long",
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                }
-              )}
+              {new Date().toLocaleDateString("id-ID", {
+                weekday: "long",
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              })}
             </span>
           </div>
         </div>
@@ -589,9 +338,6 @@ export default function DashboardPage() {
             return "#FCD34D";
           };
 
-          const displayText =
-            apiTranslations[stat.key] || tAdminSync(stat.title);
-
           return (
             <div
               key={index}
@@ -601,7 +347,7 @@ export default function DashboardPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium font-admin-body text-gray-600">
-                    {displayText}
+                    {stat.title}
                   </p>
                   <p className="text-2xl font-bold mt-2 font-admin-heading text-gray-900">
                     {stat.value}
@@ -622,7 +368,7 @@ export default function DashboardPage() {
                       {stat.change}
                     </span>
                     <span className="text-sm text-gray-500 ml-1 font-admin-body">
-                      {uiText.vsLastMonth}
+                      {t("dashboard.vsLastMonth")}
                     </span>
                   </div>
                 </div>
@@ -646,13 +392,13 @@ export default function DashboardPage() {
             <div className="flex items-center space-x-2">
               <ShoppingCart className="w-5 h-5 text-blue-500" />
               <h2 className="text-lg font-semibold font-admin-heading text-gray-900">
-                {uiText.recentOrders}
+                {t("dashboard.recentOrders")}
               </h2>
             </div>
           </div>
           <div className="p-6">
             <div className="space-y-4">
-              {translatedOrders.map((order, index) => (
+              {recentOrdersData.map((order, index) => (
                 <div
                   key={index}
                   className="flex items-center justify-between p-4 rounded-lg border-2 hover:shadow-sm transition-all duration-200"
@@ -677,7 +423,7 @@ export default function DashboardPage() {
                       </span>
                     </div>
                     <p className="text-sm font-admin-body text-gray-600">
-                      {order.displayText}
+                      {order.customer?.nama || "Guest"} ({order.customer?.no_hp || "-"}) • {order.items?.[0]?.productName || "Item"} ({order.items?.[0]?.quantity || 1}x)
                     </p>
                     <div className="flex items-center justify-between mt-2">
                       <p className="font-semibold font-admin-heading text-gray-900">
@@ -690,7 +436,7 @@ export default function DashboardPage() {
                       </p>
                       <div className="flex items-center text-xs text-gray-500 font-admin-body">
                         <Clock className="w-3 h-3 mr-1" />
-                        {timeAgo(order.created_at)}
+                        {getRelativeTime(order.created_at)}
                       </div>
                     </div>
                   </div>
@@ -699,7 +445,7 @@ export default function DashboardPage() {
             </div>
             <div className="mt-4">
               <button className="w-full text-center py-2 px-4 text-sm font-medium transition-all duration-200 font-admin-body bg-blue-500 text-white rounded-lg hover:bg-blue-600 hover:shadow-sm">
-                {uiText.viewAllOrders}
+                {t("dashboard.viewAllOrders")}
               </button>
             </div>
           </div>
@@ -711,13 +457,13 @@ export default function DashboardPage() {
             <div className="flex items-center space-x-2">
               <Package className="w-5 h-5 text-purple-500" />
               <h2 className="text-lg font-semibold font-admin-heading text-gray-900">
-                {uiText.topProducts}
+                {t("dashboard.topProducts")}
               </h2>
             </div>
           </div>
           <div className="p-6">
             <div className="space-y-4">
-              {translatedProducts.map((product, index) => {
+              {topProductsData.map((product, index) => {
                 const badge = getRankBadge(index);
                 return (
                   <div
@@ -740,7 +486,7 @@ export default function DashboardPage() {
                           {product.nama || product.name}
                         </p>
                         <p className="text-sm font-admin-body text-gray-600">
-                          {product.displayText}
+                          {product.sales || 0} {t("dashboard.sales")} • {t("dashboard.stock")}: {product.stok}
                         </p>
                       </div>
                     </div>
@@ -770,7 +516,7 @@ export default function DashboardPage() {
             <span className="text-white font-bold text-lg">⚡</span>
           </div>
           <h2 className="text-lg font-semibold font-admin-heading text-gray-900">
-            {uiText.quickActions}
+            {t("dashboard.quickActions")}
           </h2>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -780,7 +526,7 @@ export default function DashboardPage() {
           >
             <Package className="w-8 h-8 mb-2 text-white" />
             <span className="text-sm font-medium font-admin-body text-white">
-              {uiText.addProduct}
+              {t("dashboard.addProduct")}
             </span>
           </button>
           <button
@@ -789,7 +535,7 @@ export default function DashboardPage() {
           >
             <Users className="w-8 h-8 mb-2 text-white" />
             <span className="text-sm font-medium font-admin-body text-white">
-              {uiText.manageUsers}
+              {t("dashboard.manageUsers")}
             </span>
           </button>
           <button
@@ -798,7 +544,7 @@ export default function DashboardPage() {
           >
             <TrendingUp className="w-8 h-8 mb-2 text-white" />
             <span className="text-sm font-medium font-admin-body text-white">
-              {uiText.waBlast}
+              {t("dashboard.waBlast")}
             </span>
           </button>
         </div>
@@ -815,6 +561,7 @@ export default function DashboardPage() {
         isOpen={activeModal === "addUser"}
         onClose={() => setActiveModal(null)}
         onAddUser={handleAddUser}
+        roles={roles}
       />
 
       <WhatsAppBlastModal

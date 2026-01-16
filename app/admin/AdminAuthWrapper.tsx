@@ -1,19 +1,56 @@
 'use client';
 
 import { useAuth } from '@/app/contexts/AuthContext';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { AdminSidebar } from '@/components/adminPage';
 import { AdminHeader } from '@/components/adminPage';
 import { PageLoading } from '@/components/ui/PageLoading';
 import { usePageTransition } from '@/hooks/usePageTransition';
+import { PUBLIC_ROUTES, getFirstAccessibleRoute, canAccessRoute } from '@/lib/rbac';
+import { useEffect, useState } from 'react';
 
 export default function AdminAuthWrapper({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
   const { isLoading: isPageLoading } = usePageTransition();
   const pathname = usePathname();
+  const router = useRouter();
+  const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
+
+  // Check authorization when user or pathname changes
+  useEffect(() => {
+    if (isLoading) {
+      setIsAuthorized(null);
+      return;
+    }
+
+    // Public routes are always accessible
+    if (PUBLIC_ROUTES.includes(pathname)) {
+      setIsAuthorized(true);
+      return;
+    }
+
+    // Not authenticated
+    if (!user) {
+      setIsAuthorized(false);
+      return;
+    }
+
+    // Check if user can access the current route
+    const hasAccess = canAccessRoute(user.roles, pathname);
+    
+    if (!hasAccess) {
+      // Redirect to first accessible route
+      const redirectPath = getFirstAccessibleRoute(user.roles);
+      router.replace(redirectPath);
+      setIsAuthorized(false);
+      return;
+    }
+
+    setIsAuthorized(true);
+  }, [user, isLoading, pathname, router]);
 
   // Show loading spinner while checking auth
-  if (isLoading) {
+  if (isLoading || isAuthorized === null) {
     return (
       <div className="flex items-center justify-center min-h-screen" style={{ backgroundColor: '#fefdf8' }}>
         <div className="text-center">
@@ -30,7 +67,7 @@ export default function AdminAuthWrapper({ children }: { children: React.ReactNo
   }
 
   // Require authentication for other admin pages
-  if (!user) {
+  if (!user || !isAuthorized) {
     return null; // AuthProvider will handle redirect
   }
 

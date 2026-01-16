@@ -1,12 +1,15 @@
 "use client"
 import { Package, TrendingUp, TrendingDown, Minus } from "lucide-react"
 import type { ProductPerformance } from "@/app/contexts/StatisticsContext"
+import { useAdminTranslation } from "@/app/contexts/AdminTranslationContext"
 
 interface TopProductsCardProps {
   products: ProductPerformance[]
 }
 
 export function TopProductsCard({ products }: TopProductsCardProps) {
+  const { t } = useAdminTranslation()
+
   const getBadgeColor = (index: number) => {
     const colors = [
       { bg: "#FCD34D", text: "#78350F", border: "#F59E0B", name: "Gold" },
@@ -44,7 +47,7 @@ export function TopProductsCard({ products }: TopProductsCardProps) {
     <div className="bg-white rounded-xl shadow-sm border-2 p-6 hover:shadow-lg transition-all duration-300" style={{ borderColor: "#E5E7EB" }}>
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-lg font-semibold font-admin-heading text-gray-900">
-          Top Performing Products
+          {t("statistics.topProducts")}
         </h2>
         <Package className="w-5 h-5 text-blue-600" />
       </div>

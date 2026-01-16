@@ -1,12 +1,15 @@
 "use client"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts"
 import type { MonthlySalesData } from "@/app/contexts/StatisticsContext"
+import { useAdminTranslation } from "@/app/contexts/AdminTranslationContext"
 
 interface MonthlySalesChartProps {
   data: MonthlySalesData[]
 }
 
 export function MonthlySalesChart({ data }: MonthlySalesChartProps) {
+  const { t } = useAdminTranslation()
+
   // Transform revenue to millions for better readability
   const chartData = data.map((item) => ({
     ...item,
@@ -17,13 +20,13 @@ export function MonthlySalesChart({ data }: MonthlySalesChartProps) {
     <div className="bg-white rounded-lg shadow-sm border p-6" style={{ borderColor: "#e0d5c7" }}>
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-lg font-semibold font-admin-heading" style={{ color: "#5d4037" }}>
-          Monthly Sales & Revenue
+          {t("statistics.monthlySalesRevenue")}
         </h2>
         <span
           className="text-xs font-admin-body px-3 py-1 rounded-full"
           style={{ backgroundColor: "#f9f7f4", color: "#8b6f47" }}
         >
-          Last 12 months
+          {t("statistics.last12Months")}
         </span>
       </div>
 
@@ -47,14 +50,14 @@ export function MonthlySalesChart({ data }: MonthlySalesChartProps) {
             yAxisId="left" 
             dataKey="sales" 
             fill="url(#colorSales)" 
-            name="Sales (units)" 
+            name={t("statistics.salesUnits")} 
             radius={[8, 8, 0, 0]}
           />
           <Bar 
             yAxisId="right" 
             dataKey="revenueM" 
             fill="url(#colorRevenue)" 
-            name="Revenue (Millions Rp)" 
+            name={t("statistics.revenueMillions")} 
             radius={[8, 8, 0, 0]}
           />
           <defs>

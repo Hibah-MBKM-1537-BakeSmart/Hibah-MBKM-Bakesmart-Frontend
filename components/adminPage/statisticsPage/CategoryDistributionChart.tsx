@@ -1,22 +1,24 @@
 "use client"
 import { PieChart, Pie, Cell, Legend, Tooltip, ResponsiveContainer } from "recharts"
 import type { CategorySalesData } from "@/app/contexts/StatisticsContext"
+import { useAdminTranslation } from "@/app/contexts/AdminTranslationContext"
 
 interface CategoryDistributionChartProps {
   data: CategorySalesData[]
 }
 
 export function CategoryDistributionChart({ data }: CategoryDistributionChartProps) {
+  const { t } = useAdminTranslation()
   const COLORS = ["#F59E0B", "#EF4444", "#8B5CF6", "#3B82F6", "#10B981", "#EC4899", "#14B8A6"]
 
   return (
     <div className="bg-white rounded-lg shadow-sm border p-6" style={{ borderColor: "#e0d5c7" }}>
       <div className="mb-6">
         <h2 className="text-lg font-semibold font-admin-heading" style={{ color: "#5d4037" }}>
-          Category Distribution
+          {t("statistics.categoryDistribution")}
         </h2>
         <p className="text-xs mt-1 font-admin-body" style={{ color: "#8b6f47" }}>
-          Sales breakdown by product category
+          {t("statistics.salesByCategory")}
         </p>
       </div>
 
@@ -71,7 +73,7 @@ export function CategoryDistributionChart({ data }: CategoryDistributionChartPro
             </div>
             <div className="flex items-center space-x-4">
               <span className="text-sm font-medium font-admin-heading" style={{ color: "#5d4037" }}>
-                {category.sales} sales
+                {category.sales} {t("statistics.salesLabel")}
               </span>
               <span
                 className="text-sm font-admin-body px-2 py-1 rounded"

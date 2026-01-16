@@ -2,14 +2,31 @@
 
 import React, { useState } from "react";
 import { useKasir } from "@/app/contexts/KasirContext";
+import { useAdminTranslation } from "@/app/contexts/AdminTranslationContext";
 import { Package, Plus, Minus, ShoppingCart, Settings } from "lucide-react";
 import { ProductCustomizationModal } from "./ProductCustomizationModal";
 import { getImageUrl } from "@/lib/utils";
 
 export function ProductGrid() {
   const { state, addToCart } = useKasir();
+  const { t, language } = useAdminTranslation();
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [showCustomizationModal, setShowCustomizationModal] = useState(false);
+
+  // Helper to get product name based on language
+  const getProductName = (product: any) => {
+    return language === 'id' ? product.nama_id : (product.nama_en || product.nama_id);
+  };
+
+  // Helper to get product description based on language
+  const getProductDescription = (product: any) => {
+    return language === 'id' ? product.deskripsi_id : (product.deskripsi_en || product.deskripsi_id);
+  };
+
+  // Helper to get category name based on language
+  const getCategoryName = (jenis: any) => {
+    return language === 'id' ? jenis.nama_id : (jenis.nama_en || jenis.nama_id);
+  };
 
   // Show loading state
   if (state.isLoadingProducts) {
@@ -17,7 +34,7 @@ export function ProductGrid() {
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-orange-200 border-t-orange-500 rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-500">Memuat produk...</p>
+          <p className="text-gray-500">{t("kasir.loadingProducts")}</p>
         </div>
       </div>
     );
@@ -29,10 +46,10 @@ export function ProductGrid() {
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
           <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          <p className="text-gray-500">Tidak ada produk tersedia</p>
+          <p className="text-gray-500">{t("kasir.noProducts")}</p>
           {!state.isApiConnected && (
             <p className="text-sm text-orange-500 mt-2">
-              API tidak terhubung - pastikan server berjalan
+              {t("kasir.apiNotConnected")}
             </p>
           )}
         </div>
@@ -89,7 +106,7 @@ export function ProductGrid() {
             <div className="aspect-square bg-gray-100 relative">
               <img
                 src={getImageUrl(product.gambars?.[0]?.file_path)}
-                alt={product.nama_id}
+                alt={getProductName(product)}
                 className="w-full h-full object-cover"
                 onError={(e) => {
                   e.currentTarget.src =
@@ -101,15 +118,15 @@ export function ProductGrid() {
               <div className="absolute top-2 2xl:top-1.5 left-2 2xl:left-1.5 right-2 2xl:right-1.5 flex justify-between items-start gap-1">
                 {/* Category Badge - More compact on large screens */}
                 <div className="bg-orange-500 text-white rounded-full px-2.5 2xl:px-2 py-1 2xl:py-0.5 text-xs 2xl:text-[10px] font-medium whitespace-nowrap overflow-hidden text-ellipsis max-w-[calc(100%-70px)] 2xl:max-w-[calc(100%-55px)]">
-                  {product.jenis?.[0]?.nama_id || "Umum"}
+                  {product.jenis?.[0] ? getCategoryName(product.jenis[0]) : t("kasir.general")}
                 </div>
 
                 {/* Stock Badge - More compact on large screens */}
                 <div className="bg-white rounded-full px-2.5 2xl:px-1.5 py-1 2xl:py-0.5 text-xs 2xl:text-[10px] font-medium whitespace-nowrap flex-shrink-0 shadow-sm">
                   {isOutOfStock ? (
-                    <span className="text-red-600">0 stok</span>
+                    <span className="text-red-600">0 {t("kasir.stock")}</span>
                   ) : (
-                    <span className="text-green-600">{product.stok} stok</span>
+                    <span className="text-green-600">{product.stok} {t("kasir.stock")}</span>
                   )}
                 </div>
               </div>
@@ -125,12 +142,12 @@ export function ProductGrid() {
             {/* Product Info - More compact on large screens */}
             <div className="p-3 md:p-4 2xl:p-2.5">
               <h3 className="font-semibold text-gray-900 text-sm md:text-base 2xl:text-sm mb-1 line-clamp-2 min-h-[2.5rem] 2xl:min-h-[2rem]">
-                {product.nama_id}
+                {getProductName(product)}
               </h3>
 
-              {product.deskripsi_id && (
+              {getProductDescription(product) && (
                 <p className="text-xs text-gray-600 mb-2 2xl:mb-1 line-clamp-1 2xl:hidden">
-                  {product.deskripsi_id}
+                  {getProductDescription(product)}
                 </p>
               )}
 
@@ -153,7 +170,7 @@ export function ProductGrid() {
                   }`}
                 >
                   <Settings className="w-4 h-4 2xl:w-3.5 2xl:h-3.5" />
-                  <span className="text-sm 2xl:text-xs">Kustomisasi</span>
+                  <span className="text-sm 2xl:text-xs">{t("kasir.customize")}</span>
                 </button>
 
                 {/* Add to Cart Button */}
@@ -171,17 +188,17 @@ export function ProductGrid() {
                   {isOutOfStock ? (
                     <>
                       <Package className="w-4 h-4 2xl:w-3.5 2xl:h-3.5" />
-                      <span className="text-sm 2xl:text-xs">Stok Habis</span>
+                      <span className="text-sm 2xl:text-xs">{t("kasir.outOfStock")}</span>
                     </>
                   ) : cartQuantity > 0 ? (
                     <>
                       <Plus className="w-4 h-4 2xl:w-3.5 2xl:h-3.5" />
-                      <span className="text-sm 2xl:text-xs">Tambah Lagi</span>
+                      <span className="text-sm 2xl:text-xs">{t("kasir.addMore")}</span>
                     </>
                   ) : (
                     <>
                       <ShoppingCart className="w-4 h-4 2xl:w-3.5 2xl:h-3.5" />
-                      <span className="text-sm 2xl:text-xs">Tambah</span>
+                      <span className="text-sm 2xl:text-xs">{t("kasir.add")}</span>
                     </>
                   )}
                 </button>
@@ -195,10 +212,10 @@ export function ProductGrid() {
         <div className="col-span-full text-center py-12">
           <Package className="w-12 h-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">
-            Tidak ada produk ditemukan
+            {t("kasir.noProductsFound")}
           </h3>
           <p className="text-gray-600">
-            Coba pilih kategori lain atau ubah kata kunci pencarian
+            {t("kasir.tryOtherCategory")}
           </p>
         </div>
       )}

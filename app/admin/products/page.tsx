@@ -6,31 +6,33 @@ import { useToast } from "@/components/adminPage/Toast";
 import { JenisTab } from "@/components/adminPage/productsPage/JenisTab";
 import { SubJenisTab } from "@/components/adminPage/productsPage/SubJenisTab";
 import { ProductsTab } from "@/components/adminPage/productsPage/ProductsTab";
+import { useAdminTranslation } from "@/app/contexts/AdminTranslationContext";
 
 type TabType = "products" | "jenis" | "sub_jenis";
 
 export default function ProductsPage() {
   const [activeTab, setActiveTab] = useState<TabType>("jenis");
   const { ToastContainer } = useToast();
+  const { t } = useAdminTranslation();
 
   const tabs = [
     {
       id: "jenis" as TabType,
-      label: "Jenis (Kategori)",
+      label: t("products.jenisTab"),
       icon: Tag,
-      description: "Kelola kategori utama",
+      description: t("products.jenisDesc"),
     },
     {
       id: "sub_jenis" as TabType,
-      label: "Sub Jenis (Konfigurasi)",
+      label: t("products.subJenisTab"),
       icon: Layers,
-      description: "Kelola sub kategori & konfigurasi",
+      description: t("products.subJenisDesc"),
     },
     {
       id: "products" as TabType,
-      label: "Produk",
+      label: t("products.productsTab"),
       icon: Package,
-      description: "Kelola daftar produk roti",
+      description: t("products.productsDesc"),
     },
   ];
 
@@ -41,10 +43,9 @@ export default function ProductsPage() {
       {/* Page Header */}
       <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Manajemen Produk</h1>
+          <h1 className="text-2xl font-bold text-gray-900">{t("products.title")}</h1>
           <p className="text-gray-600 text-sm lg:text-base mt-1">
-            Kelola produk, kategori (jenis), dan sub kategori (sub jenis) dengan
-            konfigurasi lengkap
+            {t("products.subtitle")}
           </p>
         </div>
       </div>
@@ -54,7 +55,7 @@ export default function ProductsPage() {
         <div className="flex items-center space-x-2 mb-2">
           <Settings className="w-5 h-5 text-orange-600" />
           <h3 className="font-medium text-orange-800">
-            Alur Pengaturan Produk
+            {t("products.flowTitle")}
           </h3>
         </div>
         <div className="flex flex-wrap items-center gap-2 text-sm">
@@ -65,7 +66,7 @@ export default function ProductsPage() {
                 : "bg-white text-gray-600 border border-gray-200"
             }`}
           >
-            1. Buat Jenis
+            {t("products.step1")}
           </span>
           <span className="text-gray-400">→</span>
           <span
@@ -75,7 +76,7 @@ export default function ProductsPage() {
                 : "bg-white text-gray-600 border border-gray-200"
             }`}
           >
-            2. Buat Sub Jenis + Konfigurasi
+            {t("products.step2")}
           </span>
           <span className="text-gray-400">→</span>
           <span
@@ -85,12 +86,11 @@ export default function ProductsPage() {
                 : "bg-white text-gray-600 border border-gray-200"
             }`}
           >
-            3. Tambah Produk
+            {t("products.step3")}
           </span>
         </div>
         <p className="text-xs text-orange-700 mt-2">
-          💡 Tip: Buat Jenis dan Sub Jenis terlebih dahulu sebelum menambahkan
-          produk untuk mengatur hari tersedia, jumlah pesanan, dan add-ons.
+          {t("products.flowTip")}
         </p>
       </div>
 

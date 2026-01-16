@@ -144,10 +144,10 @@ export function AdminHeader() {
                 className="w-8 h-8 rounded-full flex items-center justify-center"
                 style={{
                   backgroundColor:
-                    user?.role === "super_admin" ? "#7b1fa2" : "#8b6f47",
+                    user?.roles.includes("owner") ? "#7b1fa2" : "#8b6f47",
                 }}
               >
-                {user?.role === "super_admin" ? (
+                {user?.roles.includes("owner") ? (
                   <Shield className="w-4 h-4 text-white" />
                 ) : (
                   <User className="w-4 h-4 text-white" />
@@ -161,7 +161,7 @@ export function AdminHeader() {
                   {user?.username}
                 </p>
                 <p className="text-xs" style={{ color: "#8b6f47" }}>
-                  {user?.role === "super_admin" ? t("users.superAdmin") : t("users.admin")}
+                  {user?.roles.includes("owner") ? t("users.superAdmin") : t("users.admin")}
                 </p>
               </div>
             </button>

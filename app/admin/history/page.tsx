@@ -6,8 +6,11 @@ import { HistoryFilter } from '@/components/adminPage/historyPage/HistoryFilter'
 import { OrderList } from '@/components/adminPage/historyPage/OrderList';
 import { OrderDetailModal } from '@/components/adminPage/historyPage/OrderDetailModal';
 import { History } from 'lucide-react';
+import { useAdminTranslation } from '@/app/contexts/AdminTranslationContext';
 
 function HistoryPageContent() {
+  const { t } = useAdminTranslation();
+  
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -17,10 +20,10 @@ function HistoryPageContent() {
         </div>
         <div>
           <h1 className="text-2xl font-bold font-admin-heading" style={{ color: '#5d4037' }}>
-            History Pesanan
+            {t("history.title")}
           </h1>
           <p className="font-admin-body" style={{ color: '#8b6f47' }}>
-            Kelola dan pantau semua pesanan yang masuk ke sistem
+            {t("history.subtitle")}
           </p>
         </div>
       </div>

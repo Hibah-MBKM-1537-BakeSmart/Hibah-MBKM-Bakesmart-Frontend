@@ -68,7 +68,8 @@ export function VouchersProvider({ children }: { children: ReactNode }) {
       expiryDate.setHours(0, 0, 0, 0); // Set to start of day
     }
 
-    const usageCount = backendVoucher.usageCount || 0;
+    // Use total_penggunaan from backend response
+    const usageCount = parseInt(backendVoucher.total_penggunaan) || backendVoucher.usageCount || 0;
     const maxUsage =
       backendVoucher.batas_penggunaan || backendVoucher.maxUsage || null;
 

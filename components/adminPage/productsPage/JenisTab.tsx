@@ -14,6 +14,7 @@ import { useJenis } from "@/app/contexts/JenisContext";
 import { useSubJenis } from "@/app/contexts/SubJenisContext";
 import { Jenis } from "@/lib/types";
 import { useToast } from "../Toast";
+import { useAdminTranslation } from "@/app/contexts/AdminTranslationContext";
 
 // Add/Edit Jenis Form Modal
 function JenisFormModal({
@@ -22,12 +23,14 @@ function JenisFormModal({
   onSubmit,
   editingJenis,
   existingJenis,
+  t,
 }: {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (data: { nama_id: string; nama_en: string }) => Promise<void>;
   editingJenis?: Jenis | null;
   existingJenis: Jenis[];
+  t: (key: string) => string;
 }) {
   const [namaId, setNamaId] = useState(editingJenis?.nama_id || "");
   const [namaEn, setNamaEn] = useState(editingJenis?.nama_en || "");
@@ -47,7 +50,7 @@ function JenisFormModal({
     setError("");
 
     if (!namaId.trim() || !namaEn.trim()) {
-      setError("Nama Indonesia dan English wajib diisi");
+      setError(t("products.bothRequired"));
       return;
     }
 
@@ -59,7 +62,7 @@ function JenisFormModal({
           j.nama_en.toLowerCase() === namaEn.toLowerCase())
     );
     if (isDuplicate) {
-      setError("Jenis dengan nama tersebut sudah ada");
+      setError(t("products.duplicateJenis"));
       return;
     }
 
@@ -68,7 +71,7 @@ function JenisFormModal({
       await onSubmit({ nama_id: namaId.trim(), nama_en: namaEn.trim() });
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Terjadi kesalahan");
+      setError(err instanceof Error ? err.message : t("products.errorOccurred"));
     } finally {
       setLoading(false);
     }
@@ -85,8 +88,8 @@ function JenisFormModal({
             <div className="p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
                 {editingJenis
-                  ? "Edit Jenis (Kategori)"
-                  : "Tambah Jenis (Kategori)"}
+                  ? t("products.editJenis")
+                  : t("products.addJenisTitle")}
               </h3>
 
               {error && (
@@ -99,13 +102,13 @@ function JenisFormModal({
                 <div>
                   <label className="flex items-center text-sm font-medium text-gray-700 mb-1">
                     <Globe className="w-4 h-4 mr-1 text-red-500" />
-                    Nama (Indonesia)
+                    {t("products.namaIndonesia")}
                   </label>
                   <input
                     type="text"
                     value={namaId}
                     onChange={(e) => setNamaId(e.target.value)}
-                    placeholder="Contoh: Kue, Roti, Pastry"
+                    placeholder={t("products.exampleId")}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                     required
                   />
@@ -114,13 +117,13 @@ function JenisFormModal({
                 <div>
                   <label className="flex items-center text-sm font-medium text-gray-700 mb-1">
                     <Globe className="w-4 h-4 mr-1 text-blue-500" />
-                    Nama (English)
+                    {t("products.namaEnglish")}
                   </label>
                   <input
                     type="text"
                     value={namaEn}
                     onChange={(e) => setNamaEn(e.target.value)}
-                    placeholder="Example: Cake, Bread, Pastry"
+                    placeholder={t("products.exampleEn")}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                     required
                   />
@@ -135,14 +138,14 @@ function JenisFormModal({
                 className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
                 disabled={loading}
               >
-                Batal
+                {t("common.cancel")}
               </button>
               <button
                 type="submit"
                 disabled={loading}
                 className="px-4 py-2 text-sm font-medium text-white bg-orange-500 rounded-lg hover:bg-orange-600 disabled:opacity-50"
               >
-                {loading ? "Menyimpan..." : editingJenis ? "Update" : "Tambah"}
+                {loading ? t("products.saving") : editingJenis ? t("products.update") : t("common.add")}
               </button>
             </div>
           </form>
@@ -157,6 +160,7 @@ export function JenisTab() {
     useJenis();
   const { getSubJenisByJenisId } = useSubJenis();
   const { addToast } = useToast();
+  const { t } = useAdminTranslation();
 
   const [searchTerm, setSearchTerm] = useState("");
   const [showForm, setShowForm] = useState(false);
@@ -178,11 +182,11 @@ export function JenisTab() {
     if (result) {
       addToast({
         type: "success",
-        title: "Jenis berhasil ditambahkan!",
-        message: `"${data.nama_id}" telah ditambahkan.`,
+        title: t("products.jenisAdded"),
+        message: `"${data.nama_id}"`,
       });
     } else {
-      throw new Error("Gagal menambahkan jenis");
+      throw new Error(t("products.deleteFailed"));
     }
   };
 
@@ -195,12 +199,12 @@ export function JenisTab() {
     if (result) {
       addToast({
         type: "success",
-        title: "Jenis berhasil diupdate!",
-        message: `"${data.nama_id}" telah diperbarui.`,
+        title: t("products.jenisUpdated"),
+        message: `"${data.nama_id}"`,
       });
       setEditingJenis(null);
     } else {
-      throw new Error("Gagal mengupdate jenis");
+      throw new Error(t("products.deleteFailed"));
     }
   };
 
@@ -212,9 +216,8 @@ export function JenisTab() {
     if (hasSubJenis) {
       addToast({
         type: "error",
-        title: "Tidak dapat menghapus",
-        message:
-          "Jenis ini memiliki Sub Jenis. Hapus Sub Jenis terlebih dahulu.",
+        title: t("products.cannotDelete"),
+        message: t("products.hasSubJenis"),
       });
       setDeleteConfirm(null);
       return;
@@ -224,14 +227,14 @@ export function JenisTab() {
     if (result) {
       addToast({
         type: "success",
-        title: "Jenis berhasil dihapus!",
-        message: `"${deleteConfirm.name}" telah dihapus.`,
+        title: t("products.jenisDeleted"),
+        message: `"${deleteConfirm.name}"`,
       });
     } else {
       addToast({
         type: "error",
-        title: "Gagal menghapus jenis",
-        message: "Terjadi kesalahan saat menghapus.",
+        title: t("products.deleteFailed"),
+        message: t("products.errorOccurred"),
       });
     }
     setDeleteConfirm(null);
@@ -243,10 +246,10 @@ export function JenisTab() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h2 className="text-xl font-semibold text-gray-900">
-            Manajemen Jenis (Kategori)
+            {t("products.jenisManagement")}
           </h2>
           <p className="text-sm text-gray-600 mt-1">
-            Kelola kategori utama produk seperti Roti, Kue, Pastry, dll.
+            {t("products.jenisSubtitle")}
           </p>
         </div>
         <button
@@ -257,7 +260,7 @@ export function JenisTab() {
           className="flex items-center space-x-2 bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition-colors text-sm font-medium"
         >
           <Plus className="w-4 h-4" />
-          <span>Tambah Jenis</span>
+          <span>{t("products.addJenis")}</span>
         </button>
       </div>
 
@@ -266,7 +269,7 @@ export function JenisTab() {
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
         <input
           type="text"
-          placeholder="Cari jenis..."
+          placeholder={t("products.searchJenis")}
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
@@ -284,7 +287,7 @@ export function JenisTab() {
               <p className="text-2xl font-bold text-orange-600">
                 {jenisList.length}
               </p>
-              <p className="text-sm text-gray-600">Total Jenis</p>
+              <p className="text-sm text-gray-600">{t("products.totalJenis")}</p>
             </div>
           </div>
         </div>
@@ -294,18 +297,18 @@ export function JenisTab() {
       {loading ? (
         <div className="flex items-center justify-center py-12">
           <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
-          <span className="ml-3 text-gray-600">Memuat data...</span>
+          <span className="ml-3 text-gray-600">{t("products.loadingData")}</span>
         </div>
       ) : filteredJenis.length === 0 ? (
         <div className="text-center py-12 bg-gray-50 rounded-lg">
           <Tag className="w-16 h-16 text-gray-300 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">
-            {searchTerm ? "Tidak ditemukan" : "Belum ada Jenis"}
+            {searchTerm ? t("products.notFound") : t("products.noJenis")}
           </h3>
           <p className="text-gray-600 mb-4">
             {searchTerm
-              ? "Coba ubah kata kunci pencarian"
-              : "Mulai dengan menambahkan Jenis pertama untuk mengkategorikan produk Anda"}
+              ? t("products.tryChangeSearch")
+              : t("products.startAddJenis")}
           </p>
           {!searchTerm && (
             <button
@@ -313,7 +316,7 @@ export function JenisTab() {
               className="inline-flex items-center space-x-2 bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition-colors"
             >
               <Plus className="w-4 h-4" />
-              <span>Tambah Jenis Pertama</span>
+              <span>{t("products.addFirstJenis")}</span>
             </button>
           )}
         </div>
@@ -323,16 +326,16 @@ export function JenisTab() {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Nama (ID)
+                  {t("products.namaId")}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Nama (EN)
+                  {t("products.namaEn")}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Sub Jenis
+                  {t("products.subJenis")}
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Aksi
+                  {t("common.actions")}
                 </th>
               </tr>
             </thead>
@@ -362,7 +365,7 @@ export function JenisTab() {
                             : "bg-gray-100 text-gray-600"
                         }`}
                       >
-                        {subJenisCount} sub jenis
+                        {subJenisCount} {t("products.subJenisCount")}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right">
@@ -414,14 +417,13 @@ export function JenisTab() {
                     <AlertTriangle className="w-5 h-5 text-red-600" />
                   </div>
                   <h3 className="text-lg font-semibold text-gray-900">
-                    Konfirmasi Hapus
+                    {t("products.confirmDeleteTitle")}
                   </h3>
                 </div>
 
                 <p className="text-gray-600 mb-6">
-                  Apakah Anda yakin ingin menghapus Jenis{" "}
-                  <strong>"{deleteConfirm.name}"</strong>? Tindakan ini tidak
-                  dapat dibatalkan.
+                  {t("products.confirmDeleteJenis")}{" "}
+                  <strong>"{deleteConfirm.name}"</strong>? {t("products.cannotUndo")}
                 </p>
 
                 <div className="flex justify-end space-x-3">
@@ -429,13 +431,13 @@ export function JenisTab() {
                     onClick={() => setDeleteConfirm(null)}
                     className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
                   >
-                    Batal
+                    {t("common.cancel")}
                   </button>
                   <button
                     onClick={handleDeleteJenis}
                     className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700"
                   >
-                    Hapus
+                    {t("common.delete")}
                   </button>
                 </div>
               </div>
@@ -454,6 +456,7 @@ export function JenisTab() {
         onSubmit={editingJenis ? handleEditJenis : handleAddJenis}
         editingJenis={editingJenis}
         existingJenis={jenisList}
+        t={t}
       />
     </div>
   );

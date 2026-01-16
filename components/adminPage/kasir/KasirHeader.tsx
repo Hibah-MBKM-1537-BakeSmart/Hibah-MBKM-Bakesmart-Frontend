@@ -2,10 +2,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { useKasir } from '@/app/contexts/KasirContext';
+import { useAdminTranslation } from '@/app/contexts/AdminTranslationContext';
 import { Clock, User, Receipt, ShoppingCart } from 'lucide-react';
 
 export function KasirHeader() {
   const { state } = useKasir();
+  const { t, language } = useAdminTranslation();
   const [currentTime, setCurrentTime] = useState<string>('');
   const [currentDate, setCurrentDate] = useState<string>('');
 
@@ -13,12 +15,13 @@ export function KasirHeader() {
     // Function to update time
     const updateDateTime = () => {
       const now = new Date();
-      setCurrentTime(now.toLocaleTimeString('id-ID', {
+      const locale = language === 'id' ? 'id-ID' : 'en-US';
+      setCurrentTime(now.toLocaleTimeString(locale, {
         hour: '2-digit',
         minute: '2-digit',
         second: '2-digit'
       }));
-      setCurrentDate(now.toLocaleDateString('id-ID', {
+      setCurrentDate(now.toLocaleDateString(locale, {
         weekday: 'long',
         year: 'numeric',
         month: 'long',
@@ -34,7 +37,7 @@ export function KasirHeader() {
 
     // Cleanup on unmount
     return () => clearInterval(interval);
-  }, []);
+  }, [language]);
 
   const totalItems = state.cart.reduce((sum, item) => sum + item.quantity, 0);
 
@@ -46,8 +49,8 @@ export function KasirHeader() {
           <div>
             <h1 className="text-lg sm:text-2xl 2xl:text-xl font-bold text-gray-900 flex items-center">
               <Receipt className="w-5 h-5 sm:w-6 sm:h-6 2xl:w-5 2xl:h-5 mr-2 text-orange-500" />
-              <span className="hidden xs:inline">Kasir</span>
-              <span className="xs:hidden">Kasir</span>
+              <span className="hidden xs:inline">{t("kasir.title")}</span>
+              <span className="xs:hidden">{t("kasir.title")}</span>
             </h1>
             <p className="text-xs sm:text-sm 2xl:text-xs text-gray-600">{currentDate}</p>
           </div>
@@ -64,7 +67,7 @@ export function KasirHeader() {
             <div className="flex items-center space-x-2 bg-blue-50 px-3 2xl:px-2 py-2 2xl:py-1 rounded-lg">
               <User className="w-4 h-4 2xl:w-3.5 2xl:h-3.5 text-blue-600" />
               <span className="text-sm 2xl:text-xs font-medium text-blue-700">
-                Customer: {state.customerName}
+                {t("kasir.customer")}: {state.customerName}
               </span>
             </div>
           )}
@@ -76,7 +79,7 @@ export function KasirHeader() {
             <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5 2xl:w-4 2xl:h-4 text-orange-600" />
             <div className="text-xs sm:text-sm 2xl:text-xs">
               <span className="font-medium text-orange-700">
-                {totalItems} item{totalItems !== 1 ? 's' : ''}
+                {totalItems} {totalItems !== 1 ? t("kasir.items") : t("kasir.itemSingular")}
               </span>
               <span className="text-orange-600 ml-1 sm:ml-2">
                 Rp {state.cart.reduce((sum, item) => sum + (item.product.harga * item.quantity), 0).toLocaleString('id-ID')}
@@ -85,8 +88,8 @@ export function KasirHeader() {
           </div>
           
           <div className="hidden sm:block text-right">
-            <div className="text-sm 2xl:text-xs text-gray-600">Kasir:</div>
-            <div className="text-sm 2xl:text-xs font-medium text-gray-900">Admin BakeSmart</div>
+            <div className="text-sm 2xl:text-xs text-gray-600">{t("kasir.cashierLabel")}</div>
+            <div className="text-sm 2xl:text-xs font-medium text-gray-900">{t("kasir.admin")}</div>
           </div>
         </div>
       </div>

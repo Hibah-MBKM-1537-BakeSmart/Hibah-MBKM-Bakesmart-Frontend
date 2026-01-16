@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/contexts/AuthContext";
 import { Eye, EyeOff, Lock, Phone, AlertCircle, Cake} from "lucide-react";
+import { parseRoles, getDefaultRedirect } from "@/lib/rbac";
 
 interface LoginForm {
   no_hp: string;
@@ -17,7 +18,7 @@ interface LoginError {
 
 export default function AdminLoginPage() {
   const router = useRouter();
-  const { login, user } = useAuth();
+  const { login, user, isLoading: isAuthLoading } = useAuth();
   const [form, setForm] = useState<LoginForm>({
     no_hp: "",
     password: "",
@@ -26,12 +27,37 @@ export default function AdminLoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<LoginError | null>(null);
 
-  // Redirect if already logged in
+  // Redirect if already logged in (only after auth check is complete)
   useEffect(() => {
-    if (user) {
-      router.push("/admin/dashboard");
+    if (!isAuthLoading && user) {
+      const redirectPath = getDefaultRedirect(user.roles);
+      router.replace(redirectPath);
     }
-  }, [user, router]);
+  }, [user, isAuthLoading, router]);
+
+  // Show loading while checking auth state
+  if (isAuthLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: "#fefdf8" }}>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 mx-auto mb-4" style={{ borderColor: '#8b6f47' }}></div>
+          <p style={{ color: '#8b6f47' }}>Memuat...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If user is already logged in, show loading while redirecting
+  if (user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: "#fefdf8" }}>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 mx-auto mb-4" style={{ borderColor: '#8b6f47' }}></div>
+          <p style={{ color: '#8b6f47' }}>Mengalihkan...</p>
+        </div>
+      </div>
+    );
+  }
 
   const handleInputChange = (field: keyof LoginForm, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -76,9 +102,23 @@ export default function AdminLoginPage() {
         return;
       }
 
-      // Login successful
-      login(form.no_hp, "admin", data.token);
-      router.push("/admin/dashboard");
+      // Parse roles from backend response
+      // Backend may return roles as: data.roles, data.user.roles, or legacy data.role
+      const rolesData = data.roles || data.user?.roles || [data.role] || [];
+      const parsedRoles = parseRoles(rolesData);
+
+      if (parsedRoles.length === 0) {
+        setError({ message: "Akun tidak memiliki role yang valid untuk mengakses admin panel" });
+        setIsLoading(false);
+        return;
+      }
+
+      // Login successful with roles
+      login(form.no_hp, parsedRoles, data.token, data.user?.id || data.userId);
+      
+      // Redirect to appropriate page based on role
+      const redirectPath = getDefaultRedirect(parsedRoles);
+      router.push(redirectPath);
     } catch (err) {
       console.error("Login error:", err);
       setError({ message: "Terjadi kesalahan saat login. Silakan coba lagi." });

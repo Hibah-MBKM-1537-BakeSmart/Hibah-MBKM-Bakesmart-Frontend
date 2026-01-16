@@ -3,8 +3,10 @@
 import React from "react";
 import { Users, UserCheck, Activity } from "lucide-react";
 import { useCustomers } from "../../../app/contexts/CustomersContext";
+import { useAdminTranslation } from "../../../app/contexts/AdminTranslationContext";
 
 export default function CustomersHeader() {
+  const { t } = useAdminTranslation();
   const { state } = useCustomers();
 
   // Calculate statistics
@@ -21,7 +23,7 @@ export default function CustomersHeader() {
 
   const statisticsCards = [
     {
-      title: "Total Customers",
+      titleKey: "customers.totalCustomers",
       value: totalCustomers,
       change: "+2.1%",
       changeType: "positive" as const,
@@ -30,7 +32,7 @@ export default function CustomersHeader() {
       iconColor: "text-blue-600",
     },
     {
-      title: "Active Members",
+      titleKey: "customers.activeMembers",
       value: activeMembers,
       change: "+5.3%",
       changeType: "positive" as const,
@@ -39,7 +41,7 @@ export default function CustomersHeader() {
       iconColor: "text-green-600",
     },
     {
-      title: "Active This Week",
+      titleKey: "customers.activeThisWeek",
       value: activeNow,
       change: "-1.2%",
       changeType: "negative" as const,
@@ -55,10 +57,10 @@ export default function CustomersHeader() {
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 font-poppins">
-            Customers
+            {t("customers.title")}
           </h1>
           <p className="text-gray-600 font-inter">
-            Manage your customer base and relationships
+            {t("customers.subtitle")}
           </p>
         </div>
 
@@ -77,7 +79,7 @@ export default function CustomersHeader() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600 font-inter">
-                    {card.title}
+                    {t(card.titleKey as any)}
                   </p>
                   <p className="text-2xl font-bold text-gray-900 font-poppins mt-1">
                     {card.value.toLocaleString()}
@@ -93,7 +95,7 @@ export default function CustomersHeader() {
                       {card.change}
                     </span>
                     <span className="text-sm text-gray-500 ml-1 font-inter">
-                      vs last month
+                      {t("customers.vsLastMonth")}
                     </span>
                   </div>
                 </div>
