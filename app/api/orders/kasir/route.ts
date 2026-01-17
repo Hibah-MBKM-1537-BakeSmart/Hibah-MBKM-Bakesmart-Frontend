@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { createAuthHeaders } from "@/lib/api/fetchWithAuth";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 const BACKEND_URL_KASIR = `${BACKEND_URL}/orders/kasir`;
@@ -112,9 +113,7 @@ export async function POST(request: Request) {
     // Call the dedicated kasir endpoint - automatically sets status to "paid" and production to "completed"
     const response = await fetch(BACKEND_URL_KASIR, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: createAuthHeaders(request),
       body: JSON.stringify(orderPayload),
     });
 

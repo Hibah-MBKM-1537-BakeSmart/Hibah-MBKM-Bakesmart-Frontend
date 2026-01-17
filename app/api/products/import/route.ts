@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getAuthHeader } from "@/lib/api/fetchWithAuth";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 const EXTERNAL_API_URL = `${BACKEND_URL}/products/import`;
@@ -8,8 +9,16 @@ export async function POST(request: Request) {
     const formData = await request.formData();
     console.log(`[Products Import API] POST import to: ${EXTERNAL_API_URL}`);
 
+    // Get auth header for FormData (don't set Content-Type, let browser handle it)
+    const authHeader = getAuthHeader(request);
+    const headers: HeadersInit = {};
+    if (authHeader) {
+      headers["Authorization"] = authHeader;
+    }
+
     const response = await fetch(EXTERNAL_API_URL, {
       method: "POST",
+      headers,
       body: formData,
     });
 

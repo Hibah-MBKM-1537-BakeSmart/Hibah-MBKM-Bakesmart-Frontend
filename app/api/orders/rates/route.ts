@@ -1,9 +1,10 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { createAuthHeaders } from "@/lib/api/fetchWithAuth";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 const BACKEND_RATES_URL = `${BACKEND_URL}/orders/rates/coordinates`;
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
     const payload = await request.json();
 
@@ -12,11 +13,12 @@ export async function POST(request: Request) {
       JSON.stringify(payload, null, 2)
     );
 
+    // Get auth headers
+    const authHeaders = createAuthHeaders(request);
+
     const response = await fetch(BACKEND_RATES_URL, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: authHeaders,
       body: JSON.stringify(payload),
     });
 

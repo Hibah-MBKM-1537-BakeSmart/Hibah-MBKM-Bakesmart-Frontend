@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createAuthHeaders } from "@/lib/api/fetchWithAuth";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
@@ -20,11 +21,12 @@ export async function POST(request: NextRequest) {
 
         console.log('[Orders Group Date API] Fetching orders for date:', date);
 
+        // Get auth headers
+        const authHeaders = createAuthHeaders(request);
+
         const response = await fetch(`${BACKEND_URL}/orders/group/date`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: authHeaders,
             body: JSON.stringify({ date }),
         });
 

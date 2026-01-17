@@ -7,6 +7,7 @@ import {
   useEffect,
   type ReactNode,
 } from "react";
+import { fetchWithAuth } from "@/lib/api/fetchWithAuth";
 
 // Use Next.js API route instead of direct backend call to avoid CORS
 const BACKEND_API_URL = "/api/vouchers";
@@ -129,7 +130,7 @@ export function VouchersProvider({ children }: { children: ReactNode }) {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
-      const response = await fetch(BACKEND_API_URL, {
+      const response = await fetchWithAuth(BACKEND_API_URL, {
         cache: "no-store",
         signal: controller.signal,
       });
@@ -255,11 +256,8 @@ export function VouchersProvider({ children }: { children: ReactNode }) {
 
       console.log("[VouchersContext] Creating voucher with payload:", payload);
 
-      const response = await fetch(BACKEND_API_URL, {
+      const response = await fetchWithAuth(BACKEND_API_URL, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
         body: JSON.stringify(payload),
         signal: AbortSignal.timeout(30000), // 30 second timeout
       });
@@ -325,11 +323,8 @@ export function VouchersProvider({ children }: { children: ReactNode }) {
         payload
       );
 
-      const response = await fetch(`${BACKEND_API_URL}/${id}`, {
+      const response = await fetchWithAuth(`${BACKEND_API_URL}/${id}`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
         body: JSON.stringify(payload),
         signal: AbortSignal.timeout(30000), // 30 second timeout
       });
@@ -370,7 +365,7 @@ export function VouchersProvider({ children }: { children: ReactNode }) {
     try {
       console.log("[VouchersContext] Deleting voucher:", id);
 
-      const response = await fetch(`${BACKEND_API_URL}/${id}`, {
+      const response = await fetchWithAuth(`${BACKEND_API_URL}/${id}`, {
         method: "DELETE",
         signal: AbortSignal.timeout(30000), // 30 second timeout
       });

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { fetchWithAuth } from "@/lib/api/fetchWithAuth";
 
 export interface Category {
   id: number;
@@ -49,7 +50,7 @@ export function CategoriesProvider({ children }: { children: ReactNode }) {
         console.log('[Categories] Loading categories from backend...');
         setState(prev => ({ ...prev, loading: true, isApiConnected: false }));
 
-        const response = await fetch('/api/jenis', {
+        const response = await fetchWithAuth('/api/jenis', {
           method: 'GET',
           cache: 'no-store',
         });
@@ -113,9 +114,8 @@ export function CategoriesProvider({ children }: { children: ReactNode }) {
       }
       
       // Send to backend API
-      const response = await fetch('/api/jenis', {
+      const response = await fetchWithAuth('/api/jenis', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(categoryData),
       });
 
@@ -157,9 +157,8 @@ export function CategoriesProvider({ children }: { children: ReactNode }) {
       }
 
       // Send to backend API
-      const response = await fetch(`/api/jenis/${id}`, {
+      const response = await fetchWithAuth(`/api/jenis/${id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(categoryData),
       });
 
@@ -189,7 +188,7 @@ export function CategoriesProvider({ children }: { children: ReactNode }) {
       setState(prev => ({ ...prev, loading: true, error: null }));
       
       // Send to backend API
-      const response = await fetch(`/api/jenis/${id}`, {
+      const response = await fetchWithAuth(`/api/jenis/${id}`, {
         method: 'DELETE',
       });
 
@@ -217,7 +216,7 @@ export function CategoriesProvider({ children }: { children: ReactNode }) {
     try {
       setState(prev => ({ ...prev, loading: true, error: null }));
       
-      const response = await fetch('/api/jenis', {
+      const response = await fetchWithAuth('/api/jenis', {
         method: 'GET',
         cache: 'no-store',
       });

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createAuthHeaders } from "@/lib/api/fetchWithAuth";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://0.0.0.0:5000";
 
@@ -10,13 +11,14 @@ export async function POST(
     const { id, attributeId } = await params;
     const body = await request.json();
 
+    // Get auth headers and add body
+    const authHeaders = createAuthHeaders(request);
+
     const response = await fetch(
       `${API_URL}/sub_jenis/${id}/attribute/${attributeId}`,
       {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: authHeaders,
         body: JSON.stringify(body), // Body berisi { harga: number }
       }
     );
@@ -41,9 +43,7 @@ export async function DELETE(
       `${API_URL}/sub_jenis/${id}/attribute/${attributeId}`,
       {
         method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: createAuthHeaders(request),
       }
     );
 

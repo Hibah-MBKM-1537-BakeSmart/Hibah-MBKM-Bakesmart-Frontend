@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { createAuthHeaders } from "@/lib/api/fetchWithAuth";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 const EXTERNAL_API_URL = `${BACKEND_URL}/products`;
@@ -9,9 +10,7 @@ export async function GET(request: Request) {
 
     const response = await fetch(EXTERNAL_API_URL, {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: createAuthHeaders(request),
       cache: "no-store",
     });
 
@@ -46,9 +45,7 @@ export async function POST(request: Request) {
 
     const response = await fetch(EXTERNAL_API_URL, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: createAuthHeaders(request),
       body: JSON.stringify(body),
     });
 

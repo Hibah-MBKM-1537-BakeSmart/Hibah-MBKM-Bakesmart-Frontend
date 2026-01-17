@@ -8,6 +8,7 @@ import {
   useEffect,
   useCallback,
 } from "react";
+import { fetchWithAuth } from "@/lib/api/fetchWithAuth";
 
 // Operating hours structure per day
 export interface OperatingHour {
@@ -148,7 +149,7 @@ export function StoreClosureProvider({
     try {
       setIsLoading(true);
       setError(null);
-      const response = await fetch("/api/config");
+      const response = await fetchWithAuth("/api/config");
 
       if (!response.ok) {
         throw new Error("Failed to fetch config");
@@ -207,11 +208,8 @@ export function StoreClosureProvider({
       setIsLoading(true);
       setError(null);
 
-      const response = await fetch("/api/config", {
+      const response = await fetchWithAuth("/api/config", {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
         body: JSON.stringify(config),
       });
 
