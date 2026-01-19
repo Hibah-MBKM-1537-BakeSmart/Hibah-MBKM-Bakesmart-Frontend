@@ -9,6 +9,7 @@ import React, {
   ReactNode,
 } from "react";
 import { SubJenis } from "@/lib/types";
+import { fetchWithAuth } from "@/lib/api/fetchWithAuth";
 
 interface SubJenisContextType {
   subJenisList: SubJenis[];
@@ -49,7 +50,7 @@ export function SubJenisProvider({ children }: { children: ReactNode }) {
       console.log(
         "[SubJenisContext] Fetching sub_jenis from products (fallback)..."
       );
-      const response = await fetch("/api/products");
+      const response = await fetchWithAuth("/api/products");
       if (!response.ok) return [];
 
       const result = await response.json();
@@ -126,7 +127,7 @@ export function SubJenisProvider({ children }: { children: ReactNode }) {
     setError(null);
     try {
       console.log("[SubJenisContext] Fetching sub_jenis...");
-      const response = await fetch("/api/sub_jenis");
+      const response = await fetchWithAuth("/api/sub_jenis");
 
       // Log response status for debugging
       console.log("[SubJenisContext] Response status:", response.status);
@@ -203,7 +204,7 @@ export function SubJenisProvider({ children }: { children: ReactNode }) {
   const getSubJenisById = useCallback(
     async (id: number): Promise<SubJenis | null> => {
       try {
-        const response = await fetch(`/api/sub_jenis/${id}`);
+        const response = await fetchWithAuth(`/api/sub_jenis/${id}`);
         if (!response.ok) {
           if (response.status === 404) return null;
           throw new Error("Failed to fetch sub_jenis");
@@ -230,9 +231,8 @@ export function SubJenisProvider({ children }: { children: ReactNode }) {
   const createSubJenis = useCallback(
     async (data: Omit<SubJenis, "id">): Promise<SubJenis | null> => {
       try {
-        const response = await fetch("/api/sub_jenis", {
+        const response = await fetchWithAuth("/api/sub_jenis", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(data),
         });
 
@@ -270,9 +270,8 @@ export function SubJenisProvider({ children }: { children: ReactNode }) {
       data: Partial<Omit<SubJenis, "id">>
     ): Promise<SubJenis | null> => {
       try {
-        const response = await fetch(`/api/sub_jenis/${id}`, {
+        const response = await fetchWithAuth(`/api/sub_jenis/${id}`, {
           method: "PUT",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(data),
         });
 
@@ -308,7 +307,7 @@ export function SubJenisProvider({ children }: { children: ReactNode }) {
   // Delete sub_jenis
   const deleteSubJenis = useCallback(async (id: number): Promise<boolean> => {
     try {
-      const response = await fetch(`/api/sub_jenis/${id}`, {
+      const response = await fetchWithAuth(`/api/sub_jenis/${id}`, {
         method: "DELETE",
       });
 
@@ -336,7 +335,7 @@ export function SubJenisProvider({ children }: { children: ReactNode }) {
         console.log(
           `[SubJenisContext] Adding sub_jenis ${subJenisId} to product ${productId}`
         );
-        const response = await fetch(
+        const response = await fetchWithAuth(
           `/api/products/${productId}/sub_jenis/${subJenisId}`,
           {
             method: "POST",
@@ -382,7 +381,7 @@ export function SubJenisProvider({ children }: { children: ReactNode }) {
         console.log(
           `[SubJenisContext] Removing sub_jenis ${subJenisId} from product ${productId}`
         );
-        const response = await fetch(
+        const response = await fetchWithAuth(
           `/api/products/${productId}/sub_jenis/${subJenisId}`,
           {
             method: "DELETE",

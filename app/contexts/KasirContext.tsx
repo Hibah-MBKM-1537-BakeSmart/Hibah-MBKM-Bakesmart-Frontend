@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { fetchWithAuth } from "@/lib/api/fetchWithAuth";
 
 // Related entities interfaces based on backend structure
 export interface Gambar {
@@ -172,7 +173,7 @@ export function KasirProvider({ children }: { children: React.ReactNode }) {
         setState(prev => ({ ...prev, isLoadingProducts: true, isApiConnected: false }));
 
         // Fetch products from backend via Next.js API proxy
-        const response = await fetch('/api/products', {
+        const response = await fetchWithAuth('/api/products', {
           method: 'GET',
           cache: 'no-store',
         });
@@ -244,7 +245,7 @@ export function KasirProvider({ children }: { children: React.ReactNode }) {
 
     const syncInterval = setInterval(async () => {
       try {
-        const response = await fetch('/api/products', {
+        const response = await fetchWithAuth('/api/products', {
           method: 'GET',
           cache: 'no-store',
         });
@@ -529,11 +530,8 @@ export function KasirProvider({ children }: { children: React.ReactNode }) {
 
           console.log('[Kasir] Sending order to backend:', orderData);
 
-          const response = await fetch('/api/orders/kasir', {
+          const response = await fetchWithAuth('/api/orders/kasir', {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
             body: JSON.stringify(orderData),
           });
 

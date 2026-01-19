@@ -1,13 +1,14 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { createAuthHeaders } from "@/lib/api/fetchWithAuth";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
-export async function GET(request: Request, { params }: { params: Promise<{ user_id: string }> }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ user_id: string }> }) {
   try {
     const { user_id } = await params;
     const url = `${BACKEND_URL}/users/${user_id}/customers/order/last`;
 
-    const response = await fetch(url, { method: 'GET', headers: { 'Content-Type': 'application/json' }, cache: 'no-store' });
+    const response = await fetch(url, { method: 'GET', headers: createAuthHeaders(request), cache: 'no-store' });
     const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createAuthHeaders } from "@/lib/api/fetchWithAuth";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
@@ -18,8 +19,16 @@ export async function POST(request: NextRequest) {
     const backendFormData = new FormData();
     backendFormData.append("file", file);
 
+    // Get auth token from request headers
+    const authToken = request.headers.get("Authorization");
+    const headers: HeadersInit = {};
+    if (authToken) {
+      headers["Authorization"] = authToken;
+    }
+
     const response = await fetch(`${BACKEND_URL}/customers/import`, {
       method: "POST",
+      headers,
       body: backendFormData,
     });
 

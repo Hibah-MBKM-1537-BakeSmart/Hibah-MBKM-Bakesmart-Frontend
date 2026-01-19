@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createAuthHeaders } from "@/lib/api/fetchWithAuth";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
@@ -13,9 +14,7 @@ export async function GET(
 
     const response = await fetch(`${BACKEND_URL}/sub_jenis/${id}`, {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: createAuthHeaders(request),
       cache: "no-store",
     });
 
@@ -61,9 +60,7 @@ export async function PUT(
 
     const response = await fetch(`${BACKEND_URL}/sub_jenis/${id}`, {
       method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: createAuthHeaders(request),
       body: JSON.stringify(backendBody),
     });
 
@@ -124,9 +121,7 @@ export async function DELETE(
 
     const response = await fetch(`${BACKEND_URL}/sub_jenis/${id}`, {
       method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: createAuthHeaders(request),
     });
 
     // Read raw response for debugging

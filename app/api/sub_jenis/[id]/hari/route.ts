@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createAuthHeaders } from "@/lib/api/fetchWithAuth";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://0.0.0.0:5000";
 
@@ -10,9 +11,7 @@ export async function GET(
     const { id } = await params;
     const response = await fetch(`${API_URL}/sub_jenis/${id}/hari`, {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: createAuthHeaders(request),
     });
 
     const data = await response.json();

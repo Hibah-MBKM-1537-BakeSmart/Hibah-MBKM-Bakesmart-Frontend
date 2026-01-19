@@ -7,6 +7,7 @@ import {
   useEffect,
   type ReactNode,
 } from "react";
+import { fetchWithAuth } from "@/lib/api/fetchWithAuth";
 
 const BACKEND_API_URL = "/api/dashboard/stats";
 
@@ -135,11 +136,8 @@ export function StatisticsProvider({ children }: { children: ReactNode }) {
     const timeoutId = setTimeout(() => controller.abort(), 10000);
 
     try {
-      const response = await fetch(BACKEND_API_URL, {
+      const response = await fetchWithAuth(BACKEND_API_URL, {
         method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
         signal: controller.signal,
         cache: "no-store",
       });

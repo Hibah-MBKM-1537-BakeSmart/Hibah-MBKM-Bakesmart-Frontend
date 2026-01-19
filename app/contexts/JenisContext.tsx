@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from "react";
 import { Jenis } from "@/lib/types";
+import { fetchWithAuth } from "@/lib/api/fetchWithAuth";
 
 interface JenisContextType {
   jenisList: Jenis[];
@@ -26,7 +27,7 @@ export function JenisProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch("/api/jenis");
+      const response = await fetchWithAuth("/api/jenis");
       if (!response.ok) {
         throw new Error("Failed to fetch jenis");
       }
@@ -45,7 +46,7 @@ export function JenisProvider({ children }: { children: ReactNode }) {
   // Get jenis by ID
   const getJenisById = useCallback(async (id: number): Promise<Jenis | null> => {
     try {
-      const response = await fetch(`/api/jenis/${id}`);
+      const response = await fetchWithAuth(`/api/jenis/${id}`);
       if (!response.ok) {
         if (response.status === 404) return null;
         throw new Error("Failed to fetch jenis");
@@ -61,9 +62,8 @@ export function JenisProvider({ children }: { children: ReactNode }) {
   // Create new jenis
   const createJenis = useCallback(async (data: Omit<Jenis, "id">): Promise<Jenis | null> => {
     try {
-      const response = await fetch("/api/jenis", {
+      const response = await fetchWithAuth("/api/jenis", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
       
@@ -92,9 +92,8 @@ export function JenisProvider({ children }: { children: ReactNode }) {
   // Update jenis
   const updateJenis = useCallback(async (id: number, data: Partial<Omit<Jenis, "id">>): Promise<Jenis | null> => {
     try {
-      const response = await fetch(`/api/jenis/${id}`, {
+      const response = await fetchWithAuth(`/api/jenis/${id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
       
@@ -123,7 +122,7 @@ export function JenisProvider({ children }: { children: ReactNode }) {
   // Delete jenis
   const deleteJenis = useCallback(async (id: number): Promise<boolean> => {
     try {
-      const response = await fetch(`/api/jenis/${id}`, {
+      const response = await fetchWithAuth(`/api/jenis/${id}`, {
         method: "DELETE",
       });
       

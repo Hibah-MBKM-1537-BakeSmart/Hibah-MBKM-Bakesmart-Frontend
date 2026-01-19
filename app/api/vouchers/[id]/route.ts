@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { createAuthHeaders } from "@/lib/api/fetchWithAuth";
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 /**
  * GET /api/vouchers/[id] - Get voucher by ID
@@ -12,9 +13,7 @@ export async function GET(
 
     const response = await fetch(`${BACKEND_URL}/voucher/${id}`, {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: createAuthHeaders(request),
       cache: "no-store",
     });
 
@@ -55,9 +54,7 @@ export async function PUT(
 
     const response = await fetch(`${BACKEND_URL}/voucher/${id}`, {
       method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: createAuthHeaders(request),
       body: JSON.stringify(payload),
     });
 
@@ -102,6 +99,7 @@ export async function DELETE(
 
     const response = await fetch(`${BACKEND_URL}/voucher/${id}`, {
       method: "DELETE",
+      headers: createAuthHeaders(request),
     });
 
     const data = await response.json();

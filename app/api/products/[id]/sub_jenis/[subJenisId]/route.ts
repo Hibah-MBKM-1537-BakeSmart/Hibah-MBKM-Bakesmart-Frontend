@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createAuthHeaders } from "@/lib/api/fetchWithAuth";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
@@ -16,9 +17,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       `${BACKEND_URL}/products/${productId}/sub_jenis/${subJenisId}`,
       {
         method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: createAuthHeaders(request),
         cache: "no-store",
       }
     );
@@ -57,9 +56,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       `${BACKEND_URL}/products/${productId}/sub_jenis/${subJenisId}`,
       {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: createAuthHeaders(request),
       }
     );
 
@@ -105,9 +102,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       `${BACKEND_URL}/products/${productId}/sub_jenis/${subJenisId}`,
       {
         method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: createAuthHeaders(request),
       }
     );
 

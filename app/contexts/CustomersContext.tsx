@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { fetchWithAuth } from "@/lib/api/fetchWithAuth";
 
 // Based on order_product table structure
 interface Purchase {
@@ -99,7 +100,7 @@ export function CustomersProvider({ children }: { children: React.ReactNode }) {
   const fetchCustomers = async () => {
     setState((prev) => ({ ...prev, isLoading: true }));
     try {
-      const response = await fetch("/api/customers");
+      const response = await fetchWithAuth("/api/customers");
       const result = await response.json();
 
       if (result.data) {
@@ -167,7 +168,7 @@ export function CustomersProvider({ children }: { children: React.ReactNode }) {
     formData.append("file", file);
 
     try {
-      const response = await fetch("/api/customers/import", {
+      const response = await fetchWithAuth("/api/customers/import", {
         method: "POST",
         body: formData,
       });
@@ -325,7 +326,7 @@ export function CustomersProvider({ children }: { children: React.ReactNode }) {
 
   const exportToExcel = async () => {
     try {
-      const response = await fetch("/api/customers/export", {
+      const response = await fetchWithAuth("/api/customers/export", {
         method: "GET",
       });
 

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createAuthHeaders } from "@/lib/api/fetchWithAuth";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://0.0.0.0:5000";
 
@@ -6,9 +7,7 @@ export async function GET(request: NextRequest) {
   try {
     const response = await fetch(`${API_URL}/atribut`, {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: createAuthHeaders(request),
     });
 
     const data = await response.json();
@@ -25,11 +24,12 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
+    // Get auth headers
+    const authHeaders = createAuthHeaders(request);
+
     const response = await fetch(`${API_URL}/atribut`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: authHeaders,
       body: JSON.stringify(body),
     });
 

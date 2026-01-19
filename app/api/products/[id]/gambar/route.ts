@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createAuthHeaders, getAuthHeader } from "@/lib/api/fetchWithAuth";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
@@ -16,9 +17,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       `${BACKEND_URL}/products/${productId}/gambar`,
       {
         method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: createAuthHeaders(request),
         cache: "no-store",
       }
     );
@@ -62,12 +61,19 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const backendFormData = new FormData();
     backendFormData.append('file', file);
 
+    // Get auth header for FormData (don't set Content-Type, let browser handle it)
+    const authHeader = getAuthHeader(request);
+    const headers: HeadersInit = {};
+    if (authHeader) {
+      headers["Authorization"] = authHeader;
+    }
+
     const response = await fetch(
       `${BACKEND_URL}/products/${productId}/gambar`,
       {
         method: "POST",
+        headers,
         body: backendFormData,
-        // Don't set Content-Type header, let fetch handle multipart/form-data
       }
     );
 

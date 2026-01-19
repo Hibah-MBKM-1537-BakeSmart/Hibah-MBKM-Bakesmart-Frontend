@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createAuthHeaders } from "@/lib/api/fetchWithAuth";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
@@ -36,9 +37,7 @@ export async function PUT(
 
         const response = await fetch(`${BACKEND_URL}/orders/${params.id}/production`, {
             method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: createAuthHeaders(request),
             body: JSON.stringify({ production_status }),
         });
 

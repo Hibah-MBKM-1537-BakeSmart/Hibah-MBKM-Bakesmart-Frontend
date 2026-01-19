@@ -1,16 +1,15 @@
 import { NextResponse } from "next/server";
+import { createAuthHeaders } from "@/lib/api/fetchWithAuth";
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
 /**
  * GET /api/vouchers - Get all vouchers
  */
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const response = await fetch(`${BACKEND_URL}/voucher`, {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: createAuthHeaders(request),
       cache: "no-store", // Disable caching for fresh data
     });
 
@@ -45,9 +44,7 @@ export async function POST(request: Request) {
 
     const response = await fetch(`${BACKEND_URL}/voucher`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: createAuthHeaders(request),
       body: JSON.stringify(payload),
     });
 

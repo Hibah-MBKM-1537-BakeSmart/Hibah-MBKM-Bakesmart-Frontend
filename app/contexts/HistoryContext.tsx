@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { fetchWithAuth } from "@/lib/api/fetchWithAuth";
 
 const BACKEND_API_URL = '/api/orders';
 
@@ -93,7 +94,7 @@ export function HistoryProvider({ children }: { children: React.ReactNode }) {
         console.log('[HistoryContext] Fetching orders from backend...');
         setState(prev => ({ ...prev, isLoading: true }));
         
-        const response = await fetch(`${BACKEND_API_URL}?relation=products`, {
+        const response = await fetchWithAuth(`${BACKEND_API_URL}?relation=products`, {
           method: 'GET',
           cache: 'no-store',
         });
@@ -271,7 +272,7 @@ export function HistoryProvider({ children }: { children: React.ReactNode }) {
       console.log('[HistoryContext] Refreshing orders...');
       setState(prev => ({ ...prev, isLoading: true }));
       
-      const response = await fetch(`${BACKEND_API_URL}?relation=products`, {
+      const response = await fetchWithAuth(`${BACKEND_API_URL}?relation=products`, {
         method: 'GET',
         cache: 'no-store',
       });

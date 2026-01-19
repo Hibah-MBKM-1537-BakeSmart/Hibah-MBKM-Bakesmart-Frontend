@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useReducer, useCallback } from 'react';
+import { fetchWithAuth } from '@/lib/api/fetchWithAuth';
 
 // Role interface matching backend response
 export interface RoleData {
@@ -102,7 +103,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log('[AdminContext] Fetching admins...');
 
-      const response = await fetch('/api/admins', {
+      const response = await fetchWithAuth('/api/admins', {
         method: 'GET',
         cache: 'no-store',
       });
@@ -133,11 +134,8 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log('[AdminContext] Creating admin:', adminData);
 
-      const response = await fetch('/api/admins', {
+      const response = await fetchWithAuth('/api/admins', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify(adminData),
       });
 
@@ -178,11 +176,8 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
         dispatch({ type: 'UPDATE_ADMIN', payload: optimisticAdmin });
       }
 
-      const response = await fetch(`/api/admins/${id}`, {
+      const response = await fetchWithAuth(`/api/admins/${id}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify(adminData),
       });
 
@@ -228,7 +223,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       const adminToDelete = state.admins.find(a => a.id === id);
       dispatch({ type: 'DELETE_ADMIN', payload: id });
 
-      const response = await fetch(`/api/admins/${id}`, {
+      const response = await fetchWithAuth(`/api/admins/${id}`, {
         method: 'DELETE',
       });
 
@@ -265,7 +260,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log('[AdminContext] Getting admin by ID:', id);
 
-      const response = await fetch(`/api/admins/${id}`, {
+      const response = await fetchWithAuth(`/api/admins/${id}`, {
         method: 'GET',
         cache: 'no-store',
       });

@@ -7,6 +7,7 @@ import React, {
   useEffect,
   ReactNode,
 } from "react";
+import { fetchWithAuth } from "@/lib/api/fetchWithAuth";
 
 // Use Next.js API route instead of direct backend call to avoid CORS
 const BACKEND_URL = "/api/products";
@@ -233,11 +234,8 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000); // Increased to 10 seconds
 
-      const response = await fetch(BACKEND_URL, {
+      const response = await fetchWithAuth(BACKEND_URL, {
         signal: controller.signal,
-        headers: {
-          "Content-Type": "application/json",
-        },
       });
 
       clearTimeout(timeoutId);
@@ -334,12 +332,9 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-      const response = await fetch(BACKEND_URL, {
+      const response = await fetchWithAuth(BACKEND_URL, {
         method: "POST",
         signal: controller.signal,
-        headers: {
-          "Content-Type": "application/json",
-        },
         body: JSON.stringify(createPayload),
       });
 
@@ -371,11 +366,12 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
             const formData = new FormData();
             formData.append("file", file);
 
-            const imageResponse = await fetch(
+            const imageResponse = await fetchWithAuth(
               `${BACKEND_URL}/${productId}/gambar`,
               {
                 method: "POST",
                 body: formData,
+                headers: {}, // Clear Content-Type for FormData
               }
             );
             if (!imageResponse.ok) {
@@ -445,12 +441,9 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000);
 
-      const response = await fetch(`${BACKEND_URL}/${id}`, {
+      const response = await fetchWithAuth(`${BACKEND_URL}/${id}`, {
         method: "PUT",
         signal: controller.signal,
-        headers: {
-          "Content-Type": "application/json",
-        },
         body: JSON.stringify(updatePayload),
       });
 
@@ -544,12 +537,9 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000);
 
-      const response = await fetch(`${BACKEND_URL}/${id}`, {
+      const response = await fetchWithAuth(`${BACKEND_URL}/${id}`, {
         method: "DELETE",
         signal: controller.signal,
-        headers: {
-          "Content-Type": "application/json",
-        },
       });
 
       clearTimeout(timeoutId);
@@ -592,7 +582,7 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
 
   const exportProduct = async () => {
     try {
-      const response = await fetch("/api/products/export", {
+      const response = await fetchWithAuth("/api/products/export", {
         method: "GET",
       });
 
@@ -618,9 +608,10 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
     formData.append("file", file);
 
     try {
-      const response = await fetch("/api/products/import", {
+      const response = await fetchWithAuth("/api/products/import", {
         method: "POST",
         body: formData,
+        headers: {}, // Clear Content-Type for FormData
       });
 
       if (!response.ok) throw new Error("Failed to import products");

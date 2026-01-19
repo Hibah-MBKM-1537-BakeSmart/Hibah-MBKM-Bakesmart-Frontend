@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { createAuthHeaders } from "@/lib/api/fetchWithAuth";
 
 /**
  * Ini adalah API Handler untuk POST /api/vouchers/validate
@@ -21,9 +22,7 @@ export async function POST(request: Request) {
 
     const response = await fetch(backendUrl, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: createAuthHeaders(request),
       body: JSON.stringify({
         code: voucherCode,
         amount: amount || 0, // Default 0 jika tidak ada

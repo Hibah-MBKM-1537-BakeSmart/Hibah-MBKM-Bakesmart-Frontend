@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createAuthHeaders } from "@/lib/api/fetchWithAuth";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
@@ -9,13 +10,12 @@ export async function PUT(
   try {
     const body = await request.json();
 
+    // Get auth headers
+    const authHeaders = createAuthHeaders(request);
+
     const response = await fetch(`${BACKEND_URL}/admins/${params.id}/role`, {
       method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        // TODO: Add authorization header when auth is implemented
-        // 'Authorization': `Bearer ${token}`
-      },
+      headers: authHeaders,
       body: JSON.stringify(body),
     });
 

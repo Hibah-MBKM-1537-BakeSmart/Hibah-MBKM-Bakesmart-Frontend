@@ -1,17 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createAuthHeaders } from "@/lib/api/fetchWithAuth";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
 // GET all sub_jenis
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     console.log(`[SubJenis API] GET all sub_jenis from: ${BACKEND_URL}/sub_jenis`);
 
     const response = await fetch(`${BACKEND_URL}/sub_jenis`, {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: createAuthHeaders(request),
       cache: "no-store",
     });
 
@@ -89,9 +88,7 @@ export async function POST(request: NextRequest) {
 
     const response = await fetch(`${BACKEND_URL}/sub_jenis`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: createAuthHeaders(request),
       body: JSON.stringify(backendBody),
     });
 

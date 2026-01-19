@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { fetchWithAuth } from "@/lib/api/fetchWithAuth";
 
 export type ProductionStatus = 'ongoing' | 'completed' | 'cancelled';
 
@@ -174,7 +175,7 @@ export function ProductionProvider({ children }: { children: React.ReactNode }) 
     setError(null);
     try {
       console.log('[ProductionContext] Fetching orders from backend...');
-      const response = await fetch('/api/orders/group', {
+      const response = await fetchWithAuth('/api/orders/group', {
         method: 'GET',
         cache: 'no-store',
       });
@@ -228,11 +229,8 @@ export function ProductionProvider({ children }: { children: React.ReactNode }) 
       );
 
       // Call backend API - PUT /orders/{id}/status
-      const response = await fetch(`/api/orders/${orderId}/status`, {
+      const response = await fetchWithAuth(`/api/orders/${orderId}/status`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({ status }),
       });
 
@@ -258,11 +256,8 @@ export function ProductionProvider({ children }: { children: React.ReactNode }) 
       );
 
       // Call backend API - PUT /orders/{id}/production
-      const response = await fetch(`/api/orders/${orderId}/production`, {
+      const response = await fetchWithAuth(`/api/orders/${orderId}/production`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({ production_status: productionStatus }),
       });
 
@@ -284,11 +279,8 @@ export function ProductionProvider({ children }: { children: React.ReactNode }) 
       setOrders(prevOrders => prevOrders.filter(order => order.id !== orderId));
 
       // Call backend API - DELETE /orders/{id}
-      const response = await fetch(`/api/orders/${orderId}`, {
+      const response = await fetchWithAuth(`/api/orders/${orderId}`, {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
       });
 
       if (!response.ok) {
