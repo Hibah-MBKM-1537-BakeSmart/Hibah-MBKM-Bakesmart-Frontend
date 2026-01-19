@@ -124,7 +124,7 @@ export function HeroSection() {
           <div className="flex items-center justify-center md:justify-start lg:justify-center">
             <div className="w-full max-w-md md:max-w-lg lg:max-w-xl">
               <Image
-                src="/img/hero-bread.jpg"
+                src="/img/bread_2.svg"
                 alt={t("heroSection.breadImageAlt")}
                 width={600}
                 height={600}
