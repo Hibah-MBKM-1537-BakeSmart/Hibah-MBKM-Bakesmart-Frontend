@@ -1,11 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // ✅ WAJIB: Supaya muncul file server.js
   output: "standalone",
-  
+
   reactStrictMode: false,
-  swcMinify: true,
-  compress: true,
+  compress: true, // Hemat bandwidth
 
   eslint: {
     ignoreDuringBuilds: true,
@@ -13,12 +13,14 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+
   images: {
-    unoptimized: true,
+    unoptimized: true, // Hemat RAM server
     remotePatterns: [
       {
         protocol: 'https',
         hostname: 'merpatisolobakery.id',
+        port: '',
       },
       {
         protocol: 'http',
@@ -27,7 +29,11 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  experimental: {},
+  
+  // Optimasi build
+  experimental: {
+    optimizePackageImports: ['lucide-react', '@radix-ui/react-icons', 'date-fns'],
+  },
 };
 
 export default nextConfig;
