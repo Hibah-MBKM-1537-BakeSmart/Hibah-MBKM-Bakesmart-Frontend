@@ -276,11 +276,11 @@ export function MenuCard({
             <img
               src={image || "/placeholder.svg"}
               alt={name}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover transition-all duration-300"
             />
             {(stock <= 0 || isStoreClosed() || isSubJenisClosed) && (
-              <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-                <span className="text-white text-sm font-medium text-center px-2">
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <span className="text-white text-xs md:text-sm font-bold text-center px-3 py-2 bg-gray-900 rounded-lg shadow-xl border-2 border-white">
                   {isSubJenisClosed
                     ? language === "id"
                       ? "Tidak Tersedia"

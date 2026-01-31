@@ -68,6 +68,15 @@ function ProductCard(item: MenuItem) {
                 {t("menu.discount")}
               </div>
             )}
+            {(isOutOfStock || storeIsClosed) && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <span className="text-white text-sm font-bold text-center px-3 py-2 bg-gray-900 rounded-lg shadow-xl border-2 border-white">
+                  {isOutOfStock
+                    ? t("menu.outOfStock")
+                    : "Toko Tutup"}
+                </span>
+              </div>
+            )}
           </div>
           <CardContent className="p-4">
             <div className="mb-3">

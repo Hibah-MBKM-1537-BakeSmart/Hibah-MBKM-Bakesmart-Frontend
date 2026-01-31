@@ -168,9 +168,21 @@ export function CustomersProvider({ children }: { children: React.ReactNode }) {
     formData.append("file", file);
 
     try {
-      const response = await fetchWithAuth("/api/customers/import", {
+      // Use plain fetch with manual auth header for FormData
+      // Don't use fetchWithAuth as it sets Content-Type: application/json
+      const token = localStorage.getItem("bakesmart_admin_auth");
+      const authHeader = token ? JSON.parse(token).token : null;
+      
+      const headers: HeadersInit = {};
+      if (authHeader) {
+        headers["Authorization"] = `Bearer ${authHeader}`;
+      }
+      // Don't set Content-Type - browser will set it automatically with boundary
+
+      const response = await fetch("/api/customers/import", {
         method: "POST",
         body: formData,
+        headers,
       });
 
       if (!response.ok) throw new Error("Failed to import customers");

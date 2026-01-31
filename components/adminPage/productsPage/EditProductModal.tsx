@@ -267,9 +267,19 @@ export function EditProductModal({
           imageFormData.append("file", file);
 
           try {
+            // Get auth token for the request
+            const token = localStorage.getItem("bakesmart_admin_auth");
+            const authHeader = token ? JSON.parse(token).token : null;
+            
+            const headers: HeadersInit = {};
+            if (authHeader) {
+              headers["Authorization"] = `Bearer ${authHeader}`;
+            }
+
             const response = await fetch(`/api/products/${pId}/gambar`, {
               method: "POST",
               body: imageFormData,
+              headers,
             });
 
             if (!response.ok) {
@@ -304,8 +314,20 @@ export function EditProductModal({
 
       for (const img of imagesToDelete) {
         try {
+          // Get auth token for DELETE request
+          const token = localStorage.getItem("bakesmart_admin_auth");
+          const authHeader = token ? JSON.parse(token).token : null;
+          
+          const headers: HeadersInit = {
+            "Content-Type": "application/json",
+          };
+          if (authHeader) {
+            headers["Authorization"] = `Bearer ${authHeader}`;
+          }
+
           await fetch(`/api/products/${pId}/gambar/${img.id}`, {
             method: "DELETE",
+            headers,
           });
         } catch (delError) {
           console.error("Error deleting image:", delError);

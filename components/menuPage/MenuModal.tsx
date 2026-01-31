@@ -224,8 +224,8 @@ export function MenuModal({
                 onClick={() => setIsImagePopupOpen(true)}
               />
               {(isOutOfStock || isStoreClosed() || item.isSubJenisClosed) && (
-                <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded-t-lg md:rounded-l-lg md:rounded-tr-none">
-                  <span className="text-white text-xl font-bold text-center px-4">
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none rounded-t-lg md:rounded-l-lg md:rounded-tr-none">
+                  <span className="text-white text-lg md:text-xl font-bold text-center px-4 py-3 bg-gray-900 rounded-lg shadow-xl border-2 border-white">
                     {item.isSubJenisClosed
                       ? language === "id"
                         ? "Tidak Tersedia untuk Dipesan"

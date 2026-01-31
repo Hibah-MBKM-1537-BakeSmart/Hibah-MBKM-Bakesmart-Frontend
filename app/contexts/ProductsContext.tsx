@@ -366,12 +366,23 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
             const formData = new FormData();
             formData.append("file", file);
 
-            const imageResponse = await fetchWithAuth(
+            // Use plain fetch with manual auth header for FormData
+            // Don't use fetchWithAuth as it sets Content-Type: application/json
+            const token = localStorage.getItem("bakesmart_admin_auth");
+            const authHeader = token ? JSON.parse(token).token : null;
+            
+            const headers: HeadersInit = {};
+            if (authHeader) {
+              headers["Authorization"] = `Bearer ${authHeader}`;
+            }
+            // Don't set Content-Type - browser will set it automatically with boundary
+
+            const imageResponse = await fetch(
               `${BACKEND_URL}/${productId}/gambar`,
               {
                 method: "POST",
                 body: formData,
-                headers: {}, // Clear Content-Type for FormData
+                headers,
               }
             );
             if (!imageResponse.ok) {
@@ -608,10 +619,21 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
     formData.append("file", file);
 
     try {
-      const response = await fetchWithAuth("/api/products/import", {
+      // Use plain fetch with manual auth header for FormData
+      // Don't use fetchWithAuth as it sets Content-Type: application/json
+      const token = localStorage.getItem("bakesmart_admin_auth");
+      const authHeader = token ? JSON.parse(token).token : null;
+      
+      const headers: HeadersInit = {};
+      if (authHeader) {
+        headers["Authorization"] = `Bearer ${authHeader}`;
+      }
+      // Don't set Content-Type - browser will set it automatically with boundary
+
+      const response = await fetch("/api/products/import", {
         method: "POST",
         body: formData,
-        headers: {}, // Clear Content-Type for FormData
+        headers,
       });
 
       if (!response.ok) throw new Error("Failed to import products");
