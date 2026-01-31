@@ -80,6 +80,7 @@ function ProductCard(item: MenuItem) {
               <p className="text-xs text-gray-500 mt-1 capitalize line-clamp-1">
                 {t("menu.availableOn")}:{" "}
                 {availableDays
+                  .filter((day) => day != null)
                   .map((day) => {
                     const dayLabels: { [key: string]: string } = {
                       senin: t("day.monday"),
@@ -133,8 +134,8 @@ function ProductCard(item: MenuItem) {
                   isOutOfStock
                     ? t("menu.outOfStock")
                     : storeIsClosed
-                    ? "Toko sedang tutup"
-                    : t("menu.addToCart")
+                      ? "Toko sedang tutup"
+                      : t("menu.addToCart")
                 }
               >
                 {t("menu.order")}
@@ -209,12 +210,12 @@ export function BestSeller() {
             hari: product.hari || [],
             attributes: product.attributes || [],
             bahans: product.bahans || [],
-          })
+          }),
         );
 
         // 3. Filter HANYA untuk best seller
         const filteredBestSellers = allProducts.filter(
-          (item) => item.isBestSeller
+          (item) => item.isBestSeller,
         );
 
         console.log("[BestSeller] Filtered best sellers:", filteredBestSellers);
@@ -222,7 +223,7 @@ export function BestSeller() {
       } catch (err) {
         console.error("[BestSeller] Error fetching products:", err);
         setError(
-          err instanceof Error ? err.message : "Failed to fetch products"
+          err instanceof Error ? err.message : "Failed to fetch products",
         );
         setBestSellers([]);
       } finally {
@@ -236,7 +237,7 @@ export function BestSeller() {
   const totalPages = Math.ceil(bestSellers.length / itemsPerPage);
   const visibleProducts = bestSellers.slice(
     currentIndex,
-    currentIndex + itemsPerPage
+    currentIndex + itemsPerPage,
   );
 
   const handlePrevious = () => {
@@ -245,7 +246,7 @@ export function BestSeller() {
 
   const handleNext = () => {
     setCurrentIndex((prev) =>
-      Math.min(bestSellers.length - itemsPerPage, prev + itemsPerPage)
+      Math.min(bestSellers.length - itemsPerPage, prev + itemsPerPage),
     );
   };
 

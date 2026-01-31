@@ -39,12 +39,12 @@ const menuItems: MenuItem[] = [
     href: "/admin/dashboard",
     icon: LayoutDashboard,
   },
-  {
-    id: "statistics",
-    labelKey: "sidebar.statistics",
-    href: "/admin/statistics",
-    icon: TrendingUp,
-  },
+  // {
+  //   id: "statistics",
+  //   labelKey: "sidebar.statistics",
+  //   href: "/admin/statistics",
+  //   icon: TrendingUp,
+  // },
   {
     id: "products",
     labelKey: "sidebar.products",

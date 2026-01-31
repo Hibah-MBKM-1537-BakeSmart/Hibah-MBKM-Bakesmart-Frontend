@@ -137,7 +137,7 @@ export function MenuCard({
       "🟢 Cart has items:",
       hasItemInCart,
       "- Total qty:",
-      totalQuantity
+      totalQuantity,
     );
 
     // Check if sub_jenis is closed - product cannot be ordered
@@ -145,21 +145,22 @@ export function MenuCard({
       alert(
         language === "id"
           ? "Maaf, produk ini sedang tidak tersedia untuk dipesan."
-          : "Sorry, this product is currently not available for ordering."
+          : "Sorry, this product is currently not available for ordering.",
       );
       return;
     }
 
     if (isStoreClosed()) {
       alert(
-        t("menu.storeIsClosed") || "Toko sedang tutup. Silakan coba lagi nanti."
+        t("menu.storeIsClosed") ||
+          "Toko sedang tutup. Silakan coba lagi nanti.",
       );
       return;
     }
 
     if (!selectedOrderDay) {
       console.log(
-        "🟢 MenuCard: No date selected, showing date validation modal"
+        "🟢 MenuCard: No date selected, showing date validation modal",
       );
       onShowDateValidation?.();
       return;
@@ -168,7 +169,7 @@ export function MenuCard({
     // Validasi apakah produk tersedia di hari yang dipilih
     if (selectedOrderDay && !availableDays.includes(selectedOrderDay)) {
       alert(
-        `Produk ini tidak tersedia untuk hari ${selectedOrderDay}. Silakan pilih produk lain atau ubah hari pesanan.`
+        `Produk ini tidak tersedia untuk hari ${selectedOrderDay}. Silakan pilih produk lain atau ubah hari pesanan.`,
       );
       return;
     }
@@ -177,11 +178,11 @@ export function MenuCard({
     if (attributes && attributes.length > 0) {
       if (hasItemInCart) {
         console.log(
-          "🟢 MenuCard: Item exists in cart, showing existing customization modal"
+          "🟢 MenuCard: Item exists in cart, showing existing customization modal",
         );
         const existingCartItem = cartItems.find(
           (cartItem) =>
-            cartItem.id === item.id && cartItem.orderDay === selectedOrderDay
+            cartItem.id === item.id && cartItem.orderDay === selectedOrderDay,
         );
 
         if (existingCartItem) {
@@ -223,7 +224,7 @@ export function MenuCard({
       // Find existing item in cart
       const existingCartItem = cartItems.find(
         (cartItem) =>
-          cartItem.id === item.id && cartItem.orderDay === selectedOrderDay
+          cartItem.id === item.id && cartItem.orderDay === selectedOrderDay,
       );
 
       if (existingCartItem) {
@@ -285,8 +286,8 @@ export function MenuCard({
                       ? "Tidak Tersedia"
                       : "Unavailable"
                     : isStoreClosed()
-                    ? t("menu.storeIsClosed")
-                    : t("menu.outOfStock")}
+                      ? t("menu.storeIsClosed")
+                      : t("menu.outOfStock")}
                 </span>
               </div>
             )}
@@ -323,18 +324,20 @@ export function MenuCard({
             </div>
 
             <div className="flex flex-wrap gap-1 mb-2">
-              {availableDays.map((day) => (
-                <span
-                  key={day}
-                  className={`text-xs px-2 py-0.5 rounded ${
-                    selectedOrderDay === day
-                      ? "bg-blue-100 text-blue-600"
-                      : "bg-gray-100 text-gray-600"
-                  }`}
-                >
-                  {t(`day.${day.toLowerCase()}`)}
-                </span>
-              ))}
+              {availableDays
+                .filter((day) => day != null)
+                .map((day) => (
+                  <span
+                    key={day}
+                    className={`text-xs px-2 py-0.5 rounded ${
+                      selectedOrderDay === day
+                        ? "bg-blue-100 text-blue-600"
+                        : "bg-gray-100 text-gray-600"
+                    }`}
+                  >
+                    {t(`day.${day.toLowerCase()}`)}
+                  </span>
+                ))}
             </div>
 
             {description && (
@@ -424,10 +427,10 @@ export function MenuCard({
                             ? "Produk tidak tersedia"
                             : "Product unavailable"
                           : !validation.canAdd
-                          ? validation.reason
-                          : isStoreClosed()
-                          ? "Toko sedang tutup"
-                          : undefined
+                            ? validation.reason
+                            : isStoreClosed()
+                              ? "Toko sedang tutup"
+                              : undefined
                       }
                     >
                       {isSubJenisClosed
@@ -435,10 +438,10 @@ export function MenuCard({
                           ? "Tidak Tersedia"
                           : "Unavailable"
                         : isStoreClosed()
-                        ? t("menu.storeIsClosed")
-                        : stock <= 0
-                        ? t("menu.outOfStock")
-                        : "Tambah"}
+                          ? t("menu.storeIsClosed")
+                          : stock <= 0
+                            ? t("menu.outOfStock")
+                            : "Tambah"}
                     </button>
                   ) : (
                     <div className="flex items-center gap-4">
@@ -512,10 +515,10 @@ export function MenuCard({
                           ? "Produk tidak tersedia"
                           : "Product unavailable"
                         : !validation.canAdd
-                        ? validation.reason
-                        : isStoreClosed()
-                        ? "Toko sedang tutup"
-                        : undefined
+                          ? validation.reason
+                          : isStoreClosed()
+                            ? "Toko sedang tutup"
+                            : undefined
                     }
                   >
                     {isSubJenisClosed
@@ -523,10 +526,10 @@ export function MenuCard({
                         ? "Tidak Tersedia"
                         : "Unavailable"
                       : isStoreClosed()
-                      ? t("menu.storeIsClosed")
-                      : stock <= 0
-                      ? t("menu.outOfStock")
-                      : "Tambah"}
+                        ? t("menu.storeIsClosed")
+                        : stock <= 0
+                          ? t("menu.outOfStock")
+                          : "Tambah"}
                   </button>
                 ) : (
                   <div className="flex items-center gap-3">
