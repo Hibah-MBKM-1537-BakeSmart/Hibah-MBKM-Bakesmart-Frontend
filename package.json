@@ -28,7 +28,7 @@
     "leaflet": "^1.9.4",
     "lucide": "^0.544.0",
     "lucide-react": "^0.542.0",
-    "next": "15.5.2",
+    "next": "15.5.9",
     "qrcode": "^1.5.4",
     "qrcode.react": "^4.2.0",
     "react": "19.1.0",
