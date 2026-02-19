@@ -118,7 +118,7 @@ interface ProductsContextType {
 }
 
 const ProductsContext = createContext<ProductsContextType | undefined>(
-  undefined
+  undefined,
 );
 
 export function ProductsProvider({ children }: { children: ReactNode }) {
@@ -148,7 +148,7 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
 
     console.log(
       "[ProductsContext] Found products array:",
-      productsArray.length
+      productsArray.length,
     );
 
     // Map backend format to frontend format
@@ -293,9 +293,7 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
   // Create product - NEW: Backend accepts all data in single POST request
   // POST /products with complete payload
   // Note: hari_ids NOT needed - hari configuration comes from sub_jenis
-  const addProduct = async (
-    productData: ProductCreateData
-  ): Promise<void> => {
+  const addProduct = async (productData: ProductCreateData): Promise<void> => {
     try {
       console.log("[ProductsContext] Creating product:", productData);
       setState((prev) => ({ ...prev, error: null }));
@@ -326,7 +324,7 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
 
       console.log(
         "[ProductsContext] Creating product with payload:",
-        createPayload
+        createPayload,
       );
 
       const controller = new AbortController();
@@ -345,7 +343,7 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
         throw new Error(
           errorData.error ||
             errorData.message ||
-            `HTTP error! status: ${response.status}`
+            `HTTP error! status: ${response.status}`,
         );
       }
 
@@ -370,7 +368,7 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
             // Don't use fetchWithAuth as it sets Content-Type: application/json
             const token = localStorage.getItem("bakesmart_admin_auth");
             const authHeader = token ? JSON.parse(token).token : null;
-            
+
             const headers: HeadersInit = {};
             if (authHeader) {
               headers["Authorization"] = `Bearer ${authHeader}`;
@@ -383,11 +381,11 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
                 method: "POST",
                 body: formData,
                 headers,
-              }
+              },
             );
             if (!imageResponse.ok) {
               console.warn(
-                `[ProductsContext] Failed to upload image ${file.name}`
+                `[ProductsContext] Failed to upload image ${file.name}`,
               );
             }
           } catch (err) {
@@ -422,7 +420,7 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
   // Update product
   const updateProduct = async (
     id: number,
-    productData: ProductUpdateData
+    productData: ProductUpdateData,
   ): Promise<void> => {
     try {
       console.log("[ProductsContext] Updating product:", id, productData);
@@ -443,7 +441,8 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
         bahans: (productData.bahans || []).map((b) => ({
           nama_id: b.nama_id,
           nama_en: b.nama_en,
-          jumlah: typeof b.jumlah === "string" ? parseInt(b.jumlah, 10) : b.jumlah,
+          jumlah:
+            typeof b.jumlah === "string" ? parseInt(b.jumlah, 10) : b.jumlah,
         })),
       };
 
@@ -463,14 +462,14 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(
-          errorData.message || `HTTP error! status: ${response.status}`
+          errorData.message || `HTTP error! status: ${response.status}`,
         );
       }
 
       const data = await response.json();
       console.log(
         "[ProductsContext] Backend PUT response:",
-        JSON.stringify(data)
+        JSON.stringify(data),
       );
 
       // Immediately update local state with optimistic data
@@ -478,7 +477,7 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
       setState((prev) => {
         console.log(
           "[ProductsContext] Updating state, current products:",
-          prev.products.length
+          prev.products.length,
         );
         const updatedProducts = prev.products.map((product) => {
           if (product.id === id) {
@@ -510,7 +509,7 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
         });
         console.log(
           "[ProductsContext] New products array:",
-          updatedProducts.length
+          updatedProducts.length,
         );
         return {
           ...prev,
@@ -558,7 +557,7 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(
-          errorData.message || `HTTP error! status: ${response.status}`
+          errorData.message || `HTTP error! status: ${response.status}`,
         );
       }
 
@@ -623,7 +622,7 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
       // Don't use fetchWithAuth as it sets Content-Type: application/json
       const token = localStorage.getItem("bakesmart_admin_auth");
       const authHeader = token ? JSON.parse(token).token : null;
-      
+
       const headers: HeadersInit = {};
       if (authHeader) {
         headers["Authorization"] = `Bearer ${authHeader}`;

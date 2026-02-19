@@ -62,7 +62,7 @@ export function MenuModal({
     console.log("Selected day:", day);
     console.log(
       "Available days:",
-      item.hari.map((h) => h.nama_id)
+      item.hari.map((h) => h.nama_id),
     );
     setTempOrderDay(day);
   };
@@ -71,7 +71,7 @@ export function MenuModal({
     setSelectedAttributes((prev) =>
       prev.includes(attributeId)
         ? prev.filter((id) => id !== attributeId)
-        : [...prev, attributeId]
+        : [...prev, attributeId],
     );
   };
 
@@ -99,14 +99,15 @@ export function MenuModal({
       alert(
         language === "id"
           ? "Maaf, produk ini sedang tidak tersedia untuk dipesan."
-          : "Sorry, this product is currently not available for ordering."
+          : "Sorry, this product is currently not available for ordering.",
       );
       return;
     }
 
     if (isStoreClosed()) {
       alert(
-        t("menu.storeIsClosed") || "Toko sedang tutup. Silakan coba lagi nanti."
+        t("menu.storeIsClosed") ||
+          "Toko sedang tutup. Silakan coba lagi nanti.",
       );
       return;
     }
@@ -200,7 +201,7 @@ export function MenuModal({
       .join(", ") || "Tidak ada informasi bahan";
 
   const validAttributes = (item.attributes || []).filter(
-    (attr) => attr && attr.id !== null && attr.harga !== null
+    (attr) => attr && attr.id !== null && attr.harga !== null,
   );
 
   return (
@@ -231,8 +232,8 @@ export function MenuModal({
                         ? "Tidak Tersedia untuk Dipesan"
                         : "Not Available for Order"
                       : isStoreClosed()
-                      ? t("menu.storeIsClosed")
-                      : t("menuModal.outOfStock")}
+                        ? t("menu.storeIsClosed")
+                        : t("menuModal.outOfStock")}
                   </span>
                 </div>
               )}
@@ -344,7 +345,7 @@ export function MenuModal({
                               <input
                                 type="checkbox"
                                 checked={selectedAttributes.includes(
-                                  attribute.id
+                                  attribute.id,
                                 )}
                                 onChange={() =>
                                   handleAttributeToggle(attribute.id)
@@ -509,14 +510,14 @@ export function MenuModal({
                           ? "Tidak Tersedia"
                           : "Unavailable"
                         : isStoreClosed()
-                        ? t("menu.storeIsClosed")
-                        : isOutOfStock
-                        ? t("menuModal.stockEmpty")
-                        : !tempOrderDay
-                        ? t("menuModal.selectDayFirst")
-                        : hasItemInCart
-                        ? "Tambah Kustomisasi Baru"
-                        : "Tambah ke Keranjang"}
+                          ? t("menu.storeIsClosed")
+                          : isOutOfStock
+                            ? t("menuModal.stockEmpty")
+                            : !tempOrderDay
+                              ? t("menuModal.selectDayFirst")
+                              : hasItemInCart
+                                ? "Tambah Kustomisasi Baru"
+                                : "Tambah ke Keranjang"}
                     </button>
 
                     {item.attributes &&
