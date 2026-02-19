@@ -70,7 +70,7 @@ export function MenuGrid() {
           (product: ApiProduct) => {
             // Check if any sub_jenis has is_closed = true
             const isSubJenisClosed = (product.sub_jenis || []).some(
-              (sj) => sj?.is_closed === true
+              (sj) => sj?.is_closed === true,
             );
 
             return {
@@ -81,7 +81,7 @@ export function MenuGrid() {
               deskripsi_en: product.deskripsi_en || "",
               harga: product.harga,
               harga_diskon: product.harga_diskon || null,
-              stok: product.stok || 0,
+              stok: product.sub_jenis?.[0]?.min_amount || 0, // Use min_amount from sub_jenis as stock
               isBestSeller: product.isBestSeller || false,
               // Sesuaikan dengan data dari API (berdasarkan contoh JSON kamu)
               isDaily: product.isDaily || false,
@@ -92,7 +92,7 @@ export function MenuGrid() {
               sub_jenis: product.sub_jenis || [],
               gambars: (product.gambars || [])
                 .filter(
-                  (g): g is { id: number; file_path: string } => g !== null
+                  (g): g is { id: number; file_path: string } => g !== null,
                 )
                 .map((g) => ({
                   ...g,
@@ -105,7 +105,7 @@ export function MenuGrid() {
               attributes: product.attributes || [],
               bahans: product.bahans || [],
             };
-          }
+          },
         );
 
         setMenuItems(products);
@@ -133,7 +133,7 @@ export function MenuGrid() {
       } catch (err) {
         console.error("[v2] Error fetching products:", err);
         setError(
-          err instanceof Error ? err.message : "Failed to fetch products"
+          err instanceof Error ? err.message : "Failed to fetch products",
         );
         setMenuItems([]);
       } finally {
@@ -224,7 +224,7 @@ export function MenuGrid() {
   const handleWeekDateSelect = (
     startDate: Date,
     endDate: Date,
-    orderDay: string
+    orderDay: string,
   ) => {
     setWeekStartDate(startDate);
     setWeekEndDate(endDate);
@@ -271,7 +271,7 @@ export function MenuGrid() {
     activeCategory === "all"
       ? menuItems
       : menuItems.filter((item) =>
-          item.jenis.some((j) => `cat-${j.id}` === activeCategory)
+          item.jenis.some((j) => `cat-${j.id}` === activeCategory),
         );
 
   // Filter products based on selected order day
@@ -291,28 +291,31 @@ export function MenuGrid() {
         });
 
   // Group products by jenis (category) for display with separators
-  const groupedByJenis = dayFilteredItems.reduce((acc, item) => {
-    const jenisKey =
-      item.jenis.length > 0 ? `${item.jenis[0].id}` : "uncategorized";
-    const jenisName =
-      item.jenis.length > 0
-        ? language === "id"
-          ? item.jenis[0].nama_id
-          : item.jenis[0].nama_en
-        : language === "id"
-        ? "Lainnya"
-        : "Others";
+  const groupedByJenis = dayFilteredItems.reduce(
+    (acc, item) => {
+      const jenisKey =
+        item.jenis.length > 0 ? `${item.jenis[0].id}` : "uncategorized";
+      const jenisName =
+        item.jenis.length > 0
+          ? language === "id"
+            ? item.jenis[0].nama_id
+            : item.jenis[0].nama_en
+          : language === "id"
+            ? "Lainnya"
+            : "Others";
 
-    if (!acc[jenisKey]) {
-      acc[jenisKey] = {
-        id: jenisKey,
-        name: jenisName,
-        items: [],
-      };
-    }
-    acc[jenisKey].items.push(item);
-    return acc;
-  }, {} as Record<string, { id: string; name: string; items: MenuItem[] }>);
+      if (!acc[jenisKey]) {
+        acc[jenisKey] = {
+          id: jenisKey,
+          name: jenisName,
+          items: [],
+        };
+      }
+      acc[jenisKey].items.push(item);
+      return acc;
+    },
+    {} as Record<string, { id: string; name: string; items: MenuItem[] }>,
+  );
 
   const groupedCategories = Object.values(groupedByJenis);
 

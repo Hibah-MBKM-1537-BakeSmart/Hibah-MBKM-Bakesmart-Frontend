@@ -102,14 +102,18 @@ export function EditCustomizationModal({
       isDiscount: cartItem.isDiscount,
       image: cartItem.image,
       category: cartItem.category,
-      stock: item.stok,
+      stock: item.isDaily
+        ? item.dailyStock || 0
+        : item.sub_jenis?.[0]?.min_amount || 0, // Use correct stock based on product type
       availableDays: item.hari.map((h) => h.nama_id),
       orderDay: cartItem.orderDay,
       selectedAttributes: selectedAttributes,
     };
 
     // Periksa stok terlebih dahulu
-    const currentStock = item.stok;
+    const currentStock = item.isDaily
+      ? item.dailyStock || 0
+      : item.sub_jenis?.[0]?.min_amount || 0;
     if (quantity > currentStock) {
       alert(`Stok tidak mencukupi. Maksimal ${currentStock} item`);
       return;
@@ -120,7 +124,7 @@ export function EditCustomizationModal({
     const added = addToCart({ ...updatedItem });
     if (!added) {
       alert(
-        "Tidak dapat menambahkan produk dengan kustomisasi ini untuk hari yang dipilih"
+        "Tidak dapat menambahkan produk dengan kustomisasi ini untuk hari yang dipilih",
       );
       return;
     }
@@ -161,12 +165,12 @@ export function EditCustomizationModal({
   const basePrice = item.harga_diskon || item.harga;
   const attributesPrice = selectedAttributes.reduce(
     (total, attr) => total + attr.harga,
-    0
+    0,
   );
   const totalPrice = (basePrice + attributesPrice) * quantity;
   const formattedTotalPrice = `Rp${totalPrice.toLocaleString("id-ID")}`;
   const formattedUnitPrice = `Rp${(basePrice + attributesPrice).toLocaleString(
-    "id-ID"
+    "id-ID",
   )}`;
 
   const shouldShowDiscount =
@@ -276,7 +280,9 @@ export function EditCustomizationModal({
                   <Plus size={16} />
                 </button>
                 <span className="text-sm text-gray-500 ml-2">
-                  (Stok: {item.stok})
+                  {item.isDaily
+                    ? "(Tersedia)"
+                    : `(Stok: ${item.sub_jenis?.[0]?.min_amount || 0})`}
                 </span>
               </div>
             </div>
@@ -290,7 +296,7 @@ export function EditCustomizationModal({
                 <div className="space-y-2">
                   {item.attributes.map((attribute) => {
                     const isSelected = selectedAttributes.some(
-                      (attr) => attr.id === attribute.id
+                      (attr) => attr.id === attribute.id,
                     );
                     const attributeName =
                       language === "en" ? attribute.nama_en : attribute.nama_id;
