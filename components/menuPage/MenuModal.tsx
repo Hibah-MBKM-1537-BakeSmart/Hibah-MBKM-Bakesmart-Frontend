@@ -62,7 +62,7 @@ export function MenuModal({
     console.log("Selected day:", day);
     console.log(
       "Available days:",
-      item.hari.map((h) => h.nama_id)
+      item.hari.map((h) => h.nama_id),
     );
     setTempOrderDay(day);
   };
@@ -71,7 +71,7 @@ export function MenuModal({
     setSelectedAttributes((prev) =>
       prev.includes(attributeId)
         ? prev.filter((id) => id !== attributeId)
-        : [...prev, attributeId]
+        : [...prev, attributeId],
     );
   };
 
@@ -86,8 +86,10 @@ export function MenuModal({
 
   const handleQuantityChange = (delta: number) => {
     const newQuantity = Math.max(1, quantity + delta);
-    // Use daily_stock for daily products, regular stok for others
-    const currentStock = item.isDaily ? item.dailyStock || 0 : item?.stok || 0;
+    // Use daily_stock for daily products, min_amount from sub_jenis for others
+    const currentStock = item.isDaily
+      ? item.dailyStock || 0
+      : item.sub_jenis?.[0]?.min_amount || 0;
     if (newQuantity <= currentStock) {
       setQuantity(newQuantity);
     }
@@ -99,14 +101,15 @@ export function MenuModal({
       alert(
         language === "id"
           ? "Maaf, produk ini sedang tidak tersedia untuk dipesan."
-          : "Sorry, this product is currently not available for ordering."
+          : "Sorry, this product is currently not available for ordering.",
       );
       return;
     }
 
     if (isStoreClosed()) {
       alert(
-        t("menu.storeIsClosed") || "Toko sedang tutup. Silakan coba lagi nanti."
+        t("menu.storeIsClosed") ||
+          "Toko sedang tutup. Silakan coba lagi nanti.",
       );
       return;
     }
@@ -143,7 +146,7 @@ export function MenuModal({
             ? item.jenis[0].nama_id
             : item.jenis[0].nama_en
           : "",
-        stock: currentStock, // Use currentStock (daily_stock or regular stok)
+        stock: currentStock, // Use currentStock (daily_stock or min_amount from sub_jenis)
         isDaily: item.isDaily, // Add isDaily flag
         availableDays: item.hari.map((h) => h.nama_id),
         orderDay: tempOrderDay,
@@ -166,8 +169,10 @@ export function MenuModal({
   const shouldShowDiscount =
     item.harga_diskon && item.harga_diskon < item.harga;
   const originalPrice = `Rp${item.harga.toLocaleString("id-ID")}`;
-  // Use daily_stock for daily products
-  const currentStock = item.isDaily ? item.dailyStock || 0 : item.stok;
+  // Use daily_stock for daily products, min_amount from sub_jenis for others
+  const currentStock = item.isDaily
+    ? item.dailyStock || 0
+    : item.sub_jenis?.[0]?.min_amount || 0;
   const isOutOfStock = currentStock <= 0;
 
   const getDayLabel = (day: string) => {
@@ -200,7 +205,7 @@ export function MenuModal({
       .join(", ") || "Tidak ada informasi bahan";
 
   const validAttributes = (item.attributes || []).filter(
-    (attr) => attr && attr.id !== null && attr.harga !== null
+    (attr) => attr && attr.id !== null && attr.harga !== null,
   );
 
   return (
@@ -231,8 +236,8 @@ export function MenuModal({
                         ? "Tidak Tersedia untuk Dipesan"
                         : "Not Available for Order"
                       : isStoreClosed()
-                      ? t("menu.storeIsClosed")
-                      : t("menuModal.outOfStock")}
+                        ? t("menu.storeIsClosed")
+                        : t("menuModal.outOfStock")}
                   </span>
                 </div>
               )}
@@ -253,14 +258,15 @@ export function MenuModal({
                     </span>
                   )}
                   {!isOutOfStock && !isStoreClosed() ? (
-                    <span className="text-xs md:text-sm bg-green-100 text-green-600 px-2 py-1 rounded">
-                      {item.isDaily
-                        ? language === "id"
-                          ? "Stok Hari Ini: "
-                          : "Today's Stock: "
-                        : t("menuModal.stockAvailable") + ": "}
-                      {currentStock}
-                    </span>
+                    item.isDaily ? (
+                      <span className="text-xs md:text-sm bg-green-100 text-green-600 px-2 py-1 rounded">
+                        {language === "id" ? "Tersedia" : "Available"}
+                      </span>
+                    ) : (
+                      <span className="text-xs md:text-sm bg-green-100 text-green-600 px-2 py-1 rounded">
+                        {t("menuModal.stockAvailable")}: {currentStock}
+                      </span>
+                    )
                   ) : (
                     <span className="text-xs md:text-sm bg-red-100 text-red-600 px-2 py-1 rounded">
                       {isStoreClosed()
@@ -344,7 +350,7 @@ export function MenuModal({
                               <input
                                 type="checkbox"
                                 checked={selectedAttributes.includes(
-                                  attribute.id
+                                  attribute.id,
                                 )}
                                 onChange={() =>
                                   handleAttributeToggle(attribute.id)
@@ -509,14 +515,14 @@ export function MenuModal({
                           ? "Tidak Tersedia"
                           : "Unavailable"
                         : isStoreClosed()
-                        ? t("menu.storeIsClosed")
-                        : isOutOfStock
-                        ? t("menuModal.stockEmpty")
-                        : !tempOrderDay
-                        ? t("menuModal.selectDayFirst")
-                        : hasItemInCart
-                        ? "Tambah Kustomisasi Baru"
-                        : "Tambah ke Keranjang"}
+                          ? t("menu.storeIsClosed")
+                          : isOutOfStock
+                            ? t("menuModal.stockEmpty")
+                            : !tempOrderDay
+                              ? t("menuModal.selectDayFirst")
+                              : hasItemInCart
+                                ? "Tambah Kustomisasi Baru"
+                                : "Tambah ke Keranjang"}
                     </button>
 
                     {item.attributes &&

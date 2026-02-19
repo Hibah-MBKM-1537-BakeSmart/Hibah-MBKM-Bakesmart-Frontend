@@ -47,7 +47,9 @@ function ProductCard(item: MenuItem) {
         ? item.jenis[0].nama_id
         : item.jenis[0].nama_en
       : "";
-  const stock = item.stok;
+  const stock = item.isDaily
+    ? item.dailyStock || 0
+    : item.sub_jenis?.[0]?.min_amount || 0;
 
   const isOutOfStock = stock <= 0;
 
@@ -133,8 +135,8 @@ function ProductCard(item: MenuItem) {
                   isOutOfStock
                     ? t("menu.outOfStock")
                     : storeIsClosed
-                    ? "Toko sedang tutup"
-                    : t("menu.addToCart")
+                      ? "Toko sedang tutup"
+                      : t("menu.addToCart")
                 }
               >
                 {t("menu.order")}
@@ -191,7 +193,7 @@ export function BestSeller() {
             deskripsi_en: product.deskripsi_en || "",
             harga: product.harga,
             harga_diskon: product.harga_diskon || null,
-            stok: product.stok || 0,
+            stok: product.sub_jenis?.[0]?.min_amount || 0, // Use min_amount from sub_jenis as stock
             isBestSeller: product.isBestSeller || false,
             isDaily: product.isDaily || false,
             dailyStock: product.daily_stock || 0,
@@ -209,12 +211,12 @@ export function BestSeller() {
             hari: product.hari || [],
             attributes: product.attributes || [],
             bahans: product.bahans || [],
-          })
+          }),
         );
 
         // 3. Filter HANYA untuk best seller
         const filteredBestSellers = allProducts.filter(
-          (item) => item.isBestSeller
+          (item) => item.isBestSeller,
         );
 
         console.log("[BestSeller] Filtered best sellers:", filteredBestSellers);
@@ -222,7 +224,7 @@ export function BestSeller() {
       } catch (err) {
         console.error("[BestSeller] Error fetching products:", err);
         setError(
-          err instanceof Error ? err.message : "Failed to fetch products"
+          err instanceof Error ? err.message : "Failed to fetch products",
         );
         setBestSellers([]);
       } finally {
@@ -236,7 +238,7 @@ export function BestSeller() {
   const totalPages = Math.ceil(bestSellers.length / itemsPerPage);
   const visibleProducts = bestSellers.slice(
     currentIndex,
-    currentIndex + itemsPerPage
+    currentIndex + itemsPerPage,
   );
 
   const handlePrevious = () => {
@@ -245,7 +247,7 @@ export function BestSeller() {
 
   const handleNext = () => {
     setCurrentIndex((prev) =>
-      Math.min(bestSellers.length - itemsPerPage, prev + itemsPerPage)
+      Math.min(bestSellers.length - itemsPerPage, prev + itemsPerPage),
     );
   };
 

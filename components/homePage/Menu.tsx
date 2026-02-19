@@ -77,7 +77,7 @@ export function Menu() {
             deskripsi_en: product.deskripsi_en || "",
             harga: product.harga,
             harga_diskon: product.harga_diskon || null,
-            stok: product.stok || 0,
+            stok: product.sub_jenis?.[0]?.min_amount || 0, // Use min_amount from sub_jenis as stock
             isBestSeller: product.isBestSeller || false,
             isDaily: product.isDaily || false,
             dailyStock: product.daily_stock || 0,
@@ -95,7 +95,7 @@ export function Menu() {
             hari: product.hari || [],
             attributes: product.attributes || [],
             bahans: product.bahans || [],
-          })
+          }),
         );
         setMenuItems(products); // <-- Simpan SEMUA produk
 
@@ -122,7 +122,7 @@ export function Menu() {
       } catch (err) {
         console.error("[Menu] Error fetching products:", err);
         setError(
-          err instanceof Error ? err.message : "Failed to fetch products"
+          err instanceof Error ? err.message : "Failed to fetch products",
         );
       } finally {
         setLoading(false);
@@ -154,15 +154,16 @@ export function Menu() {
       ? menuItems
       : menuItems.filter((item) =>
           item.jenis.some(
-            (j) => j.nama_id.toLowerCase().replace(/ /g, "-") === activeCategory
-          )
+            (j) =>
+              j.nama_id.toLowerCase().replace(/ /g, "-") === activeCategory,
+          ),
         );
 
   const itemsPerView = 4;
   // [PERUBAHAN] Gunakan 'filteredItems' untuk kalkulasi carousel
   const maxIndex = Math.max(
     0,
-    Math.ceil(filteredItems.length / itemsPerView) - 1
+    Math.ceil(filteredItems.length / itemsPerView) - 1,
   );
 
   const handlePrevious = () => {
@@ -180,7 +181,7 @@ export function Menu() {
   // [PERUBAHAN] Gunakan 'filteredItems' untuk menentukan item yang terlihat
   const visibleItems = filteredItems.slice(
     carouselIndex * itemsPerView,
-    (carouselIndex + 1) * itemsPerView
+    (carouselIndex + 1) * itemsPerView,
   );
 
   const canGoPrevious = carouselIndex > 0;
