@@ -44,7 +44,7 @@ export default function SettingsPage() {
   const [disconnecting, setDisconnecting] = useState(false);
 
   const handleDisconnect = async () => {
-    if (!confirm("Are you sure you want to disconnect WhatsApp?")) return;
+    if (!confirm("Apakah Anda yakin ingin memutuskan WhatsApp?")) return;
 
     setDisconnecting(true);
     try {
@@ -58,11 +58,11 @@ export default function SettingsPage() {
         }));
         // The polling interval will pick up the new QR code eventually
       } else {
-        alert("Failed to disconnect: " + (data.message || "Unknown error"));
+        alert("Gagal memutuskan: " + (data.message || "Kesalahan tidak diketahui"));
       }
     } catch (error) {
       console.error("Error disconnecting:", error);
-      alert("Error disconnecting WhatsApp");
+      alert("Kesalahan saat memutuskan WhatsApp");
     } finally {
       setDisconnecting(false);
     }
@@ -110,9 +110,9 @@ export default function SettingsPage() {
       {/* Page Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Pengaturan</h1>
           <p className="text-gray-600">
-            Manage your application settings and preferences
+            Kelola pengaturan dan preferensi aplikasi Anda
           </p>
         </div>
       </div>
@@ -153,12 +153,12 @@ export default function SettingsPage() {
               <div className="space-y-6">
                 <div>
                   <h3 className="text-lg font-medium text-gray-900 mb-4">
-                    WhatsApp Server Connection
+                    Koneksi Server WhatsApp
                   </h3>
                   <div className="space-y-4">
                     <p className="text-sm text-gray-500 mb-4">
-                      Scan the QR code to connect the WhatsApp server for
-                      automated notifications.
+                      Pindai kode QR untuk menghubungkan server WhatsApp untuk
+                      notifikasi otomatis.
                     </p>
 
                     {waStatus.is_connected ? (
@@ -169,10 +169,10 @@ export default function SettingsPage() {
                           </div>
                           <div>
                             <p className="text-sm font-medium text-green-800">
-                              WhatsApp Connected
+                              WhatsApp Terhubung
                             </p>
                             <p className="text-xs text-green-600">
-                              Server is ready to send messages.
+                              Server siap mengirim pesan.
                             </p>
                           </div>
                         </div>
@@ -184,10 +184,10 @@ export default function SettingsPage() {
                           {disconnecting ? (
                             <>
                               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                              Disconnecting...
+                              Memutuskan...
                             </>
                           ) : (
-                            "Disconnect WhatsApp"
+                            "Putus WhatsApp"
                           )}
                         </Button>
                       </div>
@@ -203,11 +203,10 @@ export default function SettingsPage() {
                           </div>
                         )}
                         <h5 className="text-sm font-medium text-gray-900 mb-1">
-                          Scan QR Code
+                          Pindai Kode QR
                         </h5>
                         <p className="text-xs text-gray-500 max-w-xs">
-                          Open WhatsApp on your phone {">"} Menu {">"} Linked
-                          Devices {">"} Link a Device
+                          Buka WhatsApp di ponsel Anda {">"} Menu {">"} Perangkat Tertaut {">"} Tautkan Perangkat
                         </p>
                       </div>
                     )}
@@ -223,7 +222,7 @@ export default function SettingsPage() {
                   <div className="flex items-center justify-center py-8">
                     <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
                     <span className="ml-2 text-gray-600">
-                      Loading configuration...
+                      Memuat konfigurasi...
                     </span>
                   </div>
                 )}
@@ -261,19 +260,19 @@ export default function SettingsPage() {
                     {/* Delivery Settings Section */}
                     <div className="border-b pb-6 mb-6">
                       <h3 className="text-lg font-medium text-gray-900 mb-4">
-                        Delivery Settings
+                        Pengaturan Pengiriman
                       </h3>
                       <p className="text-sm text-gray-600 mb-6">
-                        Configure delivery options for your customers
+                        Konfigurasi opsi pengiriman untuk pelanggan Anda
                       </p>
 
                       <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
                         <div>
                           <h4 className="text-sm font-medium text-gray-900">
-                            Enable Delivery Service
+                            Aktifkan Layanan Pengiriman
                           </h4>
                           <p className="text-sm text-gray-500">
-                            Allow customers to choose delivery option
+                            Izinkan pelanggan memilih opsi pengiriman
                           </p>
                         </div>
                         <input
@@ -292,11 +291,11 @@ export default function SettingsPage() {
                     {/* Store Closure Section */}
                     <div>
                       <h3 className="text-lg font-medium text-gray-900 mb-4">
-                        Store Closure Settings
+                        Pengaturan Tutup Toko
                       </h3>
                       <p className="text-sm text-gray-600 mb-6">
-                        Configure when your store will be closed and set a
-                        message for customers
+                        Konfigurasi kapan toko Anda akan tutup dan atur pesan
+                        untuk pelanggan
                       </p>
 
                       <div className="space-y-6">
@@ -304,10 +303,10 @@ export default function SettingsPage() {
                         <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
                           <div>
                             <h4 className="text-sm font-medium text-gray-900">
-                              Enable Store Closure
+                              Aktifkan Penutupan Toko
                             </h4>
                             <p className="text-sm text-gray-500">
-                              Temporarily close the store for orders
+                              Tutup toko sementara untuk pesanan
                             </p>
                           </div>
                           <input
@@ -322,7 +321,7 @@ export default function SettingsPage() {
 
                         {/* WhatsApp Number for Closure */}
                         <Input
-                          label="WhatsApp Number (for Store Closed Modal)"
+                          label="Nomor WhatsApp (untuk Modal Toko Tutup)"
                           value={config.whatsapp_number || ""}
                           onChange={(e) =>
                             updateConfig({ whatsapp_number: e.target.value })
@@ -335,17 +334,17 @@ export default function SettingsPage() {
                         {config.is_tutup && (
                           <div className="space-y-4 p-4 bg-red-50 rounded-lg border border-red-200">
                             <Textarea
-                              label="Closure Message"
+                              label="Pesan Penutupan"
                               value={config.pesan}
                               onChange={(e) =>
                                 updateConfig({ pesan: e.target.value })
                               }
-                              placeholder="e.g., We are closed for renovation. See you soon!"
+                              placeholder="cth., Kami tutup untuk renovasi. Sampai jumpa!"
                               rows={3}
                             />
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                               <Input
-                                label="Reopening Date"
+                                label="Tanggal Buka Kembali"
                                 type="date"
                                 value={(() => {
                                   if (!config.tgl_buka) return "";
@@ -380,7 +379,7 @@ export default function SettingsPage() {
                                 }}
                               />
                               <TimePicker
-                                label="Reopening Time"
+                                label="Waktu Buka Kembali"
                                 value={(() => {
                                   if (!config.tgl_buka) return "00:00";
                                   const date = new Date(config.tgl_buka);
@@ -414,7 +413,7 @@ export default function SettingsPage() {
                             {config.tgl_buka && (
                               <div className="p-3 bg-white rounded border border-red-200">
                                 <p className="text-sm text-gray-600">
-                                  <strong>Store will reopen on:</strong>{" "}
+                                  <strong>Toko akan buka kembali pada:</strong>{" "}
                                   {new Date(config.tgl_buka).toLocaleString(
                                     "id-ID",
                                     {
@@ -437,15 +436,15 @@ export default function SettingsPage() {
                     {/* Order Limits Section */}
                     <div className="border-t pt-6">
                       <h3 className="text-lg font-medium text-gray-900 mb-4">
-                        Order Limits
+                        Batas Pesanan
                       </h3>
                       <p className="text-sm text-gray-600 mb-6">
-                        Set daily order limits and order cutoff time
+                        Atur batas pesanan harian dan waktu batas pemesanan
                       </p>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <Input
-                          label="Daily Order Limit"
+                          label="Batas Pesanan Harian"
                           type="number"
                           value={config.limit_pesanan_harian || ""}
                           onChange={(e) => {
@@ -459,7 +458,7 @@ export default function SettingsPage() {
                           icon={ShoppingCart}
                         />
                         <TimePicker
-                          label="Order Cutoff Time"
+                          label="Waktu Batas Pemesanan"
                           value={
                             config.limit_jam_order
                               ? config.limit_jam_order.slice(0, 5)
@@ -474,8 +473,8 @@ export default function SettingsPage() {
                         />
                       </div>
                       <p className="text-xs text-gray-500 mt-2">
-                        Orders will not be accepted after the cutoff time each
-                        day.
+                        Pesanan tidak akan diterima setelah waktu batas setiap
+                        hari.
                       </p>
                     </div>
 
@@ -618,16 +617,15 @@ export default function SettingsPage() {
                     {/* Store Location Section */}
                     <div className="border-t pt-6">
                       <h3 className="text-lg font-medium text-gray-900 mb-4">
-                        Store Location
+                        Lokasi Toko
                       </h3>
                       <p className="text-sm text-gray-600 mb-6">
-                        Set your store&apos;s GPS coordinates for delivery
-                        calculations
+                        Atur koordinat GPS toko Anda untuk perhitungan pengiriman
                       </p>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <Input
-                          label="Latitude"
+                          label="Lintang"
                           type="text"
                           value={config.latitude}
                           onChange={(e) =>
@@ -637,7 +635,7 @@ export default function SettingsPage() {
                           icon={MapPin}
                         />
                         <Input
-                          label="Longitude"
+                          label="Bujur"
                           type="text"
                           value={config.longitude}
                           onChange={(e) =>
@@ -655,7 +653,7 @@ export default function SettingsPage() {
                             rel="noopener noreferrer"
                             className="text-sm text-orange-600 hover:text-orange-700 underline"
                           >
-                            View location on Google Maps →
+                            Lihat lokasi di Google Maps →
                           </a>
                         </div>
                       )}
@@ -672,12 +670,12 @@ export default function SettingsPage() {
                           if (success) {
                             setStoreConfigMessage({
                               type: "success",
-                              text: "Store configuration saved successfully!",
+                              text: "Konfigurasi toko berhasil disimpan!",
                             });
                           } else {
                             setStoreConfigMessage({
                               type: "error",
-                              text: "Failed to save configuration. Please try again.",
+                              text: "Gagal menyimpan konfigurasi. Silakan coba lagi.",
                             });
                           }
                           // Clear message after 3 seconds
@@ -689,12 +687,12 @@ export default function SettingsPage() {
                         {savingStoreConfig ? (
                           <>
                             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            Saving...
+                            Menyimpan...
                           </>
                         ) : (
                           <>
                             <Save className="h-4 w-4 mr-2" />
-                            Save Store Configuration
+                            Simpan Konfigurasi Toko
                           </>
                         )}
                       </Button>
