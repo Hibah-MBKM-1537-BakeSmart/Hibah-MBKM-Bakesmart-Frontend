@@ -56,6 +56,9 @@ export async function PUT(
     if (body.nama_en !== undefined) backendBody.nama_en = body.nama_en;
     if (body.jenis_id !== undefined) backendBody.ref_jenis_id = body.jenis_id;
     if (body.ref_jenis_id !== undefined) backendBody.ref_jenis_id = body.ref_jenis_id;
+    if (body.min_amount !== undefined) backendBody.min_amount = body.min_amount;
+    if (body.max_amount !== undefined) backendBody.max_amount = body.max_amount;
+    if (body.PO_closed !== undefined) backendBody.PO_closed = body.PO_closed;
     console.log(`[SubJenis API] Transformed body for backend:`, backendBody);
 
     const response = await fetch(`${BACKEND_URL}/sub_jenis/${id}`, {
@@ -98,6 +101,9 @@ export async function PUT(
       nama_id: data.nama_id,
       nama_en: data.nama_en,
       jenis_id: data.ref_jenis_id || data.jenis_id,
+      min_amount: data.min_amount,
+      max_amount: data.max_amount,
+      PO_closed: data.PO_closed,
     };
     return NextResponse.json(resultData);
   } catch (error) {

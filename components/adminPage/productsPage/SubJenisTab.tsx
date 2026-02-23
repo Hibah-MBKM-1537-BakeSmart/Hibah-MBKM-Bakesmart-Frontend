@@ -51,14 +51,6 @@ const DAYS_OPTIONS = [
   { id: 7, nama_id: "Minggu", nama_en: "Sunday" },
 ];
 
-// Attribute interface
-interface Attribute {
-  id?: number;
-  nama_id: string;
-  nama_en: string;
-  harga: number;
-}
-
 // Add/Edit Sub Jenis Form Modal with Configuration
 function SubJenisFormModal({
   isOpen,
@@ -728,9 +720,8 @@ export function SubJenisTab() {
   const {
     subJenisList,
     loading,
-    createSubJenis,
-    updateSubJenis,
     deleteSubJenis,
+    fetchSubJenis,
   } = useSubJenis();
   const { addToast } = useToast();
 
@@ -757,6 +748,25 @@ export function SubJenisTab() {
     return matchesSearch && matchesJenis;
   });
 
+  const readErrorMessage = async (
+    response: Response,
+    fallbackMessage: string
+  ) => {
+    try {
+      const text = await response.text();
+      if (!text) return fallbackMessage;
+
+      try {
+        const json = JSON.parse(text);
+        return json.message || json.error || fallbackMessage;
+      } catch {
+        return text;
+      }
+    } catch {
+      return fallbackMessage;
+    }
+  };
+
   const handleAddSubJenis = async (data: SubJenisConfig) => {
     try {
       // Step 1: Create sub jenis with basic info + config
@@ -775,13 +785,25 @@ export function SubJenisTab() {
 
       if (!response.ok) throw new Error("Gagal membuat sub jenis");
       const result = await response.json();
-      const subJenisId = result.id;
+      const subJenisId = result.id || result?.data?.id;
+
+      if (!subJenisId) {
+        throw new Error("ID sub jenis tidak ditemukan dari response backend");
+      }
 
       // Step 2: Append hari (available days)
       for (const hariId of data.available_days || []) {
-        await fetch(`/api/sub_jenis/${subJenisId}/hari/${hariId}`, {
+        const hariResponse = await fetch(`/api/sub_jenis/${subJenisId}/hari/${hariId}`, {
           method: "POST",
         });
+        if (!hariResponse.ok && hariResponse.status !== 409) {
+          throw new Error(
+            await readErrorMessage(
+              hariResponse,
+              `Gagal menambahkan hari ${hariId} ke sub jenis`
+            )
+          );
+        }
       }
 
       // Step 3: Create and append attributes
@@ -800,30 +822,39 @@ export function SubJenisTab() {
             }),
           });
 
-          if (attrResponse.ok) {
-            const attrResult = await attrResponse.json();
-            attributeId = attrResult.id;
+          if (!attrResponse.ok) {
+            throw new Error(
+              await readErrorMessage(attrResponse, "Gagal membuat atribut baru")
+            );
           }
+
+          const attrResult = await attrResponse.json();
+          attributeId = attrResult.id || attrResult?.data?.id;
         }
 
         // Append attribute to sub_jenis (DENGAN HARGA!)
         if (attributeId) {
-          await fetch(`/api/sub_jenis/${subJenisId}/attribute/${attributeId}`, {
+          const appendAttrResponse = await fetch(`/api/sub_jenis/${subJenisId}/attribute/${attributeId}`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               harga: attr.harga || 0, // ✅ Kirim harga di sini!
             }),
           });
+
+          if (!appendAttrResponse.ok && appendAttrResponse.status !== 409) {
+            throw new Error(
+              await readErrorMessage(
+                appendAttrResponse,
+                `Gagal menambahkan atribut ${attributeId} ke sub jenis`
+              )
+            );
+          }
         }
       }
 
-      // Refresh sub jenis list
-      await createSubJenis({
-        nama_id: data.nama_id,
-        nama_en: data.nama_en,
-        jenis_id: data.jenis_id,
-      });
+      // Refresh sub jenis list from server to keep admin state in sync
+      await fetchSubJenis();
 
       addToast({
         type: "success",
@@ -873,6 +904,10 @@ export function SubJenisTab() {
               }
             );
           }
+        } else if (existingHariRes.status !== 404) {
+          throw new Error(
+            await readErrorMessage(existingHariRes, "Gagal mengambil data hari")
+          );
         }
       } catch (e) {
         // If no hari exists, continue
@@ -881,9 +916,17 @@ export function SubJenisTab() {
       // Step 3: Add new hari
       for (const hariId of data.available_days || []) {
         try {
-          await fetch(`/api/sub_jenis/${editingSubJenis.id}/hari/${hariId}`, {
+          const addHariResponse = await fetch(`/api/sub_jenis/${editingSubJenis.id}/hari/${hariId}`, {
             method: "POST",
           });
+          if (!addHariResponse.ok && addHariResponse.status !== 409) {
+            throw new Error(
+              await readErrorMessage(
+                addHariResponse,
+                `Gagal menambahkan hari ${hariId}`
+              )
+            );
+          }
         } catch (e) {
           // Continue if already exists
         }
@@ -905,6 +948,13 @@ export function SubJenisTab() {
               }
             );
           }
+        } else if (existingAttrRes.status !== 404) {
+          throw new Error(
+            await readErrorMessage(
+              existingAttrRes,
+              "Gagal mengambil data atribut sub jenis"
+            )
+          );
         }
       } catch (e) {
         // If no attributes exist, continue
@@ -929,7 +979,7 @@ export function SubJenisTab() {
 
             if (attrResponse.ok) {
               const attrResult = await attrResponse.json();
-              attributeId = attrResult.id;
+              attributeId = attrResult.id || attrResult?.data?.id;
             }
           } catch (e) {
             console.error("Failed to create attribute:", e);
@@ -939,7 +989,7 @@ export function SubJenisTab() {
         // Append attribute to sub_jenis (DENGAN HARGA!)
         if (attributeId) {
           try {
-            await fetch(
+            const appendAttrResponse = await fetch(
               `/api/sub_jenis/${editingSubJenis.id}/attribute/${attributeId}`,
               {
                 method: "POST",
@@ -949,18 +999,22 @@ export function SubJenisTab() {
                 }),
               }
             );
+            if (!appendAttrResponse.ok && appendAttrResponse.status !== 409) {
+              throw new Error(
+                await readErrorMessage(
+                  appendAttrResponse,
+                  `Gagal menambahkan atribut ${attributeId}`
+                )
+              );
+            }
           } catch (e) {
             // Continue if already exists
           }
         }
       }
 
-      // Refresh list
-      await updateSubJenis(editingSubJenis.id, {
-        nama_id: data.nama_id,
-        nama_en: data.nama_en,
-        jenis_id: data.jenis_id,
-      });
+      // Refresh list from server to keep admin state in sync
+      await fetchSubJenis();
 
       addToast({
         type: "success",

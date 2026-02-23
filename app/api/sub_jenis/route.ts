@@ -83,6 +83,9 @@ export async function POST(request: NextRequest) {
       nama_id: body.nama_id,
       nama_en: body.nama_en,
       ref_jenis_id: body.jenis_id || body.ref_jenis_id,
+      min_amount: body.min_amount,
+      max_amount: body.max_amount,
+      PO_closed: body.PO_closed,
     };
     console.log(`[SubJenis API] Transformed body for backend:`, backendBody);
 
@@ -121,6 +124,9 @@ export async function POST(request: NextRequest) {
       nama_id: data.nama_id,
       nama_en: data.nama_en,
       jenis_id: data.ref_jenis_id || data.jenis_id,
+      min_amount: data.min_amount,
+      max_amount: data.max_amount,
+      PO_closed: data.PO_closed,
     };
     return NextResponse.json(resultData, { status: 201 });
   } catch (error) {
