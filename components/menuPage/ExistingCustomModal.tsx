@@ -50,9 +50,14 @@ export function ExistingCustomizationModal({
 
   if (!isOpen || !item) return null;
 
+  // Calculate current stock based on product type
+  const currentStock = item.isDaily
+    ? item.dailyStock || 0
+    : item.sub_jenis?.[0]?.min_amount || 0;
+
   // Get all cart items for this product
   const productCartItems = cartItems.filter(
-    (cartItem) => cartItem.id === item.id
+    (cartItem) => cartItem.id === item.id,
   );
 
   if (productCartItems.length === 0) {
@@ -65,7 +70,7 @@ export function ExistingCustomizationModal({
     const attributesKey = (cartItem.selectedAttributes || [])
       .map(
         (attr) =>
-          `${attr.id}-${language === "en" ? attr.nama_en : attr.nama_id}`
+          `${attr.id}-${language === "en" ? attr.nama_en : attr.nama_id}`,
       )
       .sort()
       .join("|");
@@ -97,7 +102,7 @@ export function ExistingCustomizationModal({
       isDiscount: cartItem.isDiscount,
       image: cartItem.image,
       category: cartItem.category,
-      stock: item.stok,
+      stock: currentStock,
       availableDays: item.hari.map((h) => h.nama_id),
       orderDay: cartItem.orderDay,
       selectedAttributes: cartItem.selectedAttributes || [],
@@ -159,8 +164,8 @@ export function ExistingCustomizationModal({
           ci.cartId !== originalCartItem.cartId &&
           ci.orderDay === originalCartItem.orderDay &&
           JSON.stringify(
-            (ci.selectedAttributes || []).map((attr) => attr.id).sort()
-          ) === JSON.stringify(newAttrIds)
+            (ci.selectedAttributes || []).map((attr) => attr.id).sort(),
+          ) === JSON.stringify(newAttrIds),
       );
 
       if (existingItemWithSameCustomization) {
@@ -169,14 +174,14 @@ export function ExistingCustomizationModal({
           existingItemWithSameCustomization.quantity + editQuantity;
 
         // Check stock
-        if (newTotalQuantity > item.stok) {
-          alert(`Stok tidak mencukupi. Maksimal ${item.stok} item`);
+        if (newTotalQuantity > currentStock) {
+          alert(`Stok tidak mencukupi. Maksimal ${currentStock} item`);
           return;
         }
 
         const quantityUpdated = updateQuantity(
           existingItemWithSameCustomization.cartId,
-          newTotalQuantity
+          newTotalQuantity,
         );
 
         if (!quantityUpdated) {
@@ -190,8 +195,8 @@ export function ExistingCustomizationModal({
       } else {
         // Tidak ada item dengan kustomisasi yang sama, buat item baru
         // Check stock
-        if (editQuantity > item.stok) {
-          alert(`Stok tidak mencukupi. Maksimal ${item.stok} item`);
+        if (editQuantity > currentStock) {
+          alert(`Stok tidak mencukupi. Maksimal ${currentStock} item`);
           return;
         }
 
@@ -203,7 +208,7 @@ export function ExistingCustomizationModal({
           isDiscount: originalCartItem.isDiscount,
           image: originalCartItem.image,
           category: originalCartItem.category,
-          stock: item.stok,
+          stock: currentStock,
           availableDays: item.hari.map((h) => h.nama_id),
           orderDay: originalCartItem.orderDay,
           selectedAttributes: editAttributes,
@@ -222,7 +227,7 @@ export function ExistingCustomizationModal({
           if (lastCartItem) {
             const quantityUpdated = updateQuantity(
               lastCartItem.cartId,
-              editQuantity
+              editQuantity,
             );
             if (!quantityUpdated) {
               removeFromCart(lastCartItem.cartId);
@@ -252,7 +257,7 @@ export function ExistingCustomizationModal({
 
   const handleQuantityChange = (delta: number) => {
     const newQuantity = Math.max(1, editQuantity + delta);
-    if (newQuantity <= item.stok) {
+    if (newQuantity <= currentStock) {
       setEditQuantity(newQuantity);
     }
   };
@@ -279,17 +284,17 @@ export function ExistingCustomizationModal({
     const basePrice = item!.harga_diskon || item!.harga;
     const attributesPrice = attributes.reduce(
       (total, attr) => total + (attr?.harga || 0),
-      0
+      0,
     );
     return (basePrice + attributesPrice) * quantity;
   };
 
   const shouldShowDiscount =
     item.harga_diskon && item.harga_diskon < item.harga;
-  const isOutOfStock = item.stok <= 0;
+  const isOutOfStock = currentStock <= 0;
   const totalQuantityInCart = cartVariants.reduce(
     (sum, variant) => sum + variant.quantity,
-    0
+    0,
   );
   const itemName = language === "en" ? item.nama_en : item.nama_id;
   const itemImage = getImageUrl(item.gambars?.[0]?.file_path);
@@ -365,10 +370,10 @@ export function ExistingCustomizationModal({
                   : variant.attributes;
                 const totalPrice = calculatePrice(
                   displayAttributes,
-                  displayQuantity
+                  displayQuantity,
                 );
                 const formattedTotalPrice = `Rp${totalPrice.toLocaleString(
-                  "id-ID"
+                  "id-ID",
                 )}`;
 
                 return (
@@ -378,8 +383,8 @@ export function ExistingCustomizationModal({
                       isEditing
                         ? "border-blue-500 bg-blue-50 ring-2 ring-blue-500/20"
                         : isSelected
-                        ? "border-[#8B6F47] bg-[#8B6F47]/5 ring-2 ring-[#8B6F47]/20 cursor-pointer"
-                        : "border-gray-200 hover:border-gray-300 cursor-pointer"
+                          ? "border-[#8B6F47] bg-[#8B6F47]/5 ring-2 ring-[#8B6F47]/20 cursor-pointer"
+                          : "border-gray-200 hover:border-gray-300 cursor-pointer"
                     }`}
                     onClick={() => !isEditing && setSelectedVariant(variant.id)}
                   >
@@ -420,12 +425,14 @@ export function ExistingCustomizationModal({
                                 type="button"
                                 className="w-7 h-7 rounded-full bg-[#5D4037] text-white hover:bg-[#8B6F47] transition-colors flex items-center justify-center disabled:opacity-50"
                                 onClick={() => handleQuantityChange(1)}
-                                disabled={editQuantity >= item.stok}
+                                disabled={editQuantity >= currentStock}
                               >
                                 <Plus size={14} />
                               </button>
                               <span className="text-xs text-gray-500 ml-1">
-                                (Stok: {item.stok})
+                                {item.isDaily
+                                  ? "(Tersedia)"
+                                  : `(Stok: ${currentStock})`}
                               </span>
                             </div>
                           </div>
@@ -457,7 +464,7 @@ export function ExistingCustomizationModal({
                               {item.attributes && item.attributes.length > 0 ? (
                                 item.attributes.map((attribute) => {
                                   const isAttrSelected = editAttributes.some(
-                                    (attr) => attr.id === attribute.id
+                                    (attr) => attr.id === attribute.id,
                                   );
                                   const attributeName =
                                     language === "en"
@@ -505,7 +512,7 @@ export function ExistingCustomizationModal({
                                         <span className="text-xs text-gray-600">
                                           +Rp
                                           {attribute.harga.toLocaleString(
-                                            "id-ID"
+                                            "id-ID",
                                           )}
                                         </span>
                                       </div>
@@ -611,7 +618,7 @@ export function ExistingCustomizationModal({
                   }`}
                   onClick={() => {
                     const selected = cartVariants.find(
-                      (v) => v.id === selectedVariant
+                      (v) => v.id === selectedVariant,
                     );
                     if (selected) {
                       handleAddSameCustomization(selected.cartItem);

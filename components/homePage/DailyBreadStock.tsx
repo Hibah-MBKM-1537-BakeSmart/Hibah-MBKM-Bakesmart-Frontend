@@ -38,9 +38,10 @@ function BreadStockCard(item: MenuItem) {
           <Image
             src={image || "/placeholder.svg"}
             alt={name}
-            width={200}
-            height={200}
-            className="h-full w-full object-cover transition-transform hover:scale-105"
+            fill
+            sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 20vw"
+            className="object-cover transition-transform hover:scale-105"
+            priority={false}
           />
         </div>
 
@@ -106,7 +107,7 @@ export function DailyBreadStock() {
   const totalPages = Math.ceil(todaysBread.length / itemsPerPage);
   const visibleProducts = todaysBread.slice(
     currentIndex,
-    currentIndex + itemsPerPage
+    currentIndex + itemsPerPage,
   );
 
   const handlePrevious = () => {
@@ -115,7 +116,7 @@ export function DailyBreadStock() {
 
   const handleNext = () => {
     setCurrentIndex((prev) =>
-      Math.min(todaysBread.length - itemsPerPage, prev + itemsPerPage)
+      Math.min(todaysBread.length - itemsPerPage, prev + itemsPerPage),
     );
   };
 
@@ -168,23 +169,23 @@ export function DailyBreadStock() {
             hari: product.hari || [],
             attributes: product.attributes || [],
             bahans: product.bahans || [],
-          })
+          }),
         );
 
         // 3. Filter HANYA untuk roti harian (isDaily) DAN yang masih ada daily_stock
         const filteredDailyBread = allProducts.filter(
-          (item) => item.isDaily && (item.dailyStock || 0) > 0
+          (item) => item.isDaily && (item.dailyStock || 0) > 0,
         );
 
         console.log(
           "[DailyBreadStock] Filtered daily bread:",
-          filteredDailyBread
+          filteredDailyBread,
         );
         setTodaysBread(filteredDailyBread);
       } catch (err) {
         console.error("[DailyBreadStock] Error fetching products:", err);
         setError(
-          err instanceof Error ? err.message : "Failed to fetch products"
+          err instanceof Error ? err.message : "Failed to fetch products",
         );
         setTodaysBread([]);
       } finally {
@@ -299,16 +300,24 @@ export function DailyBreadStock() {
             )}
           </div>
         ) : (
-          <div className="text-center py-16">
-            <AlertCircle className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-            <p className="text-gray-500 text-lg">
-              {t("stock.noAvailable") ||
-                "Tidak ada roti yang tersedia hari ini"}
-            </p>
-            <p className="text-gray-400 text-sm mt-2">
-              {t("stock.checkBack") ||
-                "Silakan kembali lagi nanti atau hubungi kami untuk pesanan khusus"}
-            </p>
+          <div className="text-center py-16 max-w-2xl mx-auto">
+            <div className="bg-white rounded-lg shadow-md p-8 md:p-12">
+              <AlertCircle className="w-20 h-20 mx-auto mb-6 text-amber-500" />
+              <h3
+                className="text-2xl font-serif font-bold mb-4"
+                style={{ color: "#5D4037" }}
+              >
+                {t("stock.soldOutTitle") || "Roti Hari Ini Sudah Habis"}
+              </h3>
+              <p className="text-gray-600 text-base mb-4 leading-relaxed">
+                {t("stock.noAvailable") ||
+                  "Maaf, roti harian kami untuk hari ini sudah habis terjual. Terima kasih atas antusiasme Anda!"}
+              </p>
+              <p className="text-gray-500 text-sm">
+                {t("stock.checkBack") ||
+                  "Silakan kembali lagi besok untuk roti segar kami, atau hubungi kami untuk pesanan pre-order khusus."}
+              </p>
+            </div>
           </div>
         )}
       </div>

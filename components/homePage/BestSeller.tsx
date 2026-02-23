@@ -47,7 +47,9 @@ function ProductCard(item: MenuItem) {
         ? item.jenis[0].nama_id
         : item.jenis[0].nama_en
       : "";
-  const stock = item.stok;
+  const stock = item.isDaily
+    ? item.dailyStock || 0
+    : item.sub_jenis?.[0]?.min_amount || 0;
 
   const isOutOfStock = stock <= 0;
 
@@ -59,9 +61,10 @@ function ProductCard(item: MenuItem) {
             <Image
               src={image || "/placeholder.svg"}
               alt={name}
-              width={200}
-              height={200}
-              className="h-full w-full object-cover transition-transform hover:scale-105"
+              fill
+              sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 20vw"
+              className="object-cover transition-transform hover:scale-105"
+              priority={false}
             />
             {isDiscount && originalPrice && (
               <div className="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">
@@ -199,7 +202,7 @@ export function BestSeller() {
             deskripsi_en: product.deskripsi_en || "",
             harga: product.harga,
             harga_diskon: product.harga_diskon || null,
-            stok: product.stok || 0,
+            stok: product.sub_jenis?.[0]?.min_amount || 0, // Use min_amount from sub_jenis as stock
             isBestSeller: product.isBestSeller || false,
             isDaily: product.isDaily || false,
             dailyStock: product.daily_stock || 0,

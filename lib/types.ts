@@ -100,6 +100,8 @@ export interface ApiProduct {
     nama_id: string;
     jenis_id?: number;
     is_closed?: boolean;
+    min_amount?: number;
+    max_amount?: number;
   }>;
   hari?: Array<{ id: number; nama_en: string; nama_id: string }>;
   attributes?: Array<{
@@ -150,6 +152,8 @@ export interface MenuItem {
     nama_id: string;
     jenis_id?: number;
     is_closed?: boolean;
+    min_amount?: number;
+    max_amount?: number;
   }>;
   isSubJenisClosed?: boolean; // Flag to indicate if product's sub_jenis is closed
   hari: Array<{ id: number; nama_en: string; nama_id: string }>;

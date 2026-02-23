@@ -86,8 +86,10 @@ export function MenuModal({
 
   const handleQuantityChange = (delta: number) => {
     const newQuantity = Math.max(1, quantity + delta);
-    // Use daily_stock for daily products, regular stok for others
-    const currentStock = item.isDaily ? item.dailyStock || 0 : item?.stok || 0;
+    // Use daily_stock for daily products, min_amount from sub_jenis for others
+    const currentStock = item.isDaily
+      ? item.dailyStock || 0
+      : item.sub_jenis?.[0]?.min_amount || 0;
     if (newQuantity <= currentStock) {
       setQuantity(newQuantity);
     }
@@ -144,7 +146,7 @@ export function MenuModal({
             ? item.jenis[0].nama_id
             : item.jenis[0].nama_en
           : "",
-        stock: currentStock, // Use currentStock (daily_stock or regular stok)
+        stock: currentStock, // Use currentStock (daily_stock or min_amount from sub_jenis)
         isDaily: item.isDaily, // Add isDaily flag
         availableDays: item.hari.map((h) => h.nama_id),
         orderDay: tempOrderDay,
@@ -167,8 +169,10 @@ export function MenuModal({
   const shouldShowDiscount =
     item.harga_diskon && item.harga_diskon < item.harga;
   const originalPrice = `Rp${item.harga.toLocaleString("id-ID")}`;
-  // Use daily_stock for daily products
-  const currentStock = item.isDaily ? item.dailyStock || 0 : item.stok;
+  // Use daily_stock for daily products, min_amount from sub_jenis for others
+  const currentStock = item.isDaily
+    ? item.dailyStock || 0
+    : item.sub_jenis?.[0]?.min_amount || 0;
   const isOutOfStock = currentStock <= 0;
 
   const getDayLabel = (day: string) => {
@@ -254,14 +258,15 @@ export function MenuModal({
                     </span>
                   )}
                   {!isOutOfStock && !isStoreClosed() ? (
-                    <span className="text-xs md:text-sm bg-green-100 text-green-600 px-2 py-1 rounded">
-                      {item.isDaily
-                        ? language === "id"
-                          ? "Stok Hari Ini: "
-                          : "Today's Stock: "
-                        : t("menuModal.stockAvailable") + ": "}
-                      {currentStock}
-                    </span>
+                    item.isDaily ? (
+                      <span className="text-xs md:text-sm bg-green-100 text-green-600 px-2 py-1 rounded">
+                        {language === "id" ? "Tersedia" : "Available"}
+                      </span>
+                    ) : (
+                      <span className="text-xs md:text-sm bg-green-100 text-green-600 px-2 py-1 rounded">
+                        {t("menuModal.stockAvailable")}: {currentStock}
+                      </span>
+                    )
                   ) : (
                     <span className="text-xs md:text-sm bg-red-100 text-red-600 px-2 py-1 rounded">
                       {isStoreClosed()

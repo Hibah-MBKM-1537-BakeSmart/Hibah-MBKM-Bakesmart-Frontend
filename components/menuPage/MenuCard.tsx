@@ -58,8 +58,10 @@ export function MenuCard({
         ? item.jenis[0].nama_id
         : item.jenis[0].nama_en
       : "";
-  // Use daily_stock for daily products, regular stok for others
-  const stock = item.isDaily ? item.dailyStock || 0 : item.stok;
+  // Use daily_stock for daily products, min_amount from sub_jenis for others
+  const stock = item.isDaily
+    ? item.dailyStock || 0
+    : item.sub_jenis?.[0]?.min_amount || 0;
   const attributes = item.attributes.map((attr) => ({
     id: attr.id,
     name: language === "id" ? attr.nama_id : attr.nama_en,
@@ -311,14 +313,9 @@ export function MenuCard({
                   🔥 {language === "id" ? "Roti Hari Ini" : "Today's Bread"}
                 </span>
               )}
-              {!isSubJenisClosed && stock > 0 && (
+              {!isSubJenisClosed && stock > 0 && !item.isDaily && (
                 <span className="text-xs bg-green-100 text-green-600 px-2 py-0.5 rounded">
-                  {item.isDaily
-                    ? language === "id"
-                      ? "Stok Hari Ini"
-                      : "Today's Stock"
-                    : "Stok"}
-                  : {stock}
+                  Stok: {stock}
                 </span>
               )}
             </div>
