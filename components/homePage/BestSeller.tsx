@@ -47,7 +47,9 @@ function ProductCard(item: MenuItem) {
         ? item.jenis[0].nama_id
         : item.jenis[0].nama_en
       : "";
-  const stock = item.stok;
+  const stock = item.isDaily
+    ? item.dailyStock || 0
+    : item.sub_jenis?.[0]?.min_amount || 0;
 
   const isOutOfStock = stock <= 0;
 
@@ -71,9 +73,7 @@ function ProductCard(item: MenuItem) {
             {(isOutOfStock || storeIsClosed) && (
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <span className="text-white text-sm font-bold text-center px-3 py-2 bg-gray-900 rounded-lg shadow-xl border-2 border-white">
-                  {isOutOfStock
-                    ? t("menu.outOfStock")
-                    : "Toko Tutup"}
+                  {isOutOfStock ? t("menu.outOfStock") : "Toko Tutup"}
                 </span>
               </div>
             )}
@@ -201,7 +201,7 @@ export function BestSeller() {
             deskripsi_en: product.deskripsi_en || "",
             harga: product.harga,
             harga_diskon: product.harga_diskon || null,
-            stok: product.stok || 0,
+            stok: product.sub_jenis?.[0]?.min_amount || 0, // Use min_amount from sub_jenis as stock
             isBestSeller: product.isBestSeller || false,
             isDaily: product.isDaily || false,
             dailyStock: product.daily_stock || 0,

@@ -76,7 +76,7 @@ interface CustomersContextType {
 }
 
 const CustomersContext = createContext<CustomersContextType | undefined>(
-  undefined
+  undefined,
 );
 
 export function CustomersProvider({ children }: { children: React.ReactNode }) {
@@ -172,7 +172,7 @@ export function CustomersProvider({ children }: { children: React.ReactNode }) {
       // Don't use fetchWithAuth as it sets Content-Type: application/json
       const token = localStorage.getItem("bakesmart_admin_auth");
       const authHeader = token ? JSON.parse(token).token : null;
-      
+
       const headers: HeadersInit = {};
       if (authHeader) {
         headers["Authorization"] = `Bearer ${authHeader}`;
@@ -213,14 +213,14 @@ export function CustomersProvider({ children }: { children: React.ReactNode }) {
       filtered = filtered.filter(
         (customer) =>
           customer.nama.toLowerCase().includes(query) ||
-          customer.no_hp.includes(query)
+          customer.no_hp.includes(query),
       );
     }
 
     // Role filter
     if (state.filters.role !== "all") {
       filtered = filtered.filter(
-        (customer) => customer.role === state.filters.role
+        (customer) => customer.role === state.filters.role,
       );
     }
 
@@ -312,7 +312,7 @@ export function CustomersProvider({ children }: { children: React.ReactNode }) {
         ? `${customer.lastPurchase.product?.nama || "Unknown"} (${
             customer.lastPurchase.jumlah
           }x) - ${new Date(customer.lastPurchase.created_at).toLocaleDateString(
-            "id-ID"
+            "id-ID",
           )}`
         : "No purchases",
     }));
@@ -323,7 +323,7 @@ export function CustomersProvider({ children }: { children: React.ReactNode }) {
       ...csvData.map((row) =>
         headers
           .map((header) => `"${row[header as keyof typeof row]}"`)
-          .join(",")
+          .join(","),
       ),
     ].join("\n");
 

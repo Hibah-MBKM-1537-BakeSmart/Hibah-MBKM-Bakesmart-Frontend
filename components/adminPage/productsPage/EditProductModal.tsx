@@ -70,7 +70,7 @@ export function EditProductModal({
           nama_en: attr.nama_en || attr.nama || "",
           nama: attr.nama,
           harga: attr.harga || 0,
-        })
+        }),
       );
 
       // Initial IDs from props
@@ -206,10 +206,10 @@ export function EditProductModal({
       // 2. Sync Attributes (Add-ons) - hari sync removed, comes from sub_jenis
       const currentAttrIds = formData.addons.map((a) => a.id);
       const attrToAdd = currentAttrIds.filter(
-        (id) => !initialIds.attributes.includes(id)
+        (id) => !initialIds.attributes.includes(id),
       );
       const attrToRemove = initialIds.attributes.filter(
-        (id) => !currentAttrIds.includes(id)
+        (id) => !currentAttrIds.includes(id),
       );
 
       for (const id of attrToAdd)
@@ -226,7 +226,7 @@ export function EditProductModal({
         .map((i) => i.id)
         .filter((id) => id !== undefined) as number[];
       const ingredientsToRemove = initialIds.ingredients.filter(
-        (id) => !currentIngredientIds.includes(id)
+        (id) => !currentIngredientIds.includes(id),
       );
 
       for (const id of ingredientsToRemove) {
@@ -270,7 +270,7 @@ export function EditProductModal({
             // Get auth token for the request
             const token = localStorage.getItem("bakesmart_admin_auth");
             const authHeader = token ? JSON.parse(token).token : null;
-            
+
             const headers: HeadersInit = {};
             if (authHeader) {
               headers["Authorization"] = `Bearer ${authHeader}`;
@@ -288,14 +288,14 @@ export function EditProductModal({
                 "Failed to upload image. Status:",
                 response.status,
                 "Response:",
-                text
+                text,
               );
               try {
                 const errorData = JSON.parse(text);
                 throw new Error(errorData.message || "Failed to upload image");
               } catch (e) {
                 throw new Error(
-                  `Failed to upload image (Status ${response.status})`
+                  `Failed to upload image (Status ${response.status})`,
                 );
               }
             }
@@ -309,7 +309,7 @@ export function EditProductModal({
       // Find images that were present initially (or in product prop) but are not in existingImages state
       const currentExistingIds = new Set(existingImages.map((img) => img.id));
       const imagesToDelete = (product.gambars || []).filter(
-        (img) => !currentExistingIds.has(img.id)
+        (img) => !currentExistingIds.has(img.id),
       );
 
       for (const img of imagesToDelete) {
@@ -317,7 +317,7 @@ export function EditProductModal({
           // Get auth token for DELETE request
           const token = localStorage.getItem("bakesmart_admin_auth");
           const authHeader = token ? JSON.parse(token).token : null;
-          
+
           const headers: HeadersInit = {
             "Content-Type": "application/json",
           };
@@ -372,7 +372,7 @@ export function EditProductModal({
       existingImages.length + formData.images.length + files.length;
     if (totalImages > 1) {
       alert(
-        "Maksimal 1 gambar total. Hapus gambar lama terlebih dahulu jika ingin mengganti."
+        "Maksimal 1 gambar total. Hapus gambar lama terlebih dahulu jika ingin mengganti.",
       );
       return;
     }
@@ -426,7 +426,7 @@ export function EditProductModal({
   const handleIngredientChange = (
     index: number,
     field: "nama_id" | "nama_en" | "jumlah",
-    value: string
+    value: string,
   ) => {
     setFormData((prev) => {
       const newIngredients = [...prev.ingredients];
@@ -728,7 +728,7 @@ export function EditProductModal({
                             handleIngredientChange(
                               index,
                               "nama_id",
-                              e.target.value
+                              e.target.value,
                             )
                           }
                           className="w-full px-2 py-1 text-sm border rounded"
@@ -743,7 +743,7 @@ export function EditProductModal({
                             handleIngredientChange(
                               index,
                               "nama_en",
-                              e.target.value
+                              e.target.value,
                             )
                           }
                           className="w-full px-2 py-1 text-sm border rounded"
@@ -760,7 +760,7 @@ export function EditProductModal({
                             handleIngredientChange(
                               index,
                               "jumlah",
-                              e.target.value
+                              e.target.value,
                             )
                           }
                           className="w-full px-2 py-1 text-sm border rounded"
