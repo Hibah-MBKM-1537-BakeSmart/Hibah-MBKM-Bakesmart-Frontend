@@ -19,7 +19,7 @@ export function HeroSection() {
           {/* Image First on Mobile */}
           <div className="w-full max-w-sm">
             <Image
-              src="/img/hero-bread.jpg"
+              src="/img/bread_2.svg"
               alt={t("heroSection.breadImageAlt")}
               width={400}
               height={400}

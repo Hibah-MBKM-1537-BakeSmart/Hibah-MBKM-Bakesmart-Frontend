@@ -61,9 +61,10 @@ function ProductCard(item: MenuItem) {
             <Image
               src={image || "/placeholder.svg"}
               alt={name}
-              width={200}
-              height={200}
-              className="h-full w-full object-cover transition-transform hover:scale-105"
+              fill
+              sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 20vw"
+              className="object-cover transition-transform hover:scale-105"
+              priority={false}
             />
             {isDiscount && originalPrice && (
               <div className="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">
