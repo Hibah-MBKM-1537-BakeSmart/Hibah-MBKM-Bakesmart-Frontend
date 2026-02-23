@@ -227,12 +227,12 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
 
   // Fetch products from backend
   const refreshProducts = async (): Promise<void> => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // Increased to 10 seconds
+
     try {
       console.log("[ProductsContext] Refreshing products from backend...");
       setState((prev) => ({ ...prev, loading: true, error: null }));
-
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // Increased to 10 seconds
 
       const response = await fetchWithAuth(BACKEND_URL, {
         signal: controller.signal,
@@ -258,6 +258,7 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
         isBackendConnected: true,
       }));
     } catch (error: any) {
+      clearTimeout(timeoutId);
       console.error("[ProductsContext] Error fetching products:", error);
 
       let errorMessage = "Tidak dapat terhubung ke backend. ";
@@ -471,54 +472,8 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
         "[ProductsContext] Backend PUT response:",
         JSON.stringify(data),
       );
-
-      // Immediately update local state with optimistic data
-      // Don't rely on backend response format, use what we sent
-      setState((prev) => {
-        console.log(
-          "[ProductsContext] Updating state, current products:",
-          prev.products.length,
-        );
-        const updatedProducts = prev.products.map((product) => {
-          if (product.id === id) {
-            // Transformasi 'bahans' agar sesuai interface Product (perlu id dan nama)
-            const updatedBahans = productData.bahans
-              ? productData.bahans.map((b) => ({
-                  id: Math.random(), // ID sementara untuk UI
-                  nama: b.nama_en || b.nama_id, // Default nama dari nama_en/id
-                  nama_id: b.nama_id,
-                  nama_en: b.nama_en,
-                  jumlah: b.jumlah,
-                }))
-              : product.bahans;
-
-            // Pisahkan properti yang tidak kompatibel (bahans & sub_jenis_ids)
-            // sub_jenis_ids tidak bisa langsung di-spread ke Product karena Product butuh sub_jenis (array objek)
-            const { bahans, sub_jenis_ids, ...restData } = productData;
-
-            const updated: Product = {
-              ...product,
-              ...restData,
-              bahans: updatedBahans,
-            };
-
-            console.log(`[ProductsContext] Updating product ${id}:`, updated);
-            return updated;
-          }
-          return product;
-        });
-        console.log(
-          "[ProductsContext] New products array:",
-          updatedProducts.length,
-        );
-        return {
-          ...prev,
-          products: updatedProducts,
-          loading: false,
-        };
-      });
-
-      console.log("[ProductsContext] State update completed");
+      await refreshProducts();
+      console.log("[ProductsContext] Product list refreshed after update");
     } catch (error: any) {
       console.error("[ProductsContext] Error updating product:", error);
 
