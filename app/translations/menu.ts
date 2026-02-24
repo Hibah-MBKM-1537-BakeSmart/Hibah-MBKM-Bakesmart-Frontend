@@ -58,7 +58,7 @@ export const menuTranslations = {
     // Menu
     "menu.title": "Our Menu",
     "menu.viewAll": "View All Menu",
-    "menu.stockavailable": "Stock Available",
+    "menu.stockavailable": "Slot Available",
     "menu.addToCart": "Add to Cart",
     "menu.outOfStock": "Out of Stock",
     "menu.storeIsClosed": "Store is Closed",
@@ -100,7 +100,7 @@ export const menuTranslations = {
 
     // Menu Modal
     "menuModal.outOfStock": "OUT OF STOCK",
-    "menuModal.stockAvailable": "Stock available",
+    "menuModal.stockAvailable": "Slot available",
     "menuModal.stockEmpty": "Out of stock",
     "menuModal.selectOrderDay": "Select Order Day:",
     "menuModal.selectDayFirst": "Select order day first",
