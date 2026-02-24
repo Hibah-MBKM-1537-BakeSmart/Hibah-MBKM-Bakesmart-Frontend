@@ -16,7 +16,7 @@ export default function CustomersHeader() {
     if (!c.lastPurchase) return false;
     const daysSinceLastPurchase = Math.floor(
       (new Date().getTime() - new Date(c.lastPurchase.created_at).getTime()) /
-        (1000 * 60 * 60 * 24)
+      (1000 * 60 * 60 * 24)
     );
     return daysSinceLastPurchase <= 7; // Active if purchased within last 7 days
   }).length;
@@ -25,8 +25,8 @@ export default function CustomersHeader() {
     {
       titleKey: "customers.totalCustomers",
       value: totalCustomers,
-      change: "+2.1%",
-      changeType: "positive" as const,
+      // change: "+2.1%", // TODO: belum tersedia di backend
+      // changeType: "positive" as const,
       icon: Users,
       iconBg: "bg-blue-100",
       iconColor: "text-blue-600",
@@ -34,8 +34,8 @@ export default function CustomersHeader() {
     {
       titleKey: "customers.activeMembers",
       value: activeMembers,
-      change: "+5.3%",
-      changeType: "positive" as const,
+      // change: "+5.3%", // TODO: belum tersedia di backend
+      // changeType: "positive" as const,
       icon: UserCheck,
       iconBg: "bg-green-100",
       iconColor: "text-green-600",
@@ -43,8 +43,8 @@ export default function CustomersHeader() {
     {
       titleKey: "customers.activeThisWeek",
       value: activeNow,
-      change: "-1.2%",
-      changeType: "negative" as const,
+      // change: "-1.2%", // TODO: belum tersedia di backend
+      // changeType: "negative" as const,
       icon: Activity,
       iconBg: "bg-purple-100",
       iconColor: "text-purple-600",
@@ -84,20 +84,7 @@ export default function CustomersHeader() {
                   <p className="text-2xl font-bold text-gray-900 font-poppins mt-1">
                     {card.value.toLocaleString()}
                   </p>
-                  <div className="flex items-center mt-2">
-                    <span
-                      className={`text-sm font-medium font-inter ${
-                        card.changeType === "positive"
-                          ? "text-green-600"
-                          : "text-red-600"
-                      }`}
-                    >
-                      {card.change}
-                    </span>
-                    <span className="text-sm text-gray-500 ml-1 font-inter">
-                      {t("customers.vsLastMonth")}
-                    </span>
-                  </div>
+                  {/* TODO: Persentase perubahan belum tersedia di backend */}
                 </div>
                 <div className={`${card.iconBg} p-3 rounded-lg`}>
                   <IconComponent className={`h-6 w-6 ${card.iconColor}`} />

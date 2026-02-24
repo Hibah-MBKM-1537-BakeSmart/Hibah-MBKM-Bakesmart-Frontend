@@ -269,11 +269,10 @@ function SubJenisFormModal({
               <button
                 type="button"
                 onClick={() => setActiveSection("basic")}
-                className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
-                  activeSection === "basic"
+                className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${activeSection === "basic"
                     ? "text-orange-600 border-b-2 border-orange-600 bg-orange-50"
                     : "text-gray-500 hover:text-gray-700"
-                }`}
+                  }`}
               >
                 <Layers className="w-4 h-4 inline mr-2" />
                 Informasi Dasar
@@ -281,11 +280,10 @@ function SubJenisFormModal({
               <button
                 type="button"
                 onClick={() => setActiveSection("config")}
-                className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
-                  activeSection === "config"
+                className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${activeSection === "config"
                     ? "text-orange-600 border-b-2 border-orange-600 bg-orange-50"
                     : "text-gray-500 hover:text-gray-700"
-                }`}
+                  }`}
               >
                 <Settings className="w-4 h-4 inline mr-2" />
                 Konfigurasi
@@ -405,7 +403,11 @@ function SubJenisFormModal({
                       <input
                         type="time"
                         value={poClosed.substring(0, 5)} // Display as HH:mm
-                        onChange={(e) => setPoClosed(e.target.value + ":00")} // Store as HH:mm:ss
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          // time input may return HH:mm or HH:mm:ss depending on browser/step
+                          setPoClosed(val.split(":").length === 2 ? val + ":00" : val);
+                        }}
                         step="1"
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                       />
@@ -446,11 +448,10 @@ function SubJenisFormModal({
                           key={day.id}
                           type="button"
                           onClick={() => toggleDay(day.id)}
-                          className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                            selectedDays.includes(day.id)
+                          className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${selectedDays.includes(day.id)
                               ? "bg-orange-500 text-white"
                               : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"
-                          }`}
+                            }`}
                         >
                           {day.nama_id}
                         </button>
@@ -640,8 +641,8 @@ function SubJenisFormModal({
                       {loading
                         ? "Menyimpan..."
                         : editingSubJenis
-                        ? "Simpan Perubahan"
-                        : "Simpan"}
+                          ? "Simpan Perubahan"
+                          : "Simpan"}
                     </button>
                   </>
                 )}
