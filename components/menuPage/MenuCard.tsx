@@ -61,7 +61,7 @@ export function MenuCard({
   // Use daily_stock for daily products, min_amount from sub_jenis for others
   const stock = item.isDaily
     ? item.dailyStock || 0
-    : item.sub_jenis?.[0]?.min_amount || 0;
+    : item.sub_jenis?.[0]?.max_amount || 0;
   const attributes = item.attributes.map((attr) => ({
     id: attr.id,
     name: language === "id" ? attr.nama_id : attr.nama_en,
