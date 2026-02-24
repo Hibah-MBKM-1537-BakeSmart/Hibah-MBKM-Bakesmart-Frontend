@@ -17,8 +17,10 @@ import {
   useStoreClosure,
   OperatingHour,
 } from "@/app/contexts/StoreClosureContext";
+import { useAdminTranslation } from "@/app/contexts/AdminTranslationContext";
 
 export default function SettingsPage() {
+  const { t } = useAdminTranslation();
   const [activeTab, setActiveTab] = useState("store-closure");
   const [savingStoreConfig, setSavingStoreConfig] = useState(false);
   const [storeConfigMessage, setStoreConfigMessage] = useState<{
@@ -44,7 +46,7 @@ export default function SettingsPage() {
   const [disconnecting, setDisconnecting] = useState(false);
 
   const handleDisconnect = async () => {
-    if (!confirm("Are you sure you want to disconnect WhatsApp?")) return;
+    if (!confirm(t("settings.confirmDisconnect"))) return;
 
     setDisconnecting(true);
     try {
@@ -58,11 +60,11 @@ export default function SettingsPage() {
         }));
         // The polling interval will pick up the new QR code eventually
       } else {
-        alert("Failed to disconnect: " + (data.message || "Unknown error"));
+        alert(t("settings.disconnectFailed") + (data.message || "Unknown error"));
       }
     } catch (error) {
       console.error("Error disconnecting:", error);
-      alert("Error disconnecting WhatsApp");
+      alert(t("settings.disconnectError"));
     } finally {
       setDisconnecting(false);
     }
@@ -101,8 +103,8 @@ export default function SettingsPage() {
   }, [activeTab]);
 
   const tabs = [
-    { id: "store-closure", label: "Konfigurasi Toko", icon: AlertCircle },
-    { id: "notifications", label: "Koneksi WhatsApp", icon: Smartphone },
+    { id: "store-closure", label: t("settings.tabStoreConfig"), icon: AlertCircle },
+    { id: "notifications", label: t("settings.tabWhatsApp"), icon: Smartphone },
   ];
 
   return (
@@ -110,9 +112,9 @@ export default function SettingsPage() {
       {/* Page Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
+          <h1 className="text-2xl font-bold text-gray-900">{t("settings.title")}</h1>
           <p className="text-gray-600">
-            Manage your application settings and preferences
+            {t("settings.subtitle")}
           </p>
         </div>
       </div>
@@ -127,16 +129,14 @@ export default function SettingsPage() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors ${
-                    activeTab === tab.id
+                  className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors ${activeTab === tab.id
                       ? "bg-orange-500 text-white"
                       : "text-gray-700 hover:bg-gray-100"
-                  }`}
+                    }`}
                 >
                   <Icon
-                    className={`w-5 h-5 ${
-                      activeTab === tab.id ? "text-white" : "text-gray-500"
-                    }`}
+                    className={`w-5 h-5 ${activeTab === tab.id ? "text-white" : "text-gray-500"
+                      }`}
                   />
                   <span className="font-medium">{tab.label}</span>
                 </button>
@@ -153,12 +153,11 @@ export default function SettingsPage() {
               <div className="space-y-6">
                 <div>
                   <h3 className="text-lg font-medium text-gray-900 mb-4">
-                    WhatsApp Server Connection
+                    {t("settings.waServerConnection")}
                   </h3>
                   <div className="space-y-4">
                     <p className="text-sm text-gray-500 mb-4">
-                      Scan the QR code to connect the WhatsApp server for
-                      automated notifications.
+                      {t("settings.waScanDesc")}
                     </p>
 
                     {waStatus.is_connected ? (
@@ -169,10 +168,10 @@ export default function SettingsPage() {
                           </div>
                           <div>
                             <p className="text-sm font-medium text-green-800">
-                              WhatsApp Connected
+                              {t("settings.waConnected")}
                             </p>
                             <p className="text-xs text-green-600">
-                              Server is ready to send messages.
+                              {t("settings.waReadyToSend")}
                             </p>
                           </div>
                         </div>
@@ -184,10 +183,10 @@ export default function SettingsPage() {
                           {disconnecting ? (
                             <>
                               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                              Disconnecting...
+                              {t("settings.disconnecting")}
                             </>
                           ) : (
-                            "Disconnect WhatsApp"
+                            t("settings.disconnectWhatsApp")
                           )}
                         </Button>
                       </div>
@@ -203,11 +202,10 @@ export default function SettingsPage() {
                           </div>
                         )}
                         <h5 className="text-sm font-medium text-gray-900 mb-1">
-                          Scan QR Code
+                          {t("settings.scanQRCode")}
                         </h5>
                         <p className="text-xs text-gray-500 max-w-xs">
-                          Open WhatsApp on your phone {">"} Menu {">"} Linked
-                          Devices {">"} Link a Device
+                          {t("settings.scanQRInstruction")}
                         </p>
                       </div>
                     )}
@@ -223,7 +221,7 @@ export default function SettingsPage() {
                   <div className="flex items-center justify-center py-8">
                     <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
                     <span className="ml-2 text-gray-600">
-                      Loading configuration...
+                      {t("settings.loadingConfiguration")}
                     </span>
                   </div>
                 )}
@@ -238,18 +236,16 @@ export default function SettingsPage() {
                 {/* Success/Error Message */}
                 {storeConfigMessage && (
                   <div
-                    className={`p-4 rounded-lg border ${
-                      storeConfigMessage.type === "success"
+                    className={`p-4 rounded-lg border ${storeConfigMessage.type === "success"
                         ? "bg-green-50 border-green-200"
                         : "bg-red-50 border-red-200"
-                    }`}
+                      }`}
                   >
                     <p
-                      className={`text-sm ${
-                        storeConfigMessage.type === "success"
+                      className={`text-sm ${storeConfigMessage.type === "success"
                           ? "text-green-600"
                           : "text-red-600"
-                      }`}
+                        }`}
                     >
                       {storeConfigMessage.text}
                     </p>
@@ -261,19 +257,19 @@ export default function SettingsPage() {
                     {/* Delivery Settings Section */}
                     <div className="border-b pb-6 mb-6">
                       <h3 className="text-lg font-medium text-gray-900 mb-4">
-                        Delivery Settings
+                        {t("settings.deliverySettings")}
                       </h3>
                       <p className="text-sm text-gray-600 mb-6">
-                        Configure delivery options for your customers
+                        {t("settings.deliverySettingsDesc")}
                       </p>
 
                       <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
                         <div>
                           <h4 className="text-sm font-medium text-gray-900">
-                            Enable Delivery Service
+                            {t("settings.enableDeliveryService")}
                           </h4>
                           <p className="text-sm text-gray-500">
-                            Allow customers to choose delivery option
+                            {t("settings.enableDeliveryServiceDesc")}
                           </p>
                         </div>
                         <input
@@ -292,11 +288,10 @@ export default function SettingsPage() {
                     {/* Store Closure Section */}
                     <div>
                       <h3 className="text-lg font-medium text-gray-900 mb-4">
-                        Store Closure Settings
+                        {t("settings.storeClosureSettings")}
                       </h3>
                       <p className="text-sm text-gray-600 mb-6">
-                        Configure when your store will be closed and set a
-                        message for customers
+                        {t("settings.storeClosureSettingsDesc")}
                       </p>
 
                       <div className="space-y-6">
@@ -304,10 +299,10 @@ export default function SettingsPage() {
                         <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
                           <div>
                             <h4 className="text-sm font-medium text-gray-900">
-                              Enable Store Closure
+                              {t("settings.enableStoreClosure")}
                             </h4>
                             <p className="text-sm text-gray-500">
-                              Temporarily close the store for orders
+                              {t("settings.enableStoreClosureDesc")}
                             </p>
                           </div>
                           <input
@@ -322,7 +317,7 @@ export default function SettingsPage() {
 
                         {/* WhatsApp Number for Closure */}
                         <Input
-                          label="WhatsApp Number (for Store Closed Modal)"
+                          label={t("settings.whatsappNumberClosure")}
                           value={config.whatsapp_number || ""}
                           onChange={(e) =>
                             updateConfig({ whatsapp_number: e.target.value })
@@ -335,17 +330,17 @@ export default function SettingsPage() {
                         {config.is_tutup && (
                           <div className="space-y-4 p-4 bg-red-50 rounded-lg border border-red-200">
                             <Textarea
-                              label="Closure Message"
+                              label={t("settings.closureMessage")}
                               value={config.pesan}
                               onChange={(e) =>
                                 updateConfig({ pesan: e.target.value })
                               }
-                              placeholder="e.g., We are closed for renovation. See you soon!"
+                              placeholder={t("settings.closureMessagePlaceholder")}
                               rows={3}
                             />
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                               <Input
-                                label="Reopening Date"
+                                label={t("settings.reopeningDate")}
                                 type="date"
                                 value={(() => {
                                   if (!config.tgl_buka) return "";
@@ -380,7 +375,7 @@ export default function SettingsPage() {
                                 }}
                               />
                               <TimePicker
-                                label="Reopening Time"
+                                label={t("settings.reopeningTime")}
                                 value={(() => {
                                   if (!config.tgl_buka) return "00:00";
                                   const date = new Date(config.tgl_buka);
@@ -414,7 +409,7 @@ export default function SettingsPage() {
                             {config.tgl_buka && (
                               <div className="p-3 bg-white rounded border border-red-200">
                                 <p className="text-sm text-gray-600">
-                                  <strong>Store will reopen on:</strong>{" "}
+                                  <strong>{t("settings.storeWillReopenOn")}</strong>{" "}
                                   {new Date(config.tgl_buka).toLocaleString(
                                     "id-ID",
                                     {
@@ -437,15 +432,15 @@ export default function SettingsPage() {
                     {/* Order Limits Section */}
                     <div className="border-t pt-6">
                       <h3 className="text-lg font-medium text-gray-900 mb-4">
-                        Order Limits
+                        {t("settings.orderLimits")}
                       </h3>
                       <p className="text-sm text-gray-600 mb-6">
-                        Set daily order limits and order cutoff time
+                        {t("settings.orderLimitsDesc")}
                       </p>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <Input
-                          label="Daily Order Limit"
+                          label={t("settings.dailyOrderLimit")}
                           type="number"
                           value={config.limit_pesanan_harian || ""}
                           onChange={(e) => {
@@ -459,7 +454,7 @@ export default function SettingsPage() {
                           icon={ShoppingCart}
                         />
                         <TimePicker
-                          label="Order Cutoff Time"
+                          label={t("settings.orderCutoffTime")}
                           value={
                             config.limit_jam_order
                               ? config.limit_jam_order.slice(0, 5)
@@ -474,8 +469,7 @@ export default function SettingsPage() {
                         />
                       </div>
                       <p className="text-xs text-gray-500 mt-2">
-                        Orders will not be accepted after the cutoff time each
-                        day.
+                        {t("settings.orderCutoffNote")}
                       </p>
                     </div>
 
@@ -483,11 +477,10 @@ export default function SettingsPage() {
                     <div className="border-t pt-6">
                       <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
                         <Calendar className="h-5 w-5" />
-                        Jam Operasional
+                        {t("settings.operatingHoursTitle")}
                       </h3>
                       <p className="text-sm text-gray-600 mb-6">
-                        Atur jam buka dan tutup toko untuk setiap hari dalam
-                        seminggu
+                        {t("settings.operatingHoursDesc")}
                       </p>
 
                       <div className="space-y-3">
@@ -495,11 +488,10 @@ export default function SettingsPage() {
                           (hour: OperatingHour) => (
                             <div
                               key={hour.day_index}
-                              className={`flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-lg border ${
-                                hour.is_open
+                              className={`flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-lg border ${hour.is_open
                                   ? "bg-green-50 border-green-200"
                                   : "bg-gray-50 border-gray-200"
-                              }`}
+                                }`}
                             >
                               {/* Day Name & Toggle */}
                               <div className="flex items-center justify-between sm:w-36">
@@ -543,13 +535,12 @@ export default function SettingsPage() {
                                   className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
                                 />
                                 <span
-                                  className={`ml-2 text-sm ${
-                                    hour.is_open
+                                  className={`ml-2 text-sm ${hour.is_open
                                       ? "text-green-600"
                                       : "text-gray-500"
-                                  }`}
+                                    }`}
                                 >
-                                  {hour.is_open ? "Buka" : "Tutup"}
+                                  {hour.is_open ? t("settings.open") : t("settings.closed")}
                                 </span>
                               </div>
 
@@ -565,9 +556,9 @@ export default function SettingsPage() {
                                           config.operating_hours.map((h) =>
                                             h.day_index === hour.day_index
                                               ? {
-                                                  ...h,
-                                                  open_time: value || "08:00",
-                                                }
+                                                ...h,
+                                                open_time: value || "08:00",
+                                              }
                                               : h
                                           );
                                         updateConfig({
@@ -587,9 +578,9 @@ export default function SettingsPage() {
                                           config.operating_hours.map((h) =>
                                             h.day_index === hour.day_index
                                               ? {
-                                                  ...h,
-                                                  close_time: value || "21:00",
-                                                }
+                                                ...h,
+                                                close_time: value || "21:00",
+                                              }
                                               : h
                                           );
                                         updateConfig({
@@ -605,7 +596,7 @@ export default function SettingsPage() {
                               {!hour.is_open && (
                                 <div className="flex-1 text-center sm:text-left">
                                   <span className="text-sm text-gray-500 italic">
-                                    Toko tutup pada hari ini
+                                    {t("settings.storeClosedToday")}
                                   </span>
                                 </div>
                               )}
@@ -618,16 +609,15 @@ export default function SettingsPage() {
                     {/* Store Location Section */}
                     <div className="border-t pt-6">
                       <h3 className="text-lg font-medium text-gray-900 mb-4">
-                        Store Location
+                        {t("settings.storeLocation")}
                       </h3>
                       <p className="text-sm text-gray-600 mb-6">
-                        Set your store&apos;s GPS coordinates for delivery
-                        calculations
+                        {t("settings.storeLocationDesc")}
                       </p>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <Input
-                          label="Latitude"
+                          label={t("settings.latitude")}
                           type="text"
                           value={config.latitude}
                           onChange={(e) =>
@@ -637,7 +627,7 @@ export default function SettingsPage() {
                           icon={MapPin}
                         />
                         <Input
-                          label="Longitude"
+                          label={t("settings.longitude")}
                           type="text"
                           value={config.longitude}
                           onChange={(e) =>
@@ -655,7 +645,7 @@ export default function SettingsPage() {
                             rel="noopener noreferrer"
                             className="text-sm text-orange-600 hover:text-orange-700 underline"
                           >
-                            View location on Google Maps →
+                            {t("settings.viewOnGoogleMaps")}
                           </a>
                         </div>
                       )}
@@ -672,12 +662,12 @@ export default function SettingsPage() {
                           if (success) {
                             setStoreConfigMessage({
                               type: "success",
-                              text: "Store configuration saved successfully!",
+                              text: t("settings.saveSuccess"),
                             });
                           } else {
                             setStoreConfigMessage({
                               type: "error",
-                              text: "Failed to save configuration. Please try again.",
+                              text: t("settings.saveFailed"),
                             });
                           }
                           // Clear message after 3 seconds
@@ -689,12 +679,12 @@ export default function SettingsPage() {
                         {savingStoreConfig ? (
                           <>
                             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            Saving...
+                            {t("settings.saving")}
                           </>
                         ) : (
                           <>
                             <Save className="h-4 w-4 mr-2" />
-                            Save Store Configuration
+                            {t("settings.saveStoreConfig")}
                           </>
                         )}
                       </Button>
