@@ -89,7 +89,7 @@ export function MenuModal({
     // Use daily_stock for daily products, min_amount from sub_jenis for others
     const currentStock = item.isDaily
       ? item.dailyStock || 0
-      : item.sub_jenis?.[0]?.min_amount || 0;
+      : item.sub_jenis?.[0]?.max_amount || 0;
     if (newQuantity <= currentStock) {
       setQuantity(newQuantity);
     }
@@ -172,7 +172,7 @@ export function MenuModal({
   // Use daily_stock for daily products, min_amount from sub_jenis for others
   const currentStock = item.isDaily
     ? item.dailyStock || 0
-    : item.sub_jenis?.[0]?.min_amount || 0;
+    : item.sub_jenis?.[0]?.max_amount || 0;
   const isOutOfStock = currentStock <= 0;
 
   const getDayLabel = (day: string) => {
