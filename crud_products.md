@@ -806,7 +806,7 @@ file: [products.xlsx]
 | `deskripsi_en` | TEXT | Deskripsi (EN) |
 | `harga` | INTEGER | Harga produk |
 | `harga_diskon` | INTEGER | Harga diskon (nullable) |
-| `stok` | INTEGER | Stok tersedia |
+| `stok` | INTEGER | Slot tersedia |
 | `isBestSeller` | BOOLEAN | Best seller flag |
 | `isDaily` | BOOLEAN | Produk harian flag |
 | `daily_stock` | INTEGER | Stok harian (nullable) |

@@ -2,7 +2,7 @@ export const menuTranslations = {
   id: {
     // Menu
     "menu.title": "Menu Kami",
-    "menu.stockavailable": "Stok Tersedia",
+    "menu.stockavailable": "Slot Tersedia",
     "menu.viewAll": "Lihat Semua Menu",
     "menu.addToCart": "Tambah ke Keranjang",
     "menu.outOfStock": "Stok Habis",
@@ -44,7 +44,7 @@ export const menuTranslations = {
     // Menu Modal
     "menuModal.outOfStock": "STOK HABIS",
     "menu.storeIsClosed": "Toko Tutup",
-    "menuModal.stockAvailable": "Stok tersedia",
+    "menuModal.stockAvailable": "Slot tersedia",
     "menuModal.stockEmpty": "Stok habis",
     "menuModal.selectOrderDay": "Pilih Hari Pesanan:",
     "menuModal.selectDayFirst": "Pilih hari pesanan terlebih dahulu",
