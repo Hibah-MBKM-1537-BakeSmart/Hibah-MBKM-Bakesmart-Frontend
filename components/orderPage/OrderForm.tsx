@@ -72,6 +72,7 @@ export function OrderForm({
   const [isCalculatingDelivery, setIsCalculatingDelivery] = useState(false);
   const [deliveryOptions, setDeliveryOptions] = useState<any[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date>();
+  const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
 
   // State untuk Modal Peta
   const [showMap, setShowMap] = useState(false);
@@ -79,15 +80,25 @@ export function OrderForm({
   useEffect(() => {
     if (cartOrderDay && !selectedDate) {
       const today = new Date();
+      const tomorrow = new Date(today);
+      tomorrow.setDate(today.getDate() + 1); // Minimum order date is tomorrow
+
       const targetDayOfWeek = getDayOfWeekFromIndonesianDay(cartOrderDay);
 
       if (targetDayOfWeek !== undefined) {
         const currentDayOfWeek = today.getDay();
         let daysToAdd = targetDayOfWeek - currentDayOfWeek;
-        if (daysToAdd < 0) daysToAdd += 7;
+
+        // Ensure we're always ordering for at least tomorrow
+        if (daysToAdd <= 0) daysToAdd += 7;
 
         const targetDate = new Date(today);
         targetDate.setDate(today.getDate() + daysToAdd);
+
+        // Double check that targetDate is at least tomorrow
+        if (targetDate <= today) {
+          targetDate.setDate(targetDate.getDate() + 7);
+        }
 
         setSelectedDate(targetDate);
         const dateString = format(targetDate, "yyyy-MM-dd");
@@ -108,6 +119,15 @@ export function OrderForm({
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+
+    // Clear error untuk field yang diisi
+    if (formErrors[field]) {
+      setFormErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[field];
+        return newErrors;
+      });
+    }
 
     if (field === "deliveryMode") {
       onDeliveryModeChange?.(value);
@@ -150,14 +170,14 @@ export function OrderForm({
     try {
       const totalItemsCount = cartItems.reduce(
         (sum, item) => sum + item.quantity,
-        0
+        0,
       );
       // Berat total paket selalu dianggap 1000 gram (1 kg)
       const weightPerItem = Math.max(1, Math.floor(1000 / totalItemsCount));
 
       const itemsPayload = cartItems.map((item) => {
         const basePrice = Number.parseInt(
-          item.discountPrice.replace(/\D/g, "") || "0"
+          item.discountPrice.replace(/\D/g, "") || "0",
         );
         const attributesPrice = item.attributesPrice || 0;
         const finalItemPrice = basePrice + attributesPrice;
@@ -245,7 +265,7 @@ export function OrderForm({
     // Cari nama jalan otomatis dari koordinat baru
     try {
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`,
       );
       const data = await response.json();
       if (data.display_name) {
@@ -272,10 +292,10 @@ export function OrderForm({
         },
         (error) => {
           alert(
-            "Gagal mendeteksi lokasi otomatis. Silakan gunakan fitur 'Pilih Lewat Peta'."
+            "Gagal mendeteksi lokasi otomatis. Silakan gunakan fitur 'Pilih Lewat Peta'.",
           );
         },
-        options
+        options,
       );
     } else {
       alert("Browser tidak mendukung geolocation.");
@@ -295,7 +315,7 @@ export function OrderForm({
   };
 
   const getDayOfWeekFromIndonesianDay = (
-    dayName: string
+    dayName: string,
   ): number | undefined => {
     const dayMap: { [key: string]: number } = {
       minggu: 0,
@@ -326,6 +346,70 @@ export function OrderForm({
     isCartLockedToDay() && cartOrderDay
       ? getDayOfWeekFromIndonesianDay(cartOrderDay)
       : undefined;
+
+  // Validasi form
+  const validateForm = () => {
+    const errors: { [key: string]: string } = {};
+
+    if (!formData.namaPenerima.trim()) {
+      errors.namaPenerima = "Nama penerima harus diisi";
+    }
+
+    if (!formData.nomorTelepon.trim()) {
+      errors.nomorTelepon = "Nomor telepon harus diisi";
+    } else if (
+      !/^[0-9]{10,13}$/.test(formData.nomorTelepon.replace(/[^0-9]/g, ""))
+    ) {
+      errors.nomorTelepon = "Nomor telepon tidak valid (10-13 digit)";
+    }
+
+    if (!formData.deliveryMode) {
+      errors.deliveryMode = "Pilih metode pengiriman";
+    }
+
+    if (!formData.tanggalPemesanan) {
+      errors.tanggalPemesanan = "Pilih tanggal pemesanan";
+    }
+
+    // Validasi khusus untuk delivery
+    if (formData.deliveryMode === "delivery") {
+      if (!formData.alamat.trim()) {
+        errors.alamat = "Alamat lengkap harus diisi";
+      }
+      if (!formData.latitude || !formData.longitude) {
+        errors.lokasi =
+          "Pilih lokasi via GPS atau Peta untuk menghitung ongkir";
+      }
+    }
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const isFormValid = () => {
+    return (
+      formData.namaPenerima.trim() !== "" &&
+      formData.nomorTelepon.trim() !== "" &&
+      formData.deliveryMode !== "" &&
+      formData.tanggalPemesanan !== "" &&
+      (formData.deliveryMode === "pickup" ||
+        (formData.alamat.trim() !== "" &&
+          formData.latitude &&
+          formData.longitude))
+    );
+  };
+
+  // Export validation status via callback
+  useEffect(() => {
+    const validationStatus = {
+      isValid: isFormValid(),
+      errors: formErrors,
+    };
+    // Jika ada callback untuk validation status, panggil
+    if (onFormDataChange) {
+      onFormDataChange({ ...formData, _validationStatus: validationStatus });
+    }
+  }, [formData, formErrors]);
 
   return (
     <div className="space-y-6">
@@ -385,7 +469,7 @@ export function OrderForm({
               htmlFor="namaPenerima"
               className="text-[#5D4037] font-medium"
             >
-              {t("order.recipientName")}
+              {t("order.recipientName")} <span className="text-red-500">*</span>
             </Label>
             <Input
               id="namaPenerima"
@@ -393,16 +477,21 @@ export function OrderForm({
               onChange={(e) =>
                 handleInputChange("namaPenerima", e.target.value)
               }
-              className="border-[#8B6F47]"
+              className={`border-[#8B6F47] ${formErrors.namaPenerima ? "border-red-500 focus:ring-red-500" : ""}`}
               placeholder={t("order.recipientNamePlaceholder")}
             />
+            {formErrors.namaPenerima && (
+              <p className="text-sm text-red-500 mt-1">
+                {formErrors.namaPenerima}
+              </p>
+            )}
           </div>
           <div className="space-y-2">
             <Label
               htmlFor="nomorTelepon"
               className="text-[#5D4037] font-medium"
             >
-              {t("order.phoneNumber")}
+              {t("order.phoneNumber")} <span className="text-red-500">*</span>
             </Label>
             <Input
               id="nomorTelepon"
@@ -411,9 +500,14 @@ export function OrderForm({
               onChange={(e) =>
                 handleInputChange("nomorTelepon", e.target.value)
               }
-              className="border-[#8B6F47]"
+              className={`border-[#8B6F47] ${formErrors.nomorTelepon ? "border-red-500 focus:ring-red-500" : ""}`}
               placeholder={t("order.phoneNumberPlaceholder")}
             />
+            {formErrors.nomorTelepon && (
+              <p className="text-sm text-red-500 mt-1">
+                {formErrors.nomorTelepon}
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -422,10 +516,15 @@ export function OrderForm({
       <Card className="bg-white shadow-lg">
         <CardHeader>
           <CardTitle className="text-xl font-semibold text-[#5D4037]">
-            {t("order.deliveryMode")}
+            {t("order.deliveryMode")} <span className="text-red-500">*</span>
           </CardTitle>
         </CardHeader>
         <CardContent>
+          {formErrors.deliveryMode && (
+            <p className="text-sm text-red-500 mb-2">
+              {formErrors.deliveryMode}
+            </p>
+          )}
           <RadioGroup
             value={formData.deliveryMode}
             onValueChange={(value) => handleInputChange("deliveryMode", value)}
@@ -488,25 +587,31 @@ export function OrderForm({
 
             <div className="space-y-2">
               <Label htmlFor="alamat" className="text-[#5D4037] font-medium">
-                {t("order.fullAddress")}
+                {t("order.fullAddress")} <span className="text-red-500">*</span>
               </Label>
               <Textarea
                 id="alamat"
                 value={formData.alamat}
                 onChange={(e) => handleInputChange("alamat", e.target.value)}
-                className="border-[#8B6F47] focus:border-[#5D4037] focus:ring-[#5D4037]"
+                className={`border-[#8B6F47] focus:border-[#5D4037] focus:ring-[#5D4037] ${formErrors.alamat ? "border-red-500" : ""}`}
                 placeholder={t("order.fullAddressPlaceholder")}
                 rows={3}
               />
-              {!formData.latitude ? (
-                <p className="text-xs text-red-500">
+              {formErrors.alamat && (
+                <p className="text-sm text-red-500">{formErrors.alamat}</p>
+              )}
+              {formErrors.lokasi && (
+                <p className="text-sm text-red-500">{formErrors.lokasi}</p>
+              )}
+              {!formData.latitude && !formErrors.lokasi ? (
+                <p className="text-xs text-orange-500">
                   * Pilih lokasi via GPS atau Peta untuk hitung ongkir
                 </p>
-              ) : (
+              ) : formData.latitude ? (
                 <p className="text-xs text-green-600">
                   ✓ Lokasi terkunci: {formData.latitude}, {formData.longitude}
                 </p>
-              )}
+              ) : null}
             </div>
 
             <div className="space-y-2">

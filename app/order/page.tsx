@@ -72,16 +72,25 @@ export default function OrderPage() {
   // =================================================================
   // 2. LAKUKAN PERHITUNGAN GRAND TOTAL DI SINI (PARENT)
   // =================================================================
-  const subtotal = getTotalPrice();
-  const tax = subtotal * 0.1; // Pajak 10%
+  const subtotal = Number(getTotalPrice()) || 0;
+  // Pajak dihilangkan sesuai permintaan user
+  const tax = 0;
 
   // Pastikan ongkir 0 jika mode pickup
-  const finalDeliveryFee = deliveryMode === "pickup" ? 0 : deliveryFee;
+  const finalDeliveryFee =
+    deliveryMode === "pickup" ? 0 : Number(deliveryFee) || 0;
 
-  // Hitung total akhir (Pastikan tidak minus)
+  // Hitung total akhir (Pastikan tidak minus dan tidak NaN)
   const grandTotal = Math.max(
     0,
-    subtotal + tax + finalDeliveryFee - voucherDiscount
+    Number(
+      (
+        subtotal +
+        tax +
+        finalDeliveryFee -
+        (Number(voucherDiscount) || 0)
+      ).toFixed(0),
+    ) || 0,
   );
 
   console.log(
@@ -96,7 +105,7 @@ export default function OrderPage() {
     "voucherDiscount:",
     voucherDiscount,
     "GRAND TOTAL:",
-    grandTotal
+    grandTotal,
   );
 
   return (
@@ -133,6 +142,7 @@ export default function OrderPage() {
                 finalTotalAmount={grandTotal}
                 deliveryFee={finalDeliveryFee}
                 voucherCode={voucherCode}
+                deliveryMode={deliveryMode}
               />
             </div>
 

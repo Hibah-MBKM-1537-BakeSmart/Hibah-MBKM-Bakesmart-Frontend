@@ -124,7 +124,7 @@ export function VoucherSection({
         // Hanya update jika ada perubahan signifikan (untuk menghindari loop)
         if (Math.abs(newDiscount - appliedVoucher.discount) > 0.01) {
           setAppliedVoucher((prev) =>
-            prev ? { ...prev, discount: newDiscount } : null
+            prev ? { ...prev, discount: newDiscount } : null,
           );
           onVoucherApplied?.(appliedVoucher.code, newDiscount);
         }
@@ -148,7 +148,7 @@ export function VoucherSection({
   // dan 'handleApplyVoucher' akan membaca state tsb saat tombol "Terapkan" diklik.
 
   const handleImageUpload = async (
-    event: React.ChangeEvent<HTMLInputElement>
+    event: React.ChangeEvent<HTMLInputElement>,
   ) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -283,7 +283,7 @@ export function VoucherSection({
     setIsScanning(false);
 
     const video = document.querySelector(
-      "#qr-scanner-video video"
+      "#qr-scanner-video video",
     ) as HTMLVideoElement;
     if (video && video.srcObject) {
       const stream = video.srcObject as MediaStream;
@@ -292,11 +292,12 @@ export function VoucherSection({
   };
 
   const formatPrice = (price: number) => {
+    const safePrice = Number(price) || 0;
     return new Intl.NumberFormat("id-ID", {
       style: "currency",
       currency: "IDR",
       minimumFractionDigits: 0,
-    }).format(price);
+    }).format(safePrice);
   };
 
   return (
@@ -331,7 +332,7 @@ export function VoucherSection({
                             {appliedVoucher.maxDiscount &&
                             appliedVoucher.maxDiscount > 0
                               ? ` hingga ${formatPrice(
-                                  appliedVoucher.maxDiscount
+                                  appliedVoucher.maxDiscount,
                                 )}`
                               : ""}
                           </span>

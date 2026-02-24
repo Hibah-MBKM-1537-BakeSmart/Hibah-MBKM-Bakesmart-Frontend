@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Navbar } from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
@@ -7,6 +8,33 @@ import { useTranslation } from "@/app/contexts/TranslationContext";
 
 export default function ContactPage() {
   const { t, language } = useTranslation();
+  const [whatsappNumber, setWhatsappNumber] = useState("628123456789"); // Default fallback
+
+  useEffect(() => {
+    // Fetch WhatsApp number from config
+    const fetchConfig = async () => {
+      try {
+        const response = await fetch("/api/config");
+        if (response.ok) {
+          const config = await response.json();
+          if (config.whatsapp_number) {
+            // Remove any non-digit characters and ensure it starts with country code
+            let number = config.whatsapp_number.replace(/\D/g, "");
+            // If doesn't start with country code, assume it's Indonesian and add 62
+            if (!number.startsWith("62")) {
+              number = "62" + number.replace(/^0+/, "");
+            }
+            setWhatsappNumber(number);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch config:", error);
+        // Keep using default number
+      }
+    };
+
+    fetchConfig();
+  }, []);
 
   const handleChatWithAdmin = () => {
     const message =
@@ -14,8 +42,8 @@ export default function ContactPage() {
         ? "Halo Merpati Bakery, saya ingin bertanya tentang produk Anda"
         : "Hello Merpati Bakery, I would like to ask about your products";
 
-    const whatsappUrl = `https://wa.me/628123456789?text=${encodeURIComponent(
-      message
+    const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(
+      message,
     )}`;
     window.open(whatsappUrl, "_blank");
   };

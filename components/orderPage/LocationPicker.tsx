@@ -137,7 +137,7 @@ export default function LocationPicker({
           enableHighAccuracy: true, // Paksa GPS akurat
           timeout: 10000,
           maximumAge: 0,
-        }
+        },
       );
     };
 
@@ -162,15 +162,22 @@ export default function LocationPicker({
     );
   }
 
-  // 3. Update tampilan peta saat position berubah manual (saat user klik peta)
-  // Ini opsional, tapi bagus agar peta selalu center ke pin saat pertama buka
-  function MapRecenter({ center }: { center: { lat: number; lng: number } }) {
+  // 3. Initial map center HANYA saat pertama load (tidak recenter saat klik)
+  function InitialMapCenter({
+    center,
+  }: {
+    center: { lat: number; lng: number };
+  }) {
     const map = useMap();
-    // Hanya recenter jika jaraknya jauh (misal inisialisasi awal)
-    // Kita tidak pakai useEffect terus menerus agar user masih bisa geser peta tanpa ditarik balik
+    const [hasInitialized, setHasInitialized] = useState(false);
+
     useEffect(() => {
-      map.flyTo(center, map.getZoom());
-    }, []); // Hanya jalan sekali saat mount
+      if (!hasInitialized) {
+        map.setView(center, 15);
+        setHasInitialized(true);
+      }
+    }, []); // Hanya jalan sekali saat mount, tidak akan dipanggil lagi
+
     return null;
   }
 
@@ -191,7 +198,7 @@ export default function LocationPicker({
           {/* Logika-logika Peta */}
           <MapClickHandler />
           <LocateControl />
-          <MapRecenter center={defaultCenter} />
+          <InitialMapCenter center={defaultCenter} />
 
           {/* Marker Utama (Pin Merah) */}
           <Marker position={position} icon={customIcon} />

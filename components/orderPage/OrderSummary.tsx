@@ -50,12 +50,21 @@ export function OrderSummary({
   const [editingItem, setEditingItem] = useState<any>(null);
   const [editingCartItem, setEditingCartItem] = useState<any>(null);
 
-  const subtotal = getTotalPrice();
-  const savings = getTotalSavings();
-  const tax = subtotal * 0.1;
+  const subtotal = Number(getTotalPrice()) || 0;
+  const savings = Number(getTotalSavings()) || 0;
+  const tax = 0; // Pajak dihilangkan sesuai permintaan user
 
-  const finalDeliveryFee = deliveryMode === "pickup" ? 0 : deliveryFee;
-  const total = subtotal + tax + finalDeliveryFee - voucherDiscount;
+  const finalDeliveryFee =
+    deliveryMode === "pickup" ? 0 : Number(deliveryFee) || 0;
+  const total =
+    Number(
+      (
+        subtotal +
+        tax +
+        finalDeliveryFee -
+        (Number(voucherDiscount) || 0)
+      ).toFixed(0),
+    ) || 0;
 
   const currentOrderDay = orderDay || selectedOrderDay || "";
 
@@ -68,8 +77,8 @@ export function OrderSummary({
       (item) =>
         !item.availableDays ||
         !item.availableDays.some(
-          (day) => day.toLowerCase() === currentOrderDay.toLowerCase()
-        )
+          (day) => day.toLowerCase() === currentOrderDay.toLowerCase(),
+        ),
     );
 
     return {
@@ -88,7 +97,7 @@ export function OrderSummary({
 
   const handleEditItem = (cartItem: any) => {
     const originalProduct = menuItems.find(
-      (product: MenuItem) => product.id === cartItem.id
+      (product: MenuItem) => product.id === cartItem.id,
     );
 
     if (!originalProduct) {
@@ -145,11 +154,12 @@ export function OrderSummary({
   };
 
   const formatPrice = (price: number) => {
+    const safePrice = Number(price) || 0;
     return new Intl.NumberFormat("id-ID", {
       style: "currency",
       currency: "IDR",
       minimumFractionDigits: 0,
-    }).format(price);
+    }).format(safePrice);
   };
 
   const getDayLabel = (day: string) => {
@@ -171,7 +181,7 @@ export function OrderSummary({
     "currentOrderDay:",
     currentOrderDay,
     "voucherDiscount:",
-    voucherDiscount
+    voucherDiscount,
   );
 
   if (cartItems.length === 0) {
@@ -262,7 +272,8 @@ export function OrderSummary({
                   currentOrderDay &&
                   item.availableDays &&
                   !item.availableDays.some(
-                    (day) => day.toLowerCase() === currentOrderDay.toLowerCase()
+                    (day) =>
+                      day.toLowerCase() === currentOrderDay.toLowerCase(),
                   )
                     ? "bg-red-50 border-red-200"
                     : "bg-[#F5F1EB] border-[#E8DDD4]"
@@ -306,7 +317,7 @@ export function OrderSummary({
                     <span className="text-sm font-semibold text-[#8B6F47]">
                       {formatPrice(
                         Number.parseInt(item.discountPrice.replace(/\D/g, "")) +
-                          (item.attributesPrice || 0)
+                          (item.attributesPrice || 0),
                       )}
                     </span>
                     {item.isDiscount && item.originalPrice && (
@@ -314,8 +325,8 @@ export function OrderSummary({
                         <span className="text-xs text-gray-400 line-through">
                           {formatPrice(
                             Number.parseInt(
-                              item.originalPrice.replace(/\D/g, "")
-                            ) + (item.attributesPrice || 0)
+                              item.originalPrice.replace(/\D/g, ""),
+                            ) + (item.attributesPrice || 0),
                           )}
                         </span>
                         <span className="text-xs bg-red-500 text-white px-1.5 py-0.5 rounded text-[10px] font-medium">
@@ -329,7 +340,9 @@ export function OrderSummary({
                       {t("orderSummary.youSave")}{" "}
                       {formatPrice(
                         Number.parseInt(item.originalPrice.replace(/\D/g, "")) -
-                          Number.parseInt(item.discountPrice.replace(/\D/g, ""))
+                          Number.parseInt(
+                            item.discountPrice.replace(/\D/g, ""),
+                          ),
                       )}
                     </div>
                   )}
@@ -363,7 +376,7 @@ export function OrderSummary({
 
                   {(() => {
                     const originalProduct = menuItems.find(
-                      (product: MenuItem) => product.id === item.id
+                      (product: MenuItem) => product.id === item.id,
                     );
                     return (
                       originalProduct &&
