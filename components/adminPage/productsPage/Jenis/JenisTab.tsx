@@ -1,3 +1,5 @@
+// frontend/components/adminPage/productsPage/JenisTab.tsx
+
 "use client";
 
 import React, { useState } from "react";
@@ -13,8 +15,9 @@ import {
 import { useJenis } from "@/app/contexts/JenisContext";
 import { useSubJenis } from "@/app/contexts/SubJenisContext";
 import { Jenis } from "@/lib/types";
-import { useToast } from "../Toast";
+// import { useToast } from "../../Toast";
 import { useAdminTranslation } from "@/app/contexts/AdminTranslationContext";
+import { useAppAlert } from "@/components/AppAlert";
 
 // Add/Edit Jenis Form Modal
 function JenisFormModal({
@@ -156,10 +159,17 @@ function JenisFormModal({
 }
 
 export function JenisTab() {
-  const { jenisList, loading, createJenis, updateJenis, deleteJenis } =
-    useJenis();
+  const {
+    list,
+    loading,
+    errors,
+    create,
+    update,
+    remove,
+  } = useJenis();
   const { getSubJenisByJenisId } = useSubJenis();
-  const { addToast } = useToast();
+  // const { addToast } = useToast();
+  const { success, error, confirm } =  useAppAlert();
   const { t } = useAdminTranslation();
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -171,22 +181,35 @@ export function JenisTab() {
   } | null>(null);
 
   // Filter jenis based on search
-  const filteredJenis = jenisList.filter(
+  const filteredJenis = list.filter(
     (jenis) =>
-      jenis.nama_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      jenis.nama_en.toLowerCase().includes(searchTerm.toLowerCase())
+      (jenis.nama_id?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
+      (jenis.nama_en?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false)
   );
 
   const handleAddJenis = async (data: { nama_id: string; nama_en: string }) => {
-    const result = await createJenis(data);
+    const result = await create(data);
+
     if (result) {
-      addToast({
-        type: "success",
-        title: t("products.jenisAdded"),
-        message: `"${data.nama_id}"`,
-      });
+      await success(
+        t("products.jenisAdded"),
+        `"${data.nama_id}" berhasil ditambahkan`
+      );
+      // addToast({
+      //   type: "success",
+      //   title: t("products.jenisAdded"),
+      //   message: `"${data.nama_id}"`,
+      // });
     } else {
-      throw new Error(t("products.deleteFailed"));
+      await error(
+        t("products.createFailed"),
+        `"${data.nama_id}" gagal ditambahkan`
+      );
+      // addToast({
+      //   type: "error",
+      //   title: t("products.createFailed"),
+      //   message: `"${data.nama_id}"`,
+      // });
     }
   };
 
@@ -195,47 +218,55 @@ export function JenisTab() {
     nama_en: string;
   }) => {
     if (!editingJenis) return;
-    const result = await updateJenis(editingJenis.id, data);
+    const result = await update(editingJenis.id, data);
     if (result) {
-      addToast({
-        type: "success",
-        title: t("products.jenisUpdated"),
-        message: `"${data.nama_id}"`,
-      });
+      await success(
+        t("products.jenisUpdated"),
+        `"${data.nama_id}" berhasil diperbarui`
+      );
+      // addToast({
+      //   type: "success",
+      //   title: t("products.jenisUpdated"),
+      //   message: `"${data.nama_id}"`,
+      // });
       setEditingJenis(null);
     } else {
-      throw new Error(t("products.deleteFailed"));
+      await error(
+        t("products.updateFailed"),
+        `"${data.nama_id}" gagal diperbarui`
+      );
+      // addToast({
+      //   type: "error",
+      //   title: t("products.updateFailed"),
+      //   message: `"${data.nama_id}"`,
+      // });
     }
   };
 
   const handleDeleteJenis = async () => {
     if (!deleteConfirm) return;
 
-    // Check if jenis has sub_jenis
-    const hasSubJenis = getSubJenisByJenisId(deleteConfirm.id).length > 0;
-    if (hasSubJenis) {
-      addToast({
-        type: "error",
-        title: t("products.cannotDelete"),
-        message: t("products.hasSubJenis"),
-      });
-      setDeleteConfirm(null);
-      return;
-    }
-
-    const result = await deleteJenis(deleteConfirm.id);
+    const result = await remove(deleteConfirm.id);
     if (result) {
-      addToast({
-        type: "success",
-        title: t("products.jenisDeleted"),
-        message: `"${deleteConfirm.name}"`,
-      });
+      await success(
+        t("products.jenisDeleted"),
+        `"${deleteConfirm.name}" berhasil dihapus`
+      );
+      // addToast({
+      //   type: "success",
+      //   title: t("products.jenisDeleted"),
+      //   message: `"${deleteConfirm.name}"`,
+      // });
     } else {
-      addToast({
-        type: "error",
-        title: t("products.deleteFailed"),
-        message: t("products.errorOccurred"),
-      });
+      await error(
+        t("products.deleteFailed"),
+        `"${deleteConfirm.name}" gagal dihapus`
+      );
+      // addToast({
+      //   type: "error",
+      //   title: t("products.deleteFailed"),
+      //   message: t("products.errorOccurred"),
+      // });
     }
     setDeleteConfirm(null);
   };
@@ -285,7 +316,7 @@ export function JenisTab() {
             </div>
             <div>
               <p className="text-2xl font-bold text-orange-600">
-                {jenisList.length}
+                {list.length}
               </p>
               <p className="text-sm text-gray-600">{t("products.totalJenis")}</p>
             </div>
@@ -372,7 +403,7 @@ export function JenisTab() {
                       <div className="flex items-center justify-end space-x-2">
                         <button
                           onClick={() => {
-                            setEditingJenis(jenis);
+                            setEditingJenis({ ...jenis, nama_id: jenis.nama_id || "", nama_en: jenis.nama_en || "" });
                             setShowForm(true);
                           }}
                           className="p-2 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
@@ -384,7 +415,7 @@ export function JenisTab() {
                           onClick={() =>
                             setDeleteConfirm({
                               id: jenis.id,
-                              name: jenis.nama_id,
+                              name: jenis.nama_id ?? "",
                             })
                           }
                           className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
@@ -455,7 +486,7 @@ export function JenisTab() {
         }}
         onSubmit={editingJenis ? handleEditJenis : handleAddJenis}
         editingJenis={editingJenis}
-        existingJenis={jenisList}
+        existingJenis={list.filter((j) => j.nama_id !== undefined) as Jenis[]}
         t={t}
       />
     </div>

@@ -10,7 +10,7 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    console.log(`[Jenis API] GET jenis by id: ${id}`);
+    // console.log(`[Jenis API] GET jenis by id: ${id}`);
 
     const response = await fetch(`${BACKEND_URL}/jenis/${id}`, {
       method: "GET",
@@ -47,7 +47,7 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
-    console.log(`[Jenis API] Updating jenis ${id}:`, body);
+    // console.log(`[Jenis API] Updating jenis ${id}:`, body);
 
     const response = await fetch(`${BACKEND_URL}/jenis/${id}`, {
       method: "PUT",
@@ -67,7 +67,7 @@ export async function PUT(
     }
 
     const data = await response.json();
-    console.log(`[Jenis API] Updated jenis ${id}`);
+    // console.log(`[Jenis API] Updated jenis ${id}`);
 
     return NextResponse.json(data);
   } catch (error) {
@@ -86,7 +86,7 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-    console.log(`[Jenis API] Deleting jenis ${id}`);
+    // console.log(`[Jenis API] Deleting jenis ${id}`);
 
     const response = await fetch(`${BACKEND_URL}/jenis/${id}`, {
       method: "DELETE",
@@ -105,7 +105,7 @@ export async function DELETE(
     }
 
     const data = await response.json();
-    console.log(`[Jenis API] Deleted jenis ${id}`);
+    // console.log(`[Jenis API] Deleted jenis ${id}`);
 
     return NextResponse.json(data);
   } catch (error) {

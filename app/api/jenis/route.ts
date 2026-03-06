@@ -6,7 +6,7 @@ const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 // GET all jenis
 export async function GET(request: NextRequest) {
   try {
-    console.log(`[Jenis API] GET all jenis from: ${BACKEND_URL}/jenis`);
+    // console.log(`[Jenis API] GET all jenis from: ${BACKEND_URL}/jenis`);
 
     const response = await fetch(`${BACKEND_URL}/jenis`, {
       method: "GET",
@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
     }
 
     const data = await response.json();
-    console.log(`[Jenis API] Retrieved ${data.data?.length || 0} jenis`);
+    // console.log(`[Jenis API] Retrieved ${data.data?.length || 0} jenis`);
 
     return NextResponse.json(data);
   } catch (error) {
@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    console.log(`[Jenis API] Creating new jenis:`, body);
+    // console.log(`[Jenis API] Creating new jenis:`, body);
 
     const response = await fetch(`${BACKEND_URL}/jenis`, {
       method: "POST",
@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
     }
 
     const data = await response.json();
-    console.log(`[Jenis API] Created jenis with id: ${data.id}`);
+    // console.log(`[Jenis API] Created jenis with id: ${data.id}`);
 
     return NextResponse.json(data, { status: 201 });
   } catch (error) {

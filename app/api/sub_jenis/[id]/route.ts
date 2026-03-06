@@ -10,7 +10,7 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    console.log(`[SubJenis API] GET sub_jenis by id: ${id}`);
+    // console.log(`[SubJenis API] GET sub_jenis by id: ${id}`);
 
     const response = await fetch(`${BACKEND_URL}/sub_jenis/${id}`, {
       method: "GET",
@@ -58,7 +58,7 @@ export async function PUT(
     if (body.ref_jenis_id !== undefined) backendBody.ref_jenis_id = body.ref_jenis_id;
     if (body.min_amount !== undefined) backendBody.min_amount = body.min_amount;
     if (body.max_amount !== undefined) backendBody.max_amount = body.max_amount;
-    if (body.PO_closed !== undefined) backendBody.PO_closed = body.PO_closed;
+    if (body.po_closed !== undefined) backendBody.po_closed = body.po_closed;
     console.log(`[SubJenis API] Transformed body for backend:`, backendBody);
 
     const response = await fetch(`${BACKEND_URL}/sub_jenis/${id}`, {
@@ -103,7 +103,7 @@ export async function PUT(
       jenis_id: data.ref_jenis_id || data.jenis_id,
       min_amount: data.min_amount,
       max_amount: data.max_amount,
-      PO_closed: data.PO_closed,
+      po_closed: data.po_closed,
     };
     return NextResponse.json(resultData);
   } catch (error) {

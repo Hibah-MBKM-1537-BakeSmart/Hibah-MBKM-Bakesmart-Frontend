@@ -21,24 +21,11 @@ import {
   CheckCircle,
   XCircle,
 } from "lucide-react";
-import { useJenis } from "@/app/contexts/JenisContext";
+import { Jenis, useJenis } from "@/app/contexts/JenisContext";
 import { useSubJenis } from "@/app/contexts/SubJenisContext";
-import { Jenis, SubJenis } from "@/lib/types";
-import { useToast } from "../Toast";
-
-// Attribute interface for dynamic add-ons
-interface Attribute {
-  id?: number;
-  nama_id: string;
-  nama_en: string;
-  harga: number;
-}
-
-// Extended SubJenis interface with configuration
-interface SubJenisConfig extends SubJenis {
-  available_days?: number[];
-  attributes?: Attribute[];
-}
+import { useAppAlert } from "@/components/AppAlert";
+import { Attribute, Hari, SubJenis } from "@/app/contexts/SubJenisCrud";
+// import { useToast } from "../Toast";
 
 // Days options (matching backend /hari endpoint)
 const DAYS_OPTIONS = [
@@ -62,8 +49,8 @@ function SubJenisFormModal({
 }: {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: SubJenisConfig) => Promise<void>;
-  editingSubJenis?: SubJenisConfig | null;
+  onSubmit: (data: SubJenis) => Promise<void>;
+  editingSubJenis?: SubJenis | null;
   existingSubJenis: SubJenis[];
   jenisList: Jenis[];
 }) {
@@ -82,6 +69,8 @@ function SubJenisFormModal({
   );
 
   // Form for adding new attribute
+  const [attributeMode, setAttributeMode] = useState<"manual" | "select">("manual");
+  const [selectedAttributeId, setSelectedAttributeId] = useState<number | null>(null);
   const [showAttributeForm, setShowAttributeForm] = useState(false);
   const [newAttrNameId, setNewAttrNameId] = useState("");
   const [newAttrNameEn, setNewAttrNameEn] = useState("");
@@ -89,13 +78,14 @@ function SubJenisFormModal({
 
   useEffect(() => {
     if (isOpen) {
+      // console.log("editingSubJenis:", editingSubJenis);
       setNamaId(editingSubJenis?.nama_id || "");
       setNamaEn(editingSubJenis?.nama_en || "");
       setJenisId(editingSubJenis?.jenis_id || jenisList[0]?.id || 0);
       setMinAmount(editingSubJenis?.min_amount || 1);
       setMaxAmount(editingSubJenis?.max_amount || 100);
-      setPoClosed(editingSubJenis?.PO_closed || "15:00:00");
-      setSelectedDays(editingSubJenis?.available_days || [1, 2, 3, 4, 5, 6, 7]);
+      setPoClosed(editingSubJenis?.po_closed || "15:00:00");
+      setSelectedDays(editingSubJenis?.hari?.length ? editingSubJenis.hari.map((h: Hari) => h.id) : [1, 2, 3, 4, 5, 6, 7]);
       setAttributes(editingSubJenis?.attributes || []);
       setError("");
       setActiveSection("basic");
@@ -110,20 +100,20 @@ function SubJenisFormModal({
 
   const loadExistingConfiguration = async (subJenisId: number) => {
     try {
-      // Fetch detail sub_jenis untuk mendapatkan min_amount, max_amount, PO_closed
-      const detailRes = await fetch(`/api/sub_jenis/${subJenisId}`);
-      if (detailRes.ok) {
-        const detailData = await detailRes.json();
-        const detail = detailData.data;
+      // Fetch detail sub_jenis untuk mendapatkan min_amount, max_amount, po_closed
+      // const detailRes = await fetch(`/api/sub_jenis/${subJenisId}`);
+      // if (detailRes.ok) {
+      //   const detailData = await detailRes.json();
+      //   const detail = detailData.data;
 
-        // Update form dengan data lengkap dari backend
-        setMinAmount(detail.min_amount || 1);
-        setMaxAmount(detail.max_amount || 100);
-        setPoClosed(detail.PO_closed || "15:00:00");
-        setNamaId(detail.nama_id || "");
-        setNamaEn(detail.nama_en || "");
-        setJenisId(detail.ref_jenis_id || jenisList[0]?.id || 0);
-      }
+      //   // Update form dengan data lengkap dari backend
+      //   setMinAmount(detail.min_amount || 1);
+      //   setMaxAmount(detail.max_amount || 100);
+      //   setPoClosed(detail.po_closed || "15:00:00");
+      //   setNamaId(detail.nama_id || "");
+      //   setNamaEn(detail.nama_en || "");
+      //   setJenisId(detail.ref_jenis_id || jenisList[0]?.id || 0);
+      // }
 
       // Fetch existing hari
       const hariRes = await fetch(`/api/sub_jenis/${subJenisId}/hari`);
@@ -184,8 +174,8 @@ function SubJenisFormModal({
         jenis_id: jenisId,
         min_amount: minAmount,
         max_amount: maxAmount,
-        PO_closed: poClosed,
-        available_days: selectedDays,
+        po_closed: poClosed,
+        hari: selectedDays.map(dayId => ({ id: dayId })),
         attributes: attributes,
       });
       onClose();
@@ -211,6 +201,7 @@ function SubJenisFormModal({
     setAttributes((prev) => [
       ...prev,
       {
+        id: 0, //!fix
         nama_id: newAttrNameId.trim(),
         nama_en: newAttrNameEn.trim(),
         harga: newAttrPrice,
@@ -471,130 +462,88 @@ function SubJenisFormModal({
                         <Gift className="w-4 h-4 mr-2 text-pink-500" />
                         Add-ons / Atribut Tambahan
                       </h4>
-                      <button
-                        type="button"
-                        onClick={() => setShowAttributeForm(!showAttributeForm)}
-                        className="flex items-center px-3 py-1.5 text-xs font-medium text-white bg-orange-500 rounded-lg hover:bg-orange-600 transition-colors"
-                      >
-                        <Plus className="w-3 h-3 mr-1" />
-                        Tambah Atribut
+                      <button type="button"
+                      onClick={() => setShowAttributeForm(!showAttributeForm)}
+                      className="flex items-center px-3 py-1.5 text-xs font-medium text-white bg-orange-500 rounded-lg hover:bg-orange-600 transition-colors" >
+                        <Plus className="w-3 h-3 mr-1" /> Tambah Atribut
                       </button>
                     </div>
-
+                    
                     {/* Add Attribute Form */}
                     {showAttributeForm && (
                       <div className="mb-4 p-3 bg-white rounded-lg border border-orange-200 space-y-3">
                         <div className="grid grid-cols-2 gap-3">
                           <div>
-                            <label className="text-xs font-medium text-gray-700 mb-1 block">
-                              Nama (Indonesia)
-                            </label>
-                            <input
-                              type="text"
-                              value={newAttrNameId}
-                              onChange={(e) => setNewAttrNameId(e.target.value)}
-                              placeholder="Kartu Ucapan"
-                              className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
-                            />
+                            <label className="text-xs font-medium text-gray-700 mb-1 block"> Nama (Indonesia) </label>
+                            <input type="text" value={newAttrNameId}
+                            onChange={(e) => setNewAttrNameId(e.target.value)}
+                            placeholder="Masukkan atribut..."
+                            className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500" />
                           </div>
                           <div>
-                            <label className="text-xs font-medium text-gray-700 mb-1 block">
-                              Nama (English)
-                            </label>
-                            <input
-                              type="text"
-                              value={newAttrNameEn}
-                              onChange={(e) => setNewAttrNameEn(e.target.value)}
-                              placeholder="Greeting Card"
-                              className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
-                            />
+                            <label className="text-xs font-medium text-gray-700 mb-1 block"> Nama (English) </label>
+                            <input type="text" value={newAttrNameEn}
+                            onChange={(e) => setNewAttrNameEn(e.target.value)}
+                            placeholder="Insert Attribute..."
+                            className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500" />
                           </div>
                         </div>
                         <div>
-                          <label className="text-xs font-medium text-gray-700 mb-1 block">
-                            Harga Tambahan (Rp)
-                          </label>
-                          <input
-                            type="number"
-                            value={newAttrPrice}
-                            onChange={(e) =>
-                              setNewAttrPrice(Number(e.target.value))
-                            }
-                            min={0}
-                            placeholder="15000"
-                            className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
-                          />
+                          <label className="text-xs font-medium text-gray-700 mb-1 block"> Harga Tambahan (Rp) </label>
+                          <input type="number" value={newAttrPrice}
+                          onChange={(e) => setNewAttrPrice(Number(e.target.value)) }
+                          min={0}
+                          placeholder="15000" className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500" />
                         </div>
                         <div className="flex justify-end gap-2">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setShowAttributeForm(false);
-                              setNewAttrNameId("");
-                              setNewAttrNameEn("");
-                              setNewAttrPrice(0);
-                              setError("");
-                            }}
-                            className="px-3 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
-                          >
+                          <button type="button"
+                          onClick={() => {
+                            setShowAttributeForm(false);
+                            setNewAttrNameId(""); 
+                            setNewAttrNameEn(""); 
+                            setNewAttrPrice(0); 
+                            setError(""); }}
+                          className="px-3 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50" >
                             Batal
                           </button>
-                          <button
-                            type="button"
-                            onClick={addAttribute}
-                            className="px-3 py-1.5 text-xs font-medium text-white bg-orange-500 rounded-lg hover:bg-orange-600"
-                          >
+
+                          <button type="button"
+                          onClick={addAttribute}
+                          className="px-3 py-1.5 text-xs font-medium text-white bg-orange-500 rounded-lg hover:bg-orange-600" >
                             Simpan Atribut
                           </button>
                         </div>
-                      </div>
-                    )}
+                      </div> )}
 
-                    {/* Attributes List */}
-                    <div className="space-y-2">
-                      {attributes.length === 0 ? (
-                        <div className="text-center py-8 text-gray-400">
-                          <Gift className="w-12 h-12 mx-auto mb-2 opacity-20" />
-                          <p className="text-sm">
-                            Belum ada atribut ditambahkan
-                          </p>
-                          <p className="text-xs mt-1">
-                            Klik "Tambah Atribut" untuk menambahkan add-ons
-                          </p>
+                      {/* Attributes List */}
+                      <div className="space-y-2">
+                        {attributes.length === 0 ? (
+                          <div className="text-center py-8 text-gray-400">
+                            <Gift className="w-12 h-12 mx-auto mb-2 opacity-20" />
+                            <p className="text-sm"> Belum ada atribut ditambahkan </p>
+                            <p className="text-xs mt-1"> Klik "Tambah Atribut" untuk menambahkan add-ons </p> </div>
+                          ) : ( 
+                            attributes.map((attr, index) => ( 
+                              <div key={index}
+                              className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200" >
+                                <div>
+                                  <p className="font-medium text-gray-900"> {attr.nama_id} </p>
+                                  <p className="text-xs text-gray-500"> {attr.nama_en} </p>
+                                </div>
+                                <div className="flex items-center gap-3"> 
+                                  <span className="text-sm font-medium text-orange-600"> +Rp {attr?.harga?.toLocaleString("id-ID") ?? "0"} </span>
+                                  <button type="button"
+                                  onClick={() => removeAttribute(index)}
+                                  className="p-1 text-red-500 hover:bg-red-50 rounded" > <X className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              </div> 
+                            )) 
+                          )}
                         </div>
-                      ) : (
-                        attributes.map((attr, index) => (
-                          <div
-                            key={index}
-                            className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200"
-                          >
-                            <div>
-                              <p className="font-medium text-gray-900">
-                                {attr.nama_id}
-                              </p>
-                              <p className="text-xs text-gray-500">
-                                {attr.nama_en}
-                              </p>
-                            </div>
-                            <div className="flex items-center gap-3">
-                              <span className="text-sm font-medium text-orange-600">
-                                +Rp {attr.harga.toLocaleString("id-ID")}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => removeAttribute(index)}
-                                className="p-1 text-red-500 hover:bg-red-50 rounded"
-                              >
-                                <X className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
+                      </div>
                   </div>
-                </div>
-              )}
+                )}
             </div>
 
             {/* Footer */}
@@ -662,7 +611,7 @@ function SubJenisCard({
   onEdit,
   onDelete,
 }: {
-  subJenis: SubJenisConfig;
+  subJenis: SubJenis;
   jenis: Jenis | undefined;
   onEdit: () => void;
   onDelete: () => void;
@@ -717,21 +666,31 @@ function SubJenisCard({
 }
 
 export function SubJenisTab() {
-  const { jenisList } = useJenis();
+  const {
+    list : jenisList,
+  } = useJenis();
+
   const {
     subJenisList,
     loading,
+    errors,
+    createSubJenis,
+    updateSubJenis,
     deleteSubJenis,
-    fetchSubJenis,
+    appendHariToSubJenis,
+    removeHariFromSubJenis,
+    appendAttributeToSubJenis,
+    removeAttributeFromSubJenis,
   } = useSubJenis();
-  const { addToast } = useToast();
+  // const { addToast } = useToast();
+  const { success, error, confirm } =  useAppAlert();
 
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedJenisFilter, setSelectedJenisFilter] = useState<
     number | "all"
   >("all");
   const [showForm, setShowForm] = useState(false);
-  const [editingSubJenis, setEditingSubJenis] = useState<SubJenisConfig | null>(
+  const [editingSubJenis, setEditingSubJenis] = useState<SubJenis | null>(
     null
   );
   const [deleteConfirm, setDeleteConfirm] = useState<{
@@ -768,264 +727,201 @@ export function SubJenisTab() {
     }
   };
 
-  const handleAddSubJenis = async (data: SubJenisConfig) => {
+  const handleAddSubJenis = async (data: SubJenis) => {
     try {
-      // Step 1: Create sub jenis with basic info + config
-      const response = await fetch("/api/sub_jenis", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          nama_id: data.nama_id,
-          nama_en: data.nama_en,
-          ref_jenis_id: data.jenis_id,
-          min_amount: data.min_amount,
-          max_amount: data.max_amount,
-          PO_closed: data.PO_closed, // Time string in HH:mm:ss format
-        }),
+      // ================================
+      // STEP 1 — Use Context to Create
+      // ================================
+      const created = await createSubJenis({
+        nama_id: data.nama_id,
+        nama_en: data.nama_en,
+        jenis_id: data.jenis_id,
+        min_amount: data.min_amount,
+        max_amount: data.max_amount,
+        po_closed: data.po_closed,
       });
 
-      if (!response.ok) throw new Error("Gagal membuat sub jenis");
-      const result = await response.json();
-      const subJenisId = result.id || result?.data?.id;
-
-      if (!subJenisId) {
-        throw new Error("ID sub jenis tidak ditemukan dari response backend");
+      if (!created) {
+        await error("Gagal", "Gagal membuat sub jenis");
+        return;
       }
 
-      // Step 2: Append hari (available days)
-      for (const hariId of data.available_days || []) {
-        const hariResponse = await fetch(`/api/sub_jenis/${subJenisId}/hari/${hariId}`, {
-          method: "POST",
-        });
-        if (!hariResponse.ok && hariResponse.status !== 409) {
-          throw new Error(
-            await readErrorMessage(
-              hariResponse,
-              `Gagal menambahkan hari ${hariId} ke sub jenis`
-            )
-          );
+      const subJenisId = created.id;
+
+      // ================================
+      // STEP 2 — Append Hari
+      // ================================
+      for (const hariId of data.hari || []) {
+        const res = await appendHariToSubJenis(subJenisId, hariId.id);
+
+        if (!res) {
+          await error("Gagal", `Gagal menambahkan hari`);
+          return;
         }
       }
 
-      // Step 3: Create and append attributes
+      // ================================
+      // STEP 3 — Create & Append Attributes
+      // ================================
       for (const attr of data.attributes || []) {
         let attributeId = attr.id;
 
-        // If attribute doesn't have ID, create it first (TANPA HARGA!)
-        if (!attributeId) {
-          const attrResponse = await fetch("/api/atribut", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
+        if (attributeId) {
+          const res = await appendAttributeToSubJenis(
+            subJenisId, 
+            attributeId,
+            {
               nama_id: attr.nama_id,
               nama_en: attr.nama_en,
-              // ❌ JANGAN kirim harga di sini!
-            }),
-          });
+              harga: attr.harga || 0,
+            }
+          );
 
-          if (!attrResponse.ok) {
-            throw new Error(
-              await readErrorMessage(attrResponse, "Gagal membuat atribut baru")
-            );
-          }
-
-          const attrResult = await attrResponse.json();
-          attributeId = attrResult.id || attrResult?.data?.id;
-        }
-
-        // Append attribute to sub_jenis (DENGAN HARGA!)
-        if (attributeId) {
-          const appendAttrResponse = await fetch(`/api/sub_jenis/${subJenisId}/attribute/${attributeId}`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              harga: attr.harga || 0, // ✅ Kirim harga di sini!
-            }),
-          });
-
-          if (!appendAttrResponse.ok && appendAttrResponse.status !== 409) {
-            throw new Error(
-              await readErrorMessage(
-                appendAttrResponse,
-                `Gagal menambahkan atribut ${attributeId} ke sub jenis`
-              )
-            );
+          if (!res) {
+            await error("Gagal", `Gagal menambahkan hari`);
+            return;
           }
         }
       }
 
-      // Refresh sub jenis list from server to keep admin state in sync
-      await fetchSubJenis();
+      // ================================
+      // SUCCESS
+      // ================================
+      await success(
+        "Berhasil",
+        `"${data.nama_id}" berhasil ditambahkan dengan konfigurasi.`
+      );
 
-      addToast({
-        type: "success",
-        title: "Sub Jenis berhasil ditambahkan!",
-        message: `"${data.nama_id}" telah ditambahkan dengan konfigurasi.`,
-      });
-    } catch (error) {
-      throw new Error(
-        error instanceof Error ? error.message : "Gagal menambahkan sub jenis"
+    } catch (err) {
+      console.error(err);
+      await error(
+        "Terjadi Kesalahan",
+        err instanceof Error
+          ? err.message
+          : "Gagal menambahkan sub jenis"
       );
     }
   };
 
-  const handleEditSubJenis = async (data: SubJenisConfig) => {
+  const handleEditSubJenis = async (data: SubJenis) => {
     if (!editingSubJenis) return;
 
     try {
-      // Step 1: Update basic info + config (ref_sub_jenis table)
-      const response = await fetch(`/api/sub_jenis/${editingSubJenis.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          nama_id: data.nama_id,
-          nama_en: data.nama_en,
-          ref_jenis_id: data.jenis_id,
-          min_amount: data.min_amount,
-          max_amount: data.max_amount,
-          PO_closed: data.PO_closed, // Time string in HH:mm:ss format
-        }),
+      // ================================
+      // STEP 1 — Use Context to Create
+      // ================================
+      const created = await updateSubJenis(editingSubJenis.id, {
+        nama_id: data.nama_id,
+        nama_en: data.nama_en,
+        jenis_id: data.jenis_id,
+        min_amount: data.min_amount,
+        max_amount: data.max_amount,
+        po_closed: data.po_closed,
       });
 
-      if (!response.ok) throw new Error("Gagal update sub jenis");
+      if (!created) {
+        await error("Gagal", "Gagal mengupdate sub jenis");
+        return;
+      }
 
-      // Step 2: Get existing hari and delete them
+      // ================================
+      // STEP 2
+      // ================================
       try {
-        const existingHariRes = await fetch(
-          `/api/sub_jenis/${editingSubJenis.id}/hari`
+        const existingHariIds: number[] = editingSubJenis.hari?.map((h) => Number(h.id)) || [];
+
+        const newHariIds: number[] =
+          data.hari?.map((h) => Number(h.id)) || [];
+
+        const toRemove = existingHariIds.filter(
+          (id) => !newHariIds.includes(id)
         );
-        if (existingHariRes.ok) {
-          const existingHari = await existingHariRes.json();
-          // Delete each existing hari
-          for (const hari of existingHari.data || []) {
-            await fetch(
-              `/api/sub_jenis/${editingSubJenis.id}/hari/${hari.hari_id}`,
-              {
-                method: "DELETE",
-              }
-            );
-          }
-        } else if (existingHariRes.status !== 404) {
-          throw new Error(
-            await readErrorMessage(existingHariRes, "Gagal mengambil data hari")
-          );
-        }
-      } catch (e) {
-        // If no hari exists, continue
+
+        const toAdd = newHariIds.filter(
+          (id) => !existingHariIds.includes(id)
+        );
+
+        // Hapus yang tidak dipakai lagi
+        await Promise.all(
+          toRemove.map((hariId) =>
+            removeHariFromSubJenis(editingSubJenis.id, hariId)
+          )
+        );
+
+        // Tambah yang baru
+        await Promise.all(
+          toAdd.map((hariId) =>
+            appendHariToSubJenis(editingSubJenis.id, hariId)
+          )
+        );
+      } catch (error) {
+        console.error("Gagal update hari:", error);
       }
 
-      // Step 3: Add new hari
-      for (const hariId of data.available_days || []) {
-        try {
-          const addHariResponse = await fetch(`/api/sub_jenis/${editingSubJenis.id}/hari/${hariId}`, {
-            method: "POST",
-          });
-          if (!addHariResponse.ok && addHariResponse.status !== 409) {
-            throw new Error(
-              await readErrorMessage(
-                addHariResponse,
-                `Gagal menambahkan hari ${hariId}`
-              )
-            );
-          }
-        } catch (e) {
-          // Continue if already exists
-        }
-      }
-
-      // Step 4: Get existing attributes and delete them
+      // ================================
+      // STEP 3
+      // ================================
       try {
-        const existingAttrRes = await fetch(
-          `/api/sub_jenis/${editingSubJenis.id}/attribute`
+        const existingAttributeIds: number[] = editingSubJenis.attributes?.map((a) => Number(a.id)) || [];
+
+        const newAttributes = data.attributes || [];
+
+        const newAttributeIds: number[] =
+          newAttributes.map((a) => Number(a.id));
+
+        // Cari yang harus dihapus
+        const toRemove = existingAttributeIds.filter(
+          (id) => !newAttributeIds.includes(id)
         );
-        if (existingAttrRes.ok) {
-          const existingAttr = await existingAttrRes.json();
-          // Delete each existing attribute
-          for (const attr of existingAttr.data || []) {
-            await fetch(
-              `/api/sub_jenis/${editingSubJenis.id}/attribute/${attr.attribute_id}`,
-              {
-                method: "DELETE",
-              }
-            );
-          }
-        } else if (existingAttrRes.status !== 404) {
-          throw new Error(
-            await readErrorMessage(
-              existingAttrRes,
-              "Gagal mengambil data atribut sub jenis"
-            )
+
+        // Cari yang harus ditambahkan
+        const toAdd = newAttributes.filter(
+          (attr) => !existingAttributeIds.includes(Number(attr.id))
+        );
+
+        // ✅ 1. Remove dulu
+        await Promise.all(
+          toRemove.map((attributeId) =>
+            removeAttributeFromSubJenis(editingSubJenis.id, attributeId)
+          )
+        );
+
+        // ✅ 2. Tambah hanya yang benar-benar baru
+        for (const attr of toAdd) {
+          const res = await appendAttributeToSubJenis(
+            editingSubJenis.id,
+            Number(attr.id),
+            {
+              nama_id: attr.nama_id,
+              nama_en: attr.nama_en,
+              harga: attr.harga ?? 0,
+            }
           );
-        }
-      } catch (e) {
-        // If no attributes exist, continue
-      }
 
-      // Step 5: Create and add new attributes
-      for (const attr of data.attributes || []) {
-        let attributeId = attr.id;
-
-        // If attribute doesn't have ID, create it first (TANPA HARGA!)
-        if (!attributeId) {
-          try {
-            const attrResponse = await fetch("/api/atribut", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                nama_id: attr.nama_id,
-                nama_en: attr.nama_en,
-                // ❌ JANGAN kirim harga di sini!
-              }),
-            });
-
-            if (attrResponse.ok) {
-              const attrResult = await attrResponse.json();
-              attributeId = attrResult.id || attrResult?.data?.id;
-            }
-          } catch (e) {
-            console.error("Failed to create attribute:", e);
+          if (!res) {
+            await error("Gagal", "Gagal menambahkan atribut");
+            return;
           }
         }
 
-        // Append attribute to sub_jenis (DENGAN HARGA!)
-        if (attributeId) {
-          try {
-            const appendAttrResponse = await fetch(
-              `/api/sub_jenis/${editingSubJenis.id}/attribute/${attributeId}`,
-              {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  harga: attr.harga || 0, // ✅ Kirim harga di sini!
-                }),
-              }
-            );
-            if (!appendAttrResponse.ok && appendAttrResponse.status !== 409) {
-              throw new Error(
-                await readErrorMessage(
-                  appendAttrResponse,
-                  `Gagal menambahkan atribut ${attributeId}`
-                )
-              );
-            }
-          } catch (e) {
-            // Continue if already exists
-          }
-        }
+      } catch (error) {
+        console.error("Gagal update atribut:", error);
       }
 
-      // Refresh list from server to keep admin state in sync
-      await fetchSubJenis();
 
-      addToast({
-        type: "success",
-        title: "Sub Jenis berhasil diupdate!",
-        message: `"${data.nama_id}" telah diperbarui dengan konfigurasi lengkap.`,
-      });
       setEditingSubJenis(null);
-    } catch (error) {
-      throw new Error(
-        error instanceof Error ? error.message : "Gagal mengupdate sub jenis"
+      await success(
+        "Berhasil",
+        `"${data.nama_id}" berhasil memperbarui dengan konfigurasi.`
+      );
+
+    } catch (err) {
+      console.error(err);
+      await error(
+        "Terjadi Kesalahan",
+        err instanceof Error
+          ? err.message
+          : "Gagal mengupdate sub jenis"
       );
     }
   };
@@ -1035,17 +931,15 @@ export function SubJenisTab() {
 
     const result = await deleteSubJenis(deleteConfirm.id);
     if (result) {
-      addToast({
-        type: "success",
-        title: "Sub Jenis berhasil dihapus!",
-        message: `"${deleteConfirm.name}" telah dihapus.`,
-      });
+      await success(
+        "Sub Jenis berhasil dihapus",
+        `"${deleteConfirm.name}" telah dihapus.`
+      );
     } else {
-      addToast({
-        type: "error",
-        title: "Gagal menghapus sub jenis",
-        message: "Terjadi kesalahan saat menghapus.",
-      });
+      await error(
+        "Gagal menghapus sub jenis",
+        `"${deleteConfirm.name}" gagal dihapus.`
+      );
     }
     setDeleteConfirm(null);
   };
@@ -1177,18 +1071,22 @@ export function SubJenisTab() {
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {filteredSubJenis.map((sj) => (
-            <SubJenisCard
-              key={sj.id}
-              subJenis={sj as SubJenisConfig}
-              jenis={jenisList.find((j) => j.id === sj.jenis_id)}
-              onEdit={() => {
-                setEditingSubJenis(sj as SubJenisConfig);
-                setShowForm(true);
-              }}
-              onDelete={() => setDeleteConfirm({ id: sj.id, name: sj.nama_id })}
-            />
-          ))}
+          {filteredSubJenis.map((sj) => {
+            const foundJenis = jenisList.find((j) => j.id === sj.jenis_id);
+            const jenisWithValidNama = foundJenis ? { ...foundJenis, nama_id: foundJenis.nama_id || "", nama_en: foundJenis.nama_en || "" } : undefined;
+            return (
+              <SubJenisCard
+                key={sj.id}
+                subJenis={sj as SubJenis}
+                jenis={jenisWithValidNama}
+                onEdit={() => {
+                  setEditingSubJenis(sj as SubJenis);
+                  setShowForm(true);
+                }}
+                onDelete={() => setDeleteConfirm({ id: sj.id, name: sj.nama_id })}
+              />
+            );
+          })}
         </div>
       )}
 
@@ -1247,7 +1145,7 @@ export function SubJenisTab() {
         onSubmit={editingSubJenis ? handleEditSubJenis : handleAddSubJenis}
         editingSubJenis={editingSubJenis}
         existingSubJenis={subJenisList}
-        jenisList={jenisList}
+        jenisList={jenisList.map(j => ({ ...j, nama_id: j.nama_id || "", nama_en: j.nama_en || "" }))}
       />
     </div>
   );

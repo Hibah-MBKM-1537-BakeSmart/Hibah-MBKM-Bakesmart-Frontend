@@ -5,12 +5,13 @@ import AdminAuthWrapper from "./AdminAuthWrapper";
 import { AdminProvider } from "@/app/contexts/AdminContext";
 import { AdminProvider as UsersProvider } from "@/app/contexts/UsersContext";
 import { AuthProvider } from "@/app/contexts/AuthContext";
-import { ToastProvider } from "@/app/contexts/ToastContext";
+// import { ToastProvider } from "@/app/contexts/ToastContext";
 import { CategoriesProvider } from "@/app/contexts/CategoriesContext";
 import { ProductsProvider } from "@/app/contexts/ProductsContext";
 import { CustomersProvider } from "@/app/contexts/CustomersContext";
 import { JenisProvider } from "@/app/contexts/JenisContext";
 import { SubJenisProvider } from "@/app/contexts/SubJenisContext";
+import { AppAlertProvider } from "@/components/AppAlert";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -32,31 +33,31 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   return (
-    <AuthProvider>
-      <AdminProvider>
-        <UsersProvider>
-          <CategoriesProvider>
-            <JenisProvider>
-              <SubJenisProvider>
-                <ProductsProvider>
-                  <CustomersProvider>
-                    <AdminTranslationProvider>
-                      <ToastProvider>
-                        <div
-                          className={`${poppins.variable} ${inter.variable}`}
-                          style={{ fontFamily: "var(--font-inter), sans-serif" }}
-                        >
-                          <AdminAuthWrapper>{children}</AdminAuthWrapper>
-                        </div>
-                      </ToastProvider>
-                    </AdminTranslationProvider>
-                  </CustomersProvider>
-                </ProductsProvider>
-              </SubJenisProvider>
-            </JenisProvider>
-          </CategoriesProvider>
-        </UsersProvider>
-      </AdminProvider>
-    </AuthProvider>
+    <AppAlertProvider>
+      <AuthProvider>
+        <AdminProvider>
+          <UsersProvider>
+            <CategoriesProvider>
+              <JenisProvider>
+                <SubJenisProvider>
+                  <ProductsProvider>
+                    <CustomersProvider>
+                      <AdminTranslationProvider>
+                          <div
+                            className={`${poppins.variable} ${inter.variable}`}
+                            style={{ fontFamily: "var(--font-inter), sans-serif" }}
+                          >
+                            <AdminAuthWrapper>{children}</AdminAuthWrapper>
+                          </div>
+                      </AdminTranslationProvider>
+                    </CustomersProvider>
+                  </ProductsProvider>
+                </SubJenisProvider>
+              </JenisProvider>
+            </CategoriesProvider>
+          </UsersProvider>
+        </AdminProvider>
+      </AuthProvider>
+    </AppAlertProvider>
   );
 }

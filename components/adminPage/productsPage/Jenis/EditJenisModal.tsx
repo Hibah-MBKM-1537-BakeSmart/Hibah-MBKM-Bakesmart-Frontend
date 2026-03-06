@@ -2,23 +2,23 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, Edit } from 'lucide-react';
-import { Category } from '../../../app/contexts/CategoriesContext';
+import { Jenis } from '../../../../app/contexts/JenisContext';
 
-interface EditCategoryModalProps {
+interface EditJenisModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onEditCategory: (id: number, categoryData: Partial<Omit<Category, 'id' | 'created_at' | 'updated_at'>>) => Promise<void>;
-  category: Category | null;
-  existingCategories: Category[];
+  onEditJenis: (id: number, jenisData: Partial<Omit<Jenis, 'id' | 'created_at' | 'updated_at'>>) => Promise<void>;
+  category: Jenis | null;
+  existingCategories: Jenis[];
 }
 
-export function EditCategoryModal({
+export function EditJenisModal({
   isOpen,
   onClose,
-  onEditCategory,
+  onEditJenis,
   category,
   existingCategories
-}: EditCategoryModalProps) {
+}: EditJenisModalProps) {
   const [formData, setFormData] = useState({
     nama: '',
   });
@@ -69,13 +69,13 @@ export function EditCategoryModal({
 
     setIsSubmitting(true);
     try {
-      await onEditCategory(category.id, {
+      await onEditJenis(category.id, {
         nama: formData.nama.trim(),
       });
       onClose();
     } catch (error) {
       // Error is handled in the context
-      console.error('Error editing category:', error);
+      console.error('Error editing jenis:', error);
     } finally {
       setIsSubmitting(false);
     }

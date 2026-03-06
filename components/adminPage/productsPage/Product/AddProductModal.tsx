@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import { X, Upload, Plus, Trash2, Tag, Layers } from "lucide-react";
-import { useJenis } from "../../../app/contexts/JenisContext";
-import { useSubJenis } from "../../../app/contexts/SubJenisContext";
+import { useJenis } from "../../../../app/contexts/JenisContext";
+import { useSubJenis } from "../../../../app/contexts/SubJenisContext";
 
 interface Product {
   id: number;

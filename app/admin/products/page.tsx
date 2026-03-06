@@ -2,17 +2,17 @@
 
 import React, { useState } from "react";
 import { Package, Tag, Layers, Settings } from "lucide-react";
-import { useToast } from "@/components/adminPage/Toast";
-import { JenisTab } from "@/components/adminPage/productsPage/JenisTab";
-import { SubJenisTab } from "@/components/adminPage/productsPage/SubJenisTab";
-import { ProductsTab } from "@/components/adminPage/productsPage/ProductsTab";
+// import { useToast } from "@/components/adminPage/Toast";
+import { JenisTab } from "@/components/adminPage/productsPage/Jenis/JenisTab";
+import { SubJenisTab } from "@/components/adminPage/productsPage/subJenis/SubJenisTab";
+import { ProductsTab } from "@/components/adminPage/productsPage/Product/ProductsTab";
 import { useAdminTranslation } from "@/app/contexts/AdminTranslationContext";
 
 type TabType = "products" | "jenis" | "sub_jenis";
 
 export default function ProductsPage() {
   const [activeTab, setActiveTab] = useState<TabType>("jenis");
-  const { ToastContainer } = useToast();
+  // const { ToastContainer } = useToast();
   const { t } = useAdminTranslation();
 
   const tabs = [
@@ -38,7 +38,7 @@ export default function ProductsPage() {
 
   return (
     <div className="space-y-6">
-      <ToastContainer />
+      {/* <ToastContainer /> */}
 
       {/* Page Header */}
       <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4">

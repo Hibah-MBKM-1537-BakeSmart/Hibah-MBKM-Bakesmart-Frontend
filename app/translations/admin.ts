@@ -157,6 +157,8 @@ export const adminTranslations = {
     "products.jenisDeleted": "Jenis berhasil dihapus!",
     "products.cannotDelete": "Tidak dapat menghapus",
     "products.hasSubJenis": "Jenis ini memiliki Sub Jenis. Hapus Sub Jenis terlebih dahulu.",
+    "products.createFailed": "Gagal menambahkan jenis",
+    "products.updateFailed": "Gagal memperbarui jenis",
     "products.deleteFailed": "Gagal menghapus jenis",
     "products.errorOccurred": "Terjadi kesalahan saat menghapus.",
     "products.confirmDeleteTitle": "Konfirmasi Hapus",

@@ -2,21 +2,21 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, Plus } from 'lucide-react';
-import { Category } from '../../../app/contexts/CategoriesContext';
+import { Jenis } from '../../../../app/contexts/JenisContext';
 
-interface AddCategoryModalProps {
+interface AddJenisModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAddCategory: (categoryData: Omit<Category, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
-  existingCategories: Category[];
+  onAddJenis: (jenisData: Omit<Jenis, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
+  existingCategories: Jenis[];
 }
 
-export function AddCategoryModal({
+export function AddJenisModal({
   isOpen,
   onClose,
-  onAddCategory,
+  onAddJenis,
   existingCategories
-}: AddCategoryModalProps) {
+}: AddJenisModalProps) {
   const [formData, setFormData] = useState({
     nama: '',
   });
@@ -65,13 +65,13 @@ export function AddCategoryModal({
 
     setIsSubmitting(true);
     try {
-      await onAddCategory({
+      await onAddJenis({
         nama: formData.nama.trim(),
       });
       onClose();
     } catch (error) {
       // Error is handled in the context
-      console.error('Error adding category:', error);
+      console.error('Error adding jenis:', error);
     } finally {
       setIsSubmitting(false);
     }
@@ -114,7 +114,7 @@ export function AddCategoryModal({
           {/* Form */}
           <form onSubmit={handleSubmit} className="p-6">
             <div className="space-y-4">
-              {/* Category Name */}
+              {/* Jenis Name */}
               <div>
                 <label htmlFor="nama" className="block text-sm font-medium text-gray-700 mb-1">
                   Nama Kategori *

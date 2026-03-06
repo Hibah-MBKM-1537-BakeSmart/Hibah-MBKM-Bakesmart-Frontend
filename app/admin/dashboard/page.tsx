@@ -15,12 +15,11 @@ import {
 } from "lucide-react";
 import { useAdminTranslation } from "@/app/contexts/AdminTranslationContext";
 import { Modal } from "@/components/adminPage/Modal";
-import { AddProductModal } from "@/components/adminPage/productsPage/AddProductModal";
+import { AddProductModal } from "@/components/adminPage/productsPage/Product/AddProductModal";
 import { AddUserModal } from "@/components/adminPage/users/AddUserModal";
 import { WhatsAppBlastModal } from "@/components/adminPage/customersPage/WhatsAppBlastModal";
 import { useProducts } from "@/app/contexts/ProductsContext";
 import { useAdmin } from "@/app/contexts/UsersContext";
-import { useToast } from "@/app/contexts/ToastContext";
 
 interface StatCard {
   title: string;
@@ -37,7 +36,7 @@ export default function DashboardPage() {
   const { t } = useAdminTranslation();
   const { addProduct } = useProducts();
   const { createAdmin } = useAdmin();
-  const { addToast } = useToast();
+  // const { addToast } = useToast();
 
   const [activeModal, setActiveModal] = useState<
     "addProduct" | "addUser" | "waBlast" | null
@@ -215,18 +214,18 @@ export default function DashboardPage() {
   const handleAddProduct = async (productData: any) => {
     try {
       await addProduct(productData);
-      addToast({
-        type: "success",
-        title: "Success",
-        message: "Product added successfully",
-      });
+      // addToast({
+      //   type: "success",
+      //   title: "Success",
+      //   message: "Product added successfully",
+      // });
       setActiveModal(null);
     } catch (error) {
-      addToast({
-        type: "error",
-        title: "Error",
-        message: "Failed to add product",
-      });
+      // addToast({
+      //   type: "error",
+      //   title: "Error",
+      //   message: "Failed to add product",
+      // });
     }
   };
 
@@ -246,18 +245,18 @@ export default function DashboardPage() {
         password: userData.password,
       });
 
-      addToast({
-        type: "success",
-        title: "Success",
-        message: "User added successfully",
-      });
+      // addToast({
+      //   type: "success",
+      //   title: "Success",
+      //   message: "User added successfully",
+      // });
       setActiveModal(null);
     } catch (error) {
-      addToast({
-        type: "error",
-        title: "Error",
-        message: "Failed to add user",
-      });
+      // addToast({
+      //   type: "error",
+      //   title: "Error",
+      //   message: "Failed to add user",
+      // });
     }
   };
 

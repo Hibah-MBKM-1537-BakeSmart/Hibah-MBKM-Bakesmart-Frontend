@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
     });
 
     const responseText = await response.text();
-    console.log(`[SubJenis API] Raw response:`, responseText);
+    // console.log(`[SubJenis API] Raw response:`, responseText);
 
     // Try to parse as JSON
     let data;
@@ -54,6 +54,12 @@ export async function GET(request: NextRequest) {
       nama_id: item.nama_id,
       nama_en: item.nama_en,
       jenis_id: item.ref_jenis_id || item.jenis_id,
+      min_amount: item.min_amount,
+      max_amount: item.max_amount,
+      po_closed: item.po_closed,
+      is_closed: item.is_closed,
+      hari: item.hari,
+      attributes: item.attributes,
     })) : [];
 
     return NextResponse.json({
@@ -85,7 +91,7 @@ export async function POST(request: NextRequest) {
       ref_jenis_id: body.jenis_id || body.ref_jenis_id,
       min_amount: body.min_amount,
       max_amount: body.max_amount,
-      PO_closed: body.PO_closed,
+      po_closed: body.po_closed,
     };
     console.log(`[SubJenis API] Transformed body for backend:`, backendBody);
 
@@ -126,7 +132,7 @@ export async function POST(request: NextRequest) {
       jenis_id: data.ref_jenis_id || data.jenis_id,
       min_amount: data.min_amount,
       max_amount: data.max_amount,
-      PO_closed: data.PO_closed,
+      po_closed: data.po_closed,
     };
     return NextResponse.json(resultData, { status: 201 });
   } catch (error) {

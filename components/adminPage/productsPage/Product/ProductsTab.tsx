@@ -21,10 +21,10 @@ import {
   ChevronRight,
   Tag,
 } from "lucide-react";
-import { AddProductModal } from "@/components/adminPage/productsPage/AddProductModal";
-import { ProductDetailModal } from "@/components/adminPage/productsPage/ProductDetailModal";
-import { EditProductModal } from "@/components/adminPage/productsPage/EditProductModal";
-import { useToast } from "@/components/adminPage/Toast";
+import { AddProductModal } from "@/components/adminPage/productsPage/Product/AddProductModal";
+import { ProductDetailModal } from "@/components/adminPage/productsPage/Product/ProductDetailModal";
+import { EditProductModal } from "@/components/adminPage/productsPage/Product/EditProductModal";
+// import { useToast } from "@/components/adminPage/Toast";
 import { useJenis } from "@/app/contexts/JenisContext";
 import { useSubJenis } from "@/app/contexts/SubJenisContext";
 import { useProducts, Product } from "@/app/contexts/ProductsContext";
@@ -219,7 +219,7 @@ export function ProductsTab() {
   const [pendingStockChanges, setPendingStockChanges] = useState<
     Record<number, number>
   >({});
-  const { addToast } = useToast();
+  // const { addToast } = useToast();
   const { jenisList } = useJenis();
   const { subJenisList } = useSubJenis();
   const {
@@ -235,18 +235,18 @@ export function ProductsTab() {
   const handleExport = async () => {
     try {
       await exportProduct();
-      addToast({
-        type: "success",
-        title: "Export successful",
-        message: "Products exported successfully.",
-      });
+      // addToast({
+      //   type: "success",
+      //   title: "Export successful",
+      //   message: "Products exported successfully.",
+      // });
     } catch (error) {
-      addToast({
-        type: "error",
-        title: "Export failed",
-        message:
-          error instanceof Error ? error.message : "An unknown error occurred",
-      });
+      // addToast({
+      //   type: "error",
+      //   title: "Export failed",
+      //   message:
+      //     error instanceof Error ? error.message : "An unknown error occurred",
+      // });
     }
   };
 
@@ -262,18 +262,18 @@ export function ProductsTab() {
 
     try {
       await importProduct(file);
-      addToast({
-        type: "success",
-        title: "Import successful",
-        message: "Products imported successfully.",
-      });
+      // addToast({
+      //   type: "success",
+      //   title: "Import successful",
+      //   message: "Products imported successfully.",
+      // });
     } catch (error) {
-      addToast({
-        type: "error",
-        title: "Import failed",
-        message:
-          error instanceof Error ? error.message : "An unknown error occurred",
-      });
+      // addToast({
+      //   type: "error",
+      //   title: "Import failed",
+      //   message:
+      //     error instanceof Error ? error.message : "An unknown error occurred",
+      // });
     } finally {
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
@@ -586,18 +586,18 @@ export function ProductsTab() {
       await addProduct(newProductData);
       setShowAddModal(false);
 
-      addToast({
-        type: "success",
-        title: "Product added successfully!",
-        message: `${newProductData.nama} has been added to product catalog.`,
-      });
+      // addToast({
+      //   type: "success",
+      //   title: "Product added successfully!",
+      //   message: `${newProductData.nama} has been added to product catalog.`,
+      // });
     } catch (error) {
-      addToast({
-        type: "error",
-        title: "Failed to add product",
-        message:
-          error instanceof Error ? error.message : "An unknown error occurred",
-      });
+      // addToast({
+      //   type: "error",
+      //   title: "Failed to add product",
+      //   message:
+      //     error instanceof Error ? error.message : "An unknown error occurred",
+      // });
     }
   };
 
@@ -612,20 +612,20 @@ export function ProductsTab() {
     ) {
       try {
         await deleteProduct(productId);
-        addToast({
-          type: "success",
-          title: "Product deleted successfully!",
-          message: `${productName} has been removed from product catalog.`,
-        });
+        // addToast({
+        //   type: "success",
+        //   title: "Product deleted successfully!",
+        //   message: `${productName} has been removed from product catalog.`,
+        // });
       } catch (error) {
-        addToast({
-          type: "error",
-          title: "Failed to delete product",
-          message:
-            error instanceof Error
-              ? error.message
-              : "An unknown error occurred",
-        });
+        // addToast({
+        //   type: "error",
+        //   title: "Failed to delete product",
+        //   message:
+        //     error instanceof Error
+        //       ? error.message
+        //       : "An unknown error occurred",
+        // });
       }
     }
   };
@@ -646,20 +646,20 @@ export function ProductsTab() {
       setShowEditModal(false);
       setSelectedProduct(null);
 
-      addToast({
-        type: "success",
-        title: "Product updated successfully!",
-        message: `${
-          productData.nama || selectedProduct.nama
-        } has been updated.`,
-      });
+      // addToast({
+      //   type: "success",
+      //   title: "Product updated successfully!",
+      //   message: `${
+      //     productData.nama || selectedProduct.nama
+      //   } has been updated.`,
+      // });
     } catch (error) {
-      addToast({
-        type: "error",
-        title: "Failed to update product",
-        message:
-          error instanceof Error ? error.message : "An unknown error occurred",
-      });
+      // addToast({
+      //   type: "error",
+      //   title: "Failed to update product",
+      //   message:
+      //     error instanceof Error ? error.message : "An unknown error occurred",
+      // });
     }
   };
 
@@ -709,17 +709,17 @@ export function ProductsTab() {
         return updated;
       });
 
-      addToast({
-        type: "success",
-        title: "Stock updated!",
-        message: `Stock has been updated to ${newStok}.`,
-      });
+      // addToast({
+      //   type: "success",
+      //   title: "Stock updated!",
+      //   message: `Stock has been updated to ${newStok}.`,
+      // });
     } catch (error) {
-      addToast({
-        type: "error",
-        title: "Failed to update stock",
-        message: error instanceof Error ? error.message : "An error occurred",
-      });
+      // addToast({
+      //   type: "error",
+      //   title: "Failed to update stock",
+      //   message: error instanceof Error ? error.message : "An error occurred",
+      // });
     }
   };
 
@@ -747,17 +747,17 @@ export function ProductsTab() {
       await updateProduct(productId, { stok: stockValue });
       setEditingStockId(null);
       setTempStock("");
-      addToast({
-        type: "success",
-        title: "Stock updated successfully!",
-        message: `Stock has been updated to ${stockValue}.`,
-      });
+      // addToast({
+      //   type: "success",
+      //   title: "Stock updated successfully!",
+      //   message: `Stock has been updated to ${stockValue}.`,
+      // });
     } catch (error) {
-      addToast({
-        type: "error",
-        title: "Failed to update stock",
-        message: error instanceof Error ? error.message : "An error occurred",
-      });
+      // addToast({
+      //   type: "error",
+      //   title: "Failed to update stock",
+      //   message: error instanceof Error ? error.message : "An error occurred",
+      // });
     }
   };
 
