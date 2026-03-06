@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -26,6 +26,7 @@ interface PaymentMethodsProps {
   finalTotalAmount: number;
   deliveryFee: number;
   voucherCode?: string;
+  deliveryMode?: string;
 }
 
 export function PaymentMethods({
@@ -33,6 +34,7 @@ export function PaymentMethods({
   finalTotalAmount,
   deliveryFee,
   voucherCode,
+  deliveryMode,
 }: PaymentMethodsProps) {
   const [selectedPayment, setSelectedPayment] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
@@ -40,16 +42,25 @@ export function PaymentMethods({
   const { t } = useTranslation();
   const { completeOrder, cartItems, getTotalPrice } = useCart();
 
+  // Auto-reset payment jika user pilih cash tapi ganti ke delivery mode
+  useEffect(() => {
+    if (selectedPayment === "cash" && deliveryMode !== "pickup") {
+      setSelectedPayment("");
+    }
+  }, [deliveryMode, selectedPayment]);
+
   const paymentOptions = [
     {
       value: "cash",
       label: t("payment.cash"),
       description: t("payment.cashDesc"),
+      disabled: deliveryMode !== "pickup", // Disable cash untuk delivery
     },
     {
       value: "transfer",
       label: t("payment.transfer"),
       description: t("payment.transferDesc"),
+      disabled: false,
     },
   ];
 
@@ -68,13 +79,13 @@ export function PaymentMethods({
         timestamp: new Date().toISOString(),
         paymentMethod: selectedPayment,
         paymentMethodLabel: paymentOptions.find(
-          (p) => p.value === selectedPayment
+          (p) => p.value === selectedPayment,
         )?.label,
         totalItems: cartItems.reduce((sum, item) => sum + item.quantity, 0),
-        subtotal: getTotalPrice(),
-        tax: getTotalPrice() * 0.1,
-        deliveryFee: deliveryFee,
-        totalAmount: finalTotalAmount,
+        subtotal: Number(getTotalPrice()) || 0,
+        tax: 0, // Pajak dihilangkan
+        deliveryFee: Number(deliveryFee) || 0,
+        totalAmount: Number(finalTotalAmount) || 0,
         currency: "IDR",
         voucherCode: voucherCode || null,
       };
@@ -145,7 +156,7 @@ export function PaymentMethods({
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(
-          errorData.message || "Gagal mengirim pesanan ke backend"
+          errorData.message || "Gagal mengirim pesanan ke backend",
         );
       }
 
@@ -160,7 +171,7 @@ export function PaymentMethods({
           alert(
             `Pesanan berhasil diproses dengan ${
               paymentOptions.find((p) => p.value === selectedPayment)?.label
-            }!`
+            }!`,
           );
           setOrderComplete(false);
           setSelectedPayment("");
@@ -171,7 +182,7 @@ export function PaymentMethods({
       alert(
         `Terjadi kesalahan: ${
           error instanceof Error ? error.message : String(error)
-        }`
+        }`,
       );
     } finally {
       setIsProcessing(false);
@@ -193,11 +204,12 @@ export function PaymentMethods({
   }
 
   const formatPrice = (price: number) => {
+    const safePrice = Number(price) || 0;
     return new Intl.NumberFormat("id-ID", {
       style: "currency",
       currency: "IDR",
       minimumFractionDigits: 0,
-    }).format(price);
+    }).format(safePrice);
   };
 
   return (
@@ -219,24 +231,36 @@ export function PaymentMethods({
           {paymentOptions.map((option) => (
             <div
               key={option.value}
-              className={`flex items-start space-x-3 p-3 border rounded-lg transition-all cursor-pointer ${
+              className={`flex items-start space-x-3 p-3 border rounded-lg transition-all ${
+                option.disabled
+                  ? "opacity-50 cursor-not-allowed bg-gray-100"
+                  : "cursor-pointer"
+              } ${
                 selectedPayment === option.value
                   ? "border-[#8B6F47] bg-[#F5F1EB] shadow-sm"
                   : "border-gray-200 hover:border-[#8B6F47] hover:bg-[#F5F1EB]"
               }`}
-              onClick={() => setSelectedPayment(option.value)}
+              onClick={() =>
+                !option.disabled && setSelectedPayment(option.value)
+              }
             >
               <RadioGroupItem
                 value={option.value}
                 id={option.value}
                 className="mt-1"
+                disabled={option.disabled}
               />
               <div className="flex-1">
                 <Label
                   htmlFor={option.value}
-                  className="text-[#5D4037] font-medium cursor-pointer block"
+                  className={`font-medium block ${
+                    option.disabled
+                      ? "text-gray-400 cursor-not-allowed"
+                      : "text-[#5D4037] cursor-pointer"
+                  }`}
                 >
                   {option.label}
+                  {option.disabled && " (Hanya untuk Ambil di Tempat)"}
                 </Label>
                 <p className="text-sm text-gray-600 mt-1">
                   {option.description}
@@ -252,7 +276,14 @@ export function PaymentMethods({
             !selectedPayment ||
             isProcessing ||
             cartItems.length === 0 ||
-            !formData?.namaPenerima
+            !formData?.namaPenerima ||
+            !formData?.nomorTelepon ||
+            !formData?.deliveryMode ||
+            !formData?.tanggalPemesanan ||
+            (formData?.deliveryMode === "delivery" &&
+              (!formData?.alamat ||
+                !formData?.latitude ||
+                !formData?.longitude))
           }
           onClick={handleProcessOrder}
         >
@@ -263,10 +294,24 @@ export function PaymentMethods({
             </div>
           ) : (
             `${t("payment.processOrder")} - ${formatPrice(
-              Number(finalTotalAmount) || 0
+              Number(finalTotalAmount) || 0,
             )}`
           )}
         </Button>
+
+        {/* Pesan informasi jika form belum lengkap */}
+        {(!formData?.namaPenerima ||
+          !formData?.nomorTelepon ||
+          !formData?.deliveryMode ||
+          !formData?.tanggalPemesanan ||
+          (formData?.deliveryMode === "delivery" &&
+            (!formData?.alamat ||
+              !formData?.latitude ||
+              !formData?.longitude))) && (
+          <p className="text-sm text-orange-600 text-center mt-2">
+            ⚠️ Lengkapi form pemesanan untuk melanjutkan pembayaran
+          </p>
+        )}
       </CardContent>
     </Card>
   );

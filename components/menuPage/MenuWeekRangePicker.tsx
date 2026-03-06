@@ -7,27 +7,30 @@ import { Button } from "@/components/ui/button";
 
 interface MenuWeekRangePickerProps {
   onDateSelect: (startDate: Date, endDate: Date, orderDay: string) => void;
+  selectedOrderDay?: string | null;
   onViewModeChange?: (mode: "order" | "allMenu") => void;
   viewMode?: "order" | "allMenu";
 }
 
 export function MenuWeekRangePicker({
   onDateSelect,
+  selectedOrderDay,
   onViewModeChange,
   viewMode = "order",
 }: MenuWeekRangePickerProps) {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
-  // 1. Definisikan Hari Ini (Jam 00:00:00)
+  // 1. Definisikan Hari Ini dan Besok (Jam 00:00:00)
   const today = startOfDay(new Date());
+  const tomorrow = addDays(today, 1); // Minimum tanggal pemesanan adalah besok
 
   const getIndonesianDayName = (date: Date): string => {
     return format(date, "EEEE", { locale: id });
   };
 
   useEffect(() => {
-    // Default: Otomatis pilih hari ini saat load
-    handleSelectDate(today);
+    // Default: Otomatis pilih besok saat load (bukan hari ini)
+    handleSelectDate(tomorrow);
   }, []);
 
   const handleSelectDate = (date: Date) => {
@@ -42,9 +45,11 @@ export function MenuWeekRangePicker({
   };
 
   // 2. GENERATE TANGGAL STATIS (Fixed)
-  // Loop 7 kali mulai dari hari ini.
-  // User TIDAK BISA melihat tanggal ke-8 (tgl 13 dst) karena tidak kita buat.
-  const visibleDates = Array.from({ length: 8 }, (_, i) => addDays(today, i));
+  // Loop 8 kali mulai dari BESOK (bukan hari ini)
+  // User TIDAK BISA memesan untuk hari ini, hanya besok sampai 8 hari ke depan
+  const visibleDates = Array.from({ length: 8 }, (_, i) =>
+    addDays(tomorrow, i),
+  );
 
   // Info Header Range
   const headerStart = visibleDates[0];
@@ -66,13 +71,13 @@ export function MenuWeekRangePicker({
           </div>
         </div>
 
-        {/* Grid Tanggal (Fixed 7 Hari) */}
+        {/* Grid Tanggal (Fixed 8 Hari dari Besok) */}
         {/* Tidak ada tombol prev/next, jadi user terkunci disini */}
         <div className="flex-1 grid grid-cols-8 gap-1">
           {visibleDates.map((date) => {
             const isSelected = selectedDate && isSameDay(date, selectedDate);
             const dayName = getIndonesianDayName(date);
-            const isToday = isSameDay(date, today);
+            const isTomorrow = isSameDay(date, tomorrow);
 
             return (
               <button
@@ -84,17 +89,19 @@ export function MenuWeekRangePicker({
                   p-1.5 rounded text-xs font-medium transition-all
                   flex flex-col items-center justify-center relative
                   ${
-                    isToday
-                      ? "bg-red-500 text-white shadow-md cursor-pointer transform scale-105 z-10 ring-2 ring-red-600"
-                      : isSelected
-                      ? "bg-[#8B6F47] text-white shadow-md cursor-pointer transform scale-105 z-10 ring-1 ring-[#5D4037]"
-                      : "bg-gray-50 text-gray-700 hover:bg-gray-100 cursor-pointer border border-gray-100"
+                    isTomorrow && isSelected
+                      ? "bg-[#8B6F47] text-white shadow-md cursor-pointer transform scale-105 z-10 ring-2 ring-[#5D4037]"
+                      : isTomorrow
+                        ? "bg-blue-500 text-white shadow-md cursor-pointer hover:bg-blue-600 ring-1 ring-blue-600"
+                        : isSelected
+                          ? "bg-[#8B6F47] text-white shadow-md cursor-pointer transform scale-105 z-10 ring-1 ring-[#5D4037]"
+                          : "bg-gray-50 text-gray-700 hover:bg-gray-100 cursor-pointer border border-gray-100"
                   }
                 `}
               >
                 <span
                   className={`text-[10px] font-semibold leading-tight uppercase ${
-                    isToday || isSelected ? "text-white" : "text-gray-500"
+                    isTomorrow || isSelected ? "text-white" : "text-gray-500"
                   }`}
                 >
                   {dayName.substring(0, 3)}
