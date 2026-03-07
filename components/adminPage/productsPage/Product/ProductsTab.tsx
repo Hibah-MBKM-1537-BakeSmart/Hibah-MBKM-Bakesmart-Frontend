@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Plus,
   Search,
@@ -25,10 +25,12 @@ import { AddProductModal } from "@/components/adminPage/productsPage/Product/Add
 import { ProductDetailModal } from "@/components/adminPage/productsPage/Product/ProductDetailModal";
 import { EditProductModal } from "@/components/adminPage/productsPage/Product/EditProductModal";
 // import { useToast } from "@/components/adminPage/Toast";
-import { useJenis } from "@/app/contexts/JenisContext";
+import { Jenis, useJenis } from "@/app/contexts/JenisContext";
 import { useSubJenis } from "@/app/contexts/SubJenisContext";
-import { useProducts, Product } from "@/app/contexts/ProductsContext";
+import { useProducts } from "@/app/contexts/ProductsContext";
+import { useAppAlert } from "@/components/AppAlert";
 import { getImageUrl } from "@/lib/utils";
+import { FormProduct, Product } from "@/app/contexts/ProductCrud";
 
 // ProductTableRow Component for reusability
 interface ProductTableRowProps {
@@ -38,14 +40,14 @@ interface ProductTableRowProps {
   tempStock: string;
   pendingStockChanges: Record<number, number>;
   formatPrice: (price: number) => string;
-  handleStockInputChange: (value: string) => void;
-  saveStockEdit: (productId: number) => void;
-  cancelStockEdit: () => void;
-  handleStockDecrement: (productId: number) => void;
-  handleStockIncrement: (productId: number) => void;
-  confirmStockChange: (productId: number) => void;
-  cancelStockChange: (productId: number) => void;
-  startEditingStock: (productId: number, currentStock: number) => void;
+  // handleStockInputChange: (value: string) => void;
+  // saveStockEdit: (productId: number) => void;
+  // cancelStockEdit: () => void;
+  // handleStockDecrement: (productId: number) => void;
+  // handleStockIncrement: (productId: number) => void;
+  // confirmStockChange: (productId: number) => void;
+  // cancelStockChange: (productId: number) => void;
+  // startEditingStock: (productId: number, currentStock: number) => void;
   handleViewProduct: (productId: number) => void;
   handleEditProduct: (productId: number, productName: string) => void;
   handleDeleteProduct: (productId: number, productName: string) => void;
@@ -58,14 +60,14 @@ function ProductTableRow({
   tempStock,
   pendingStockChanges,
   formatPrice,
-  handleStockInputChange,
-  saveStockEdit,
-  cancelStockEdit,
-  handleStockDecrement,
-  handleStockIncrement,
-  confirmStockChange,
-  cancelStockChange,
-  startEditingStock,
+  // handleStockInputChange,
+  // saveStockEdit,
+  // cancelStockEdit,
+  // handleStockDecrement,
+  // handleStockIncrement,
+  // confirmStockChange,
+  // cancelStockChange,
+  // startEditingStock,
   handleViewProduct,
   handleEditProduct,
   handleDeleteProduct,
@@ -79,8 +81,8 @@ function ProductTableRow({
             {product.gambars && product.gambars.length > 0 ? (
               <>
                 <img
-                  src={getImageUrl(product.gambars[0].file_path)}
-                  alt={product.nama}
+                  src={getImageUrl(product.gambars[0]?.file_path)}
+                  alt={product.nama_id || product.nama_en || "Unnamed Product"}
                   className="w-10 h-10 rounded-lg object-cover border border-gray-200"
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
@@ -108,10 +110,10 @@ function ProductTableRow({
           </div>
           <div className="min-w-0 flex-1">
             <div className="text-sm font-medium text-gray-900 truncate">
-              {product.nama}
+              {product.nama_id || product.nama_en || "Unnamed Product"}
             </div>
             <div className="text-xs lg:text-sm text-gray-500 truncate max-w-[150px] lg:max-w-xs">
-              {product.deskripsi}
+              {product.deskripsi_id || product.deskripsi_en || "No description available"}
             </div>
           </div>
         </div>
@@ -131,7 +133,7 @@ function ProductTableRow({
                 key={day.id}
                 className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800"
               >
-                {day.nama_id || day.nama}
+                {day.nama_id || day.nama_en}
               </span>
             ))
           ) : (
@@ -168,7 +170,7 @@ function ProductTableRow({
           </button>
           <button
             onClick={() =>
-              handleEditProduct(product.id, product.nama || "Product")
+              handleEditProduct(product.id, product.nama_id || product.nama_en ||  "Product")
             }
             className="p-2 rounded-lg bg-orange-50 text-orange-600 hover:bg-orange-100 hover:text-orange-700 transition-colors"
             title="Edit Product"
@@ -177,7 +179,7 @@ function ProductTableRow({
           </button>
           <button
             onClick={() =>
-              handleDeleteProduct(product.id, product.nama || "Product")
+              handleDeleteProduct(product.id, product.nama_id || product.nama_en || "Product")
             }
             className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 transition-colors"
             title="Delete Product"
@@ -219,34 +221,26 @@ export function ProductsTab() {
   const [pendingStockChanges, setPendingStockChanges] = useState<
     Record<number, number>
   >({});
-  // const { addToast } = useToast();
-  const { jenisList } = useJenis();
+  const { list : jenisList } = useJenis();
   const { subJenisList } = useSubJenis();
   const {
-    products,
-    addProduct,
+    fetchProduct,
+    productList: products,
+    createProduct: addProduct,
     deleteProduct,
     updateProduct,
     exportProduct,
     importProduct,
   } = useProducts();
+  const { success, error, confirm } =  useAppAlert();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
-
+  
   const handleExport = async () => {
     try {
       await exportProduct();
-      // addToast({
-      //   type: "success",
-      //   title: "Export successful",
-      //   message: "Products exported successfully.",
-      // });
-    } catch (error) {
-      // addToast({
-      //   type: "error",
-      //   title: "Export failed",
-      //   message:
-      //     error instanceof Error ? error.message : "An unknown error occurred",
-      // });
+      await success("Export successful", `Products exported successfully.`);
+    } catch (e) {
+      await error("Export failed", `Failed to export products.`);
     }
   };
 
@@ -262,18 +256,9 @@ export function ProductsTab() {
 
     try {
       await importProduct(file);
-      // addToast({
-      //   type: "success",
-      //   title: "Import successful",
-      //   message: "Products imported successfully.",
-      // });
-    } catch (error) {
-      // addToast({
-      //   type: "error",
-      //   title: "Import failed",
-      //   message:
-      //     error instanceof Error ? error.message : "An unknown error occurred",
-      // });
+      await success("Import successful", `Products imported successfully.`);
+    } catch (e) {
+      await error("Import failed", `Failed to import products.`);
     } finally {
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
@@ -283,15 +268,11 @@ export function ProductsTab() {
 
   // Extract unique jenis from backend products
   const uniqueJenis = React.useMemo(() => {
-    const jenisSet = new Set<string>();
-    products.forEach((product) => {
-      product.jenis?.forEach((j) => {
-        const jenisNama = (j.nama_en || j.nama_id || j.nama)?.trim();
-        if (jenisNama) jenisSet.add(jenisNama);
-      });
-    });
-    return Array.from(jenisSet).sort();
-  }, [products]);
+    return jenisList
+      .map((j) => (j.nama_en || j.nama_id)?.trim())
+      .filter(Boolean)
+      .sort();
+  }, [jenisList]);
 
   // Extract unique days from backend products
   const uniqueDays = React.useMemo(() => {
@@ -308,7 +289,7 @@ export function ProductsTab() {
 
     products.forEach((product) => {
       product.hari?.forEach((h) => {
-        const dayNama = h.nama_en || h.nama_id || h.nama;
+        const dayNama = h.nama_en || h.nama_id;
         if (dayNama) daysSet.add(dayNama);
       });
     });
@@ -326,26 +307,28 @@ export function ProductsTab() {
   const dayOptions = ["all", ...uniqueDays];
 
   // Sort and filter products
-  const filteredProducts = products
-    .filter((product) => {
-      if (!product || !product.nama) return false;
+  // const filteredProducts = products
+  const filteredProducts = products.filter((product) => {
+    if (!product || !product.nama_id || !product.nama_en) return false;
 
-      const matchesSearch = product.nama
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase());
+    const term = searchTerm.toLowerCase();
 
-      const matchesCategory =
-        selectedCategory === "all" ||
-        product.jenis?.some((j) => {
-          const jenisNama = (j.nama_en || j.nama_id || j.nama)?.trim();
-          return jenisNama === selectedCategory;
-        }) ||
-        false;
+    const matchesSearch =
+      product.nama_id?.toLowerCase().includes(term) ||
+      product.nama_en?.toLowerCase().includes(term);
+
+    const matchesCategory =
+      selectedCategory === "all" ||
+      product.jenis?.some((j) => {
+        const jenisNama = (j.nama_en || j.nama_id)?.trim();
+        return jenisNama === selectedCategory;
+      }) ||
+      false;
 
       const matchesDay =
         selectedDay === "all" ||
         product.hari?.some((h) => {
-          const dayNama = h.nama_en || h.nama_id || h.nama;
+          const dayNama = h.nama_en || h.nama_id;
           return dayNama === selectedDay;
         }) ||
         false;
@@ -354,15 +337,15 @@ export function ProductsTab() {
         product.harga >= priceRange.min && product.harga <= priceRange.max;
 
       const matchesStock =
-        (product.stok ?? 0) >= stockRange.min &&
-        (product.stok ?? 0) <= stockRange.max;
+        (product.daily_stock ?? 0) >= stockRange.min &&
+        (product.daily_stock ?? 0) <= stockRange.max;
 
       return (
         matchesSearch &&
         matchesCategory &&
         matchesDay &&
-        matchesPrice &&
-        matchesStock
+        matchesPrice 
+        && matchesStock
       );
     })
     .sort((a, b) => {
@@ -370,7 +353,7 @@ export function ProductsTab() {
 
       switch (sortField) {
         case "nama":
-          comparison = a.nama.localeCompare(b.nama);
+          comparison = (a.nama_id || "").localeCompare(b.nama_id || "");
           break;
         case "category":
           const categoryA =
@@ -446,7 +429,7 @@ export function ProductsTab() {
       });
     } else if (groupBy === "sub_jenis") {
       filteredProducts.forEach((product) => {
-        const subJenis = product.sub_jenis?.[0];
+        const subJenis = product.sub_jenis;
         const key = `sub_${subJenis?.id?.toString() || "uncategorized"}`;
         const name = subJenis?.nama_id || "Tanpa Sub Kategori";
         const nameEn = subJenis?.nama_en || "Uncategorized";
@@ -459,7 +442,7 @@ export function ProductsTab() {
     } else if (groupBy === "jenis_sub_jenis") {
       filteredProducts.forEach((product) => {
         const jenis = product.jenis?.[0];
-        const subJenis = product.sub_jenis?.[0];
+        const subJenis = product.sub_jenis;
 
         const jenisKey = `jenis_${jenis?.id?.toString() || "uncategorized"}`;
         const jenisName = jenis?.nama_id || "Tanpa Kategori";
@@ -581,23 +564,26 @@ export function ProductsTab() {
     }).format(price);
   };
 
-  const handleAddProduct = async (newProductData: Partial<Product>) => {
+  const handleAddProduct = async (newProductData: FormProduct): Promise<Product | null> => {
     try {
-      await addProduct(newProductData);
+      const result = await addProduct(newProductData);
+      await fetchProduct();
+
       setShowAddModal(false);
 
-      // addToast({
-      //   type: "success",
-      //   title: "Product added successfully!",
-      //   message: `${newProductData.nama} has been added to product catalog.`,
-      // });
-    } catch (error) {
-      // addToast({
-      //   type: "error",
-      //   title: "Failed to add product",
-      //   message:
-      //     error instanceof Error ? error.message : "An unknown error occurred",
-      // });
+      success(
+        "Product added successfully!",
+        `${newProductData.nama_id} has been added to product catalog.`
+      );
+
+      return result;
+    } catch (e) {
+      error(
+        "Failed to add product",
+        e instanceof Error ? e.message : "An unknown error occurred"
+      );
+
+      return null;
     }
   };
 
@@ -612,20 +598,10 @@ export function ProductsTab() {
     ) {
       try {
         await deleteProduct(productId);
-        // addToast({
-        //   type: "success",
-        //   title: "Product deleted successfully!",
-        //   message: `${productName} has been removed from product catalog.`,
-        // });
-      } catch (error) {
-        // addToast({
-        //   type: "error",
-        //   title: "Failed to delete product",
-        //   message:
-        //     error instanceof Error
-        //       ? error.message
-        //       : "An unknown error occurred",
-        // });
+        await fetchProduct();
+        await success("Product deleted successfully!", `${productName} has been removed from product catalog.`)
+      } catch (e) {
+        await error("Failed to delete product", e instanceof Error ? e.message : "An unknown error occurred")
       }
     }
   };
@@ -638,28 +614,19 @@ export function ProductsTab() {
     }
   };
 
-  const handleUpdateProduct = async (productData: Partial<Product>) => {
-    if (!selectedProduct) return;
+  const handleUpdateProduct = async (productData: Partial<FormProduct>) : Promise<Product | null> => {
+    if (!selectedProduct) return null;
 
     try {
-      await updateProduct(selectedProduct.id, productData);
+      const result = await updateProduct(selectedProduct.id, productData);
+      await fetchProduct();
       setShowEditModal(false);
       setSelectedProduct(null);
-
-      // addToast({
-      //   type: "success",
-      //   title: "Product updated successfully!",
-      //   message: `${
-      //     productData.nama || selectedProduct.nama
-      //   } has been updated.`,
-      // });
-    } catch (error) {
-      // addToast({
-      //   type: "error",
-      //   title: "Failed to update product",
-      //   message:
-      //     error instanceof Error ? error.message : "An unknown error occurred",
-      // });
+      await success("Product updated successfully!", `${productData.nama_id || selectedProduct.nama_id} has been updated.`);
+      return result;
+    } catch (e) {
+      await error("Failed to update product", e instanceof Error ? e.message : "An unknown error occurred");
+      return null;
     }
   };
 
@@ -671,100 +638,83 @@ export function ProductsTab() {
     }
   };
 
-  const handleStockIncrement = (productId: number) => {
-    const product = products.find((p) => p.id === productId);
-    if (product && typeof product.stok === "number") {
-      const currentPending = pendingStockChanges[productId] ?? product.stok;
-      const newStok = currentPending + 1;
-      setPendingStockChanges((prev) => ({
-        ...prev,
-        [productId]: newStok,
-      }));
-    }
-  };
+  // const handleStockIncrement = (productId: number) => {
+  //   const product = products.find((p) => p.id === productId);
+  //   if (product && typeof product.stok === "number") {
+  //     const currentPending = pendingStockChanges[productId] ?? product.stok;
+  //     const newStok = currentPending + 1;
+  //     setPendingStockChanges((prev) => ({
+  //       ...prev,
+  //       [productId]: newStok,
+  //     }));
+  //   }
+  // };
 
-  const handleStockDecrement = (productId: number) => {
-    const product = products.find((p) => p.id === productId);
-    if (product && typeof product.stok === "number") {
-      const currentPending = pendingStockChanges[productId] ?? product.stok;
-      if (currentPending > 0) {
-        const newStok = currentPending - 1;
-        setPendingStockChanges((prev) => ({
-          ...prev,
-          [productId]: newStok,
-        }));
-      }
-    }
-  };
+  // const handleStockDecrement = (productId: number) => {
+  //   const product = products.find((p) => p.id === productId);
+  //   if (product && typeof product.stok === "number") {
+  //     const currentPending = pendingStockChanges[productId] ?? product.stok;
+  //     if (currentPending > 0) {
+  //       const newStok = currentPending - 1;
+  //       setPendingStockChanges((prev) => ({
+  //         ...prev,
+  //         [productId]: newStok,
+  //       }));
+  //     }
+  //   }
+  // };
 
-  const confirmStockChange = async (productId: number) => {
-    const newStok = pendingStockChanges[productId];
-    if (newStok === undefined) return;
+  // const confirmStockChange = async (productId: number) => {
+  //   const newStok = pendingStockChanges[productId];
+  //   if (newStok === undefined) return;
 
-    try {
-      await updateProduct(productId, { stok: newStok });
-      setPendingStockChanges((prev) => {
-        const updated = { ...prev };
-        delete updated[productId];
-        return updated;
-      });
+  //   try {
+  //     await updateProduct(productId, { stok: newStok });
+  //     setPendingStockChanges((prev) => {
+  //       const updated = { ...prev };
+  //       delete updated[productId];
+  //       return updated;
+  //     });
+  //     await success("Stock updated successfully!", `Stock has been updated to ${newStok}.`);
+  //   } catch (e) {
+  //     await error("Failed to update stock", e instanceof Error ? e.message : "An unknown error occurred");
+  //   }
+  // };
 
-      // addToast({
-      //   type: "success",
-      //   title: "Stock updated!",
-      //   message: `Stock has been updated to ${newStok}.`,
-      // });
-    } catch (error) {
-      // addToast({
-      //   type: "error",
-      //   title: "Failed to update stock",
-      //   message: error instanceof Error ? error.message : "An error occurred",
-      // });
-    }
-  };
+  // const cancelStockChange = (productId: number) => {
+  //   setPendingStockChanges((prev) => {
+  //     const updated = { ...prev };
+  //     delete updated[productId];
+  //     return updated;
+  //   });
+  // };
 
-  const cancelStockChange = (productId: number) => {
-    setPendingStockChanges((prev) => {
-      const updated = { ...prev };
-      delete updated[productId];
-      return updated;
-    });
-  };
+  // const startEditingStock = (productId: number, currentStock: number) => {
+  //   setEditingStockId(productId);
+  //   setTempStock(currentStock.toString());
+  // };
 
-  const startEditingStock = (productId: number, currentStock: number) => {
-    setEditingStockId(productId);
-    setTempStock(currentStock.toString());
-  };
+  // const handleStockInputChange = (value: string) => {
+  //   const cleanedValue = value.replace(/[^0-9]/g, "");
+  //   setTempStock(cleanedValue);
+  // };
 
-  const handleStockInputChange = (value: string) => {
-    const cleanedValue = value.replace(/[^0-9]/g, "");
-    setTempStock(cleanedValue);
-  };
+  // const saveStockEdit = async (productId: number) => {
+  //   try {
+  //     const stockValue = parseInt(tempStock) || 0;
+  //     await updateProduct(productId, { stok: stockValue });
+  //     setEditingStockId(null);
+  //     setTempStock("");
+  //     await success("Stock updated successfully!", `Stock has been updated to ${stockValue}.`);
+  //   } catch (e) {
+  //     await error("Failed to update stock", e instanceof Error ? e.message : "An error occurred");
+  //   }
+  // };
 
-  const saveStockEdit = async (productId: number) => {
-    try {
-      const stockValue = parseInt(tempStock) || 0;
-      await updateProduct(productId, { stok: stockValue });
-      setEditingStockId(null);
-      setTempStock("");
-      // addToast({
-      //   type: "success",
-      //   title: "Stock updated successfully!",
-      //   message: `Stock has been updated to ${stockValue}.`,
-      // });
-    } catch (error) {
-      // addToast({
-      //   type: "error",
-      //   title: "Failed to update stock",
-      //   message: error instanceof Error ? error.message : "An error occurred",
-      // });
-    }
-  };
-
-  const cancelStockEdit = () => {
-    setEditingStockId(null);
-    setTempStock("");
-  };
+  // const cancelStockEdit = () => {
+  //   setEditingStockId(null);
+  //   setTempStock("");
+  // };
 
   return (
     <div className="space-y-6">
@@ -1123,14 +1073,14 @@ export function ProductsTab() {
                       tempStock={tempStock}
                       pendingStockChanges={pendingStockChanges}
                       formatPrice={formatPrice}
-                      handleStockInputChange={handleStockInputChange}
-                      saveStockEdit={saveStockEdit}
-                      cancelStockEdit={cancelStockEdit}
-                      handleStockDecrement={handleStockDecrement}
-                      handleStockIncrement={handleStockIncrement}
-                      confirmStockChange={confirmStockChange}
-                      cancelStockChange={cancelStockChange}
-                      startEditingStock={startEditingStock}
+                      // handleStockInputChange={handleStockInputChange}
+                      // saveStockEdit={saveStockEdit}
+                      // cancelStockEdit={cancelStockEdit}
+                      // handleStockDecrement={handleStockDecrement}
+                      // handleStockIncrement={handleStockIncrement}
+                      // confirmStockChange={confirmStockChange}
+                      // cancelStockChange={cancelStockChange}
+                      // startEditingStock={startEditingStock}
                       handleViewProduct={handleViewProduct}
                       handleEditProduct={handleEditProduct}
                       handleDeleteProduct={handleDeleteProduct}
@@ -1209,26 +1159,16 @@ export function ProductsTab() {
                                           isGrouped={true}
                                           editingStockId={editingStockId}
                                           tempStock={tempStock}
-                                          pendingStockChanges={
-                                            pendingStockChanges
-                                          }
+                                          pendingStockChanges={ pendingStockChanges }
                                           formatPrice={formatPrice}
-                                          handleStockInputChange={
-                                            handleStockInputChange
-                                          }
-                                          saveStockEdit={saveStockEdit}
-                                          cancelStockEdit={cancelStockEdit}
-                                          handleStockDecrement={
-                                            handleStockDecrement
-                                          }
-                                          handleStockIncrement={
-                                            handleStockIncrement
-                                          }
-                                          confirmStockChange={
-                                            confirmStockChange
-                                          }
-                                          cancelStockChange={cancelStockChange}
-                                          startEditingStock={startEditingStock}
+                                          // handleStockInputChange={ handleStockInputChange }
+                                          // saveStockEdit={saveStockEdit}
+                                          // cancelStockEdit={cancelStockEdit}
+                                          // handleStockDecrement={ handleStockDecrement }
+                                          // handleStockIncrement={ handleStockIncrement }
+                                          // confirmStockChange={ confirmStockChange }
+                                          // cancelStockChange={cancelStockChange}
+                                          // startEditingStock={startEditingStock}
                                           handleViewProduct={handleViewProduct}
                                           handleEditProduct={handleEditProduct}
                                           handleDeleteProduct={
@@ -1247,16 +1187,14 @@ export function ProductsTab() {
                                   tempStock={tempStock}
                                   pendingStockChanges={pendingStockChanges}
                                   formatPrice={formatPrice}
-                                  handleStockInputChange={
-                                    handleStockInputChange
-                                  }
-                                  saveStockEdit={saveStockEdit}
-                                  cancelStockEdit={cancelStockEdit}
-                                  handleStockDecrement={handleStockDecrement}
-                                  handleStockIncrement={handleStockIncrement}
-                                  confirmStockChange={confirmStockChange}
-                                  cancelStockChange={cancelStockChange}
-                                  startEditingStock={startEditingStock}
+                                  // handleStockInputChange={ handleStockInputChange }
+                                  // saveStockEdit={saveStockEdit}
+                                  // cancelStockEdit={cancelStockEdit}
+                                  // handleStockDecrement={handleStockDecrement}
+                                  // handleStockIncrement={handleStockIncrement}
+                                  // confirmStockChange={confirmStockChange}
+                                  // cancelStockChange={cancelStockChange}
+                                  // startEditingStock={startEditingStock}
                                   handleViewProduct={handleViewProduct}
                                   handleEditProduct={handleEditProduct}
                                   handleDeleteProduct={handleDeleteProduct}

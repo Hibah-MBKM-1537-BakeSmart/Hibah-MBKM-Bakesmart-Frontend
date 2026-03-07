@@ -7,10 +7,10 @@ import { AdminProvider as UsersProvider } from "@/app/contexts/UsersContext";
 import { AuthProvider } from "@/app/contexts/AuthContext";
 // import { ToastProvider } from "@/app/contexts/ToastContext";
 import { CategoriesProvider } from "@/app/contexts/CategoriesContext";
-import { ProductsProvider } from "@/app/contexts/ProductsContext";
 import { CustomersProvider } from "@/app/contexts/CustomersContext";
 import { JenisProvider } from "@/app/contexts/JenisContext";
 import { SubJenisProvider } from "@/app/contexts/SubJenisContext";
+import { ProductProvider } from "@/app/contexts/ProductsContext";
 import { AppAlertProvider } from "@/components/AppAlert";
 
 const poppins = Poppins({
@@ -40,7 +40,7 @@ export default function AdminLayout({
             <CategoriesProvider>
               <JenisProvider>
                 <SubJenisProvider>
-                  <ProductsProvider>
+                  <ProductProvider>
                     <CustomersProvider>
                       <AdminTranslationProvider>
                           <div
@@ -51,7 +51,7 @@ export default function AdminLayout({
                           </div>
                       </AdminTranslationProvider>
                     </CustomersProvider>
-                  </ProductsProvider>
+                  </ProductProvider>
                 </SubJenisProvider>
               </JenisProvider>
             </CategoriesProvider>

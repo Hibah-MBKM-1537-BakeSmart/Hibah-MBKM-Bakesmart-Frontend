@@ -72,6 +72,7 @@ function SubJenisFormModal({
   const [attributeMode, setAttributeMode] = useState<"manual" | "select">("manual");
   const [selectedAttributeId, setSelectedAttributeId] = useState<number | null>(null);
   const [showAttributeForm, setShowAttributeForm] = useState(false);
+  const [newAttrId, setNewAttrId] = useState(0);
   const [newAttrNameId, setNewAttrNameId] = useState("");
   const [newAttrNameEn, setNewAttrNameEn] = useState("");
   const [newAttrPrice, setNewAttrPrice] = useState<number>(0);

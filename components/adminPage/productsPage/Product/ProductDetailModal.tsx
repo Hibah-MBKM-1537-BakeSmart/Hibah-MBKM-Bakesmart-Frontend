@@ -2,8 +2,8 @@
 
 import React from "react";
 import { X, Package, CheckCircle, XCircle, Calendar } from "lucide-react";
-import { Product } from "@/app/contexts/ProductsContext";
 import { getImageUrl } from "@/lib/utils";
+import { Product } from "@/app/contexts/ProductCrud";
 
 interface ProductDetailModalProps {
   isOpen: boolean;
@@ -54,11 +54,12 @@ export function ProductDetailModal({
             <div className="w-24 h-24 rounded-lg overflow-hidden border bg-gray-50 flex items-center justify-center flex-shrink-0">
               {product.gambars && product.gambars.length > 0 ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={getImageUrl(product.gambars[0].file_path)}
-                  alt={product.nama}
-                  className="w-full h-full object-cover"
-                />
+                // <img
+                //   src={getImageUrl(product.gambars[0].file_path)}
+                //   alt={product.nama_id || product.nama_en || "Product Image"}
+                //   className="w-full h-full object-cover"
+                // />
+                <></>
               ) : (
                 <Package className="w-8 h-8 text-orange-600" />
               )}
@@ -66,11 +67,11 @@ export function ProductDetailModal({
 
             <div className="min-w-0">
               <h4 className="text-xl font-semibold text-gray-900 truncate mb-1">
-                {product.nama}
+                {product.nama_id || product.nama_en || "Product Name"}
               </h4>
-              {product.jenis?.[0]?.nama && (
+              {product.jenis?.[0]?.nama_id && (
                 <p className="text-sm text-gray-600">
-                  Kategori: {product.jenis[0].nama}
+                  Kategori: {product.jenis[0].nama_id}
                 </p>
               )}
 
@@ -98,9 +99,9 @@ export function ProductDetailModal({
                     </div>
                   )}
                 </div>
-              ) : product.deskripsi ? (
+              ) : product.deskripsi_id ? (
                 <p className="mt-2 text-gray-700 whitespace-pre-line">
-                  {product.deskripsi}
+                  {product.deskripsi_id}
                 </p>
               ) : null}
             </div>
@@ -114,8 +115,8 @@ export function ProductDetailModal({
               </p>
             </div>
             <div className="rounded-lg border p-4">
-              <p className="text-sm text-gray-600">Stok</p>
-              <p className="text-lg font-semibold">{product.stok} unit</p>
+              <p className="text-sm text-gray-600">Stok Harian</p>
+              <p className="text-lg font-semibold">{product.daily_stock} unit</p>
             </div>
             <div className="rounded-lg border p-4 sm:col-span-2">
               <p className="text-sm text-gray-600">Penjualan</p>
@@ -174,7 +175,7 @@ export function ProductDetailModal({
                         <CheckCircle className="w-5 h-5 text-orange-600 flex-shrink-0" />
                         <div>
                           <p className="font-medium text-gray-900">
-                            {attribute.nama_id || attribute.nama || "Unnamed"}
+                            {attribute.nama_id || attribute.nama_en || "Unnamed"}
                           </p>
                           {attribute.nama_en && (
                             <p className="text-xs text-gray-600">
@@ -219,7 +220,7 @@ export function ProductDetailModal({
                         <div className="w-2 h-2 rounded-full bg-blue-500" />
                         <div>
                           <p className="font-medium text-gray-900">
-                            {bahan.nama_id || bahan.nama || "Unnamed"}
+                            {bahan.nama_id || bahan.nama_en || "Unnamed"}
                           </p>
                           {bahan.nama_en && (
                             <p className="text-xs text-gray-600">
@@ -231,68 +232,6 @@ export function ProductDetailModal({
                       <div className="text-right">
                         <p className="font-semibold text-gray-900">
                           {bahan.jumlah} unit
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Product Addons Section (Frontend managed) */}
-          {product.addons && product.addons.length > 0 && (
-            <div className="rounded-lg border border-gray-200">
-              <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 rounded-t-lg">
-                <h4 className="text-sm font-semibold text-gray-900">
-                  Product Addons
-                </h4>
-                <p className="text-xs text-gray-600 mt-0.5">
-                  {product.addons.length} addon(s) •{" "}
-                  {product.addons.filter((a) => a.is_active).length} active
-                </p>
-              </div>
-              <div className="p-4">
-                <div className="space-y-2">
-                  {product.addons.map((addon) => (
-                    <div
-                      key={addon.id}
-                      className={`flex items-center justify-between p-3 rounded-lg ${
-                        addon.is_active
-                          ? "bg-green-50 border border-green-200"
-                          : "bg-gray-50 border border-gray-200"
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        {addon.is_active ? (
-                          <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
-                        ) : (
-                          <XCircle className="w-5 h-5 text-gray-400 flex-shrink-0" />
-                        )}
-                        <div>
-                          <p
-                            className={`font-medium ${
-                              addon.is_active
-                                ? "text-gray-900"
-                                : "text-gray-500"
-                            }`}
-                          >
-                            {addon.nama}
-                          </p>
-                          <p className="text-xs text-gray-600">
-                            {addon.is_active ? "Active" : "Inactive"}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p
-                          className={`font-semibold ${
-                            addon.is_active ? "text-gray-900" : "text-gray-500"
-                          }`}
-                        >
-                          {addon.harga_tambahan > 0
-                            ? `+${formatPrice(addon.harga_tambahan)}`
-                            : "Free"}
                         </p>
                       </div>
                     </div>

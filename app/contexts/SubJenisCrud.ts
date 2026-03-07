@@ -8,6 +8,12 @@ export interface Hari {
   id: number;
 }
 
+export interface FullHari {
+  id: number;
+  nama_id: string;
+  nama_en: string;
+}
+
 export interface Attribute {
   id: number;
   nama_id: string;

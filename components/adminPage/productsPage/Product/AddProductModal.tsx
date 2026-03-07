@@ -4,58 +4,32 @@ import React, { useState, useEffect } from "react";
 import { X, Upload, Plus, Trash2, Tag, Layers } from "lucide-react";
 import { useJenis } from "../../../../app/contexts/JenisContext";
 import { useSubJenis } from "../../../../app/contexts/SubJenisContext";
-
-interface Product {
-  id: number;
-  nama: string;
-  nama_id?: string;
-  nama_en?: string;
-  deskripsi: string;
-  deskripsi_id?: string;
-  deskripsi_en?: string;
-  harga: number;
-  stok: number;
-  created_at: string;
-  updated_at: string;
-  gambars?: Array<{
-    id: number;
-    file_path: string;
-    product_id: number;
-  }>;
-  jenis?: Array<{
-    id: number;
-    nama: string;
-  }>;
-  sales?: number;
-  rating?: number;
-  status: "active" | "inactive";
-  hari_tersedia?: string[];
-}
+import { Bahan, FormProduct, Product } from "@/app/contexts/ProductCrud";
+import { useProducts } from "@/app/contexts/ProductsContext";
+import { useAppAlert } from "@/components/AppAlert";
 
 interface AddProductModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAddProduct: (product: Partial<Product>) => void;
+  onAddProduct: (data: FormProduct) => Promise<Product | null>;
 }
 
-interface FormData {
+export interface FormData {
   nama_id: string;
   nama_en: string;
   deskripsi_id: string;
   deskripsi_en: string;
   harga: string;
   harga_diskon: string;
-  stok: string; // Regular stock - backend still uses this
-  daily_stock: string; // Only used when isDaily is true
-  ref_sub_jenis_id: number | null; // Single sub jenis reference
-  images: File[];
+  daily_stock: string;
+
+  ref_sub_jenis_id: number;
+  gambars: File[];
+
   isBestSeller: boolean;
   isDaily: boolean;
-  ingredients: Array<{
-    nama_id: string;
-    nama_en: string;
-    jumlah: string;
-  }>;
+
+  bahans: Partial<Bahan>[];
 }
 
 export function AddProductModal({
@@ -63,8 +37,14 @@ export function AddProductModal({
   onClose,
   onAddProduct,
 }: AddProductModalProps) {
-  const { jenisList } = useJenis();
+  const { list : jenisList } = useJenis();
   const { subJenisList, getSubJenisByJenisId } = useSubJenis();
+  const { 
+    createProduct,
+    appendBahanToProduct,
+    appendGambarToProduct,
+  } = useProducts();
+  const { success, error, confirm } =  useAppAlert();
   const [formData, setFormData] = useState<FormData>({
     nama_id: "",
     nama_en: "",
@@ -72,13 +52,14 @@ export function AddProductModal({
     deskripsi_en: "",
     harga: "",
     harga_diskon: "",
-    stok: "0",
     daily_stock: "",
-    ref_sub_jenis_id: null,
-    images: [],
+
+    ref_sub_jenis_id: 0,
+    gambars: [],
+
     isBestSeller: false,
     isDaily: false,
-    ingredients: [],
+    bahans: [],
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -90,41 +71,41 @@ export function AddProductModal({
 
   // Fetch available hari from backend (jenis/sub_jenis now from context)
   useEffect(() => {
-    const fetchHari = async () => {
-      try {
-        const response = await fetch("/api/products");
-        const data = await response.json();
+    // const fetchHari = async () => {
+    //   try {
+    //     const response = await fetch("/api/products");
+    //     const data = await response.json();
 
-        if (data.data && Array.isArray(data.data)) {
-          const hariMap = new Map<
-            number,
-            { id: number; nama_id: string; nama_en: string }
-          >();
+    //     if (data.data && Array.isArray(data.data)) {
+    //       const hariMap = new Map<
+    //         number,
+    //         { id: number; nama_id: string; nama_en: string }
+    //       >();
 
-          data.data.forEach((product: any) => {
-            product.hari?.forEach((h: any) => {
-              if (h.id && h.nama_id) {
-                hariMap.set(h.id, {
-                  id: h.id,
-                  nama_id: h.nama_id,
-                  nama_en: h.nama_en || h.nama_id,
-                });
-              }
-            });
-          });
+    //       data.data.forEach((product: any) => {
+    //         product.hari?.forEach((h: any) => {
+    //           if (h.id && h.nama_id) {
+    //             hariMap.set(h.id, {
+    //               id: h.id,
+    //               nama_id: h.nama_id,
+    //               nama_en: h.nama_en || h.nama_id,
+    //             });
+    //           }
+    //         });
+    //       });
 
-          setAvailableHari(
-            Array.from(hariMap.values()).sort((a, b) => a.id - b.id)
-          );
-        }
-      } catch (error) {
-        console.error("Error fetching hari:", error);
-      }
-    };
+    //       setAvailableHari(
+    //         Array.from(hariMap.values()).sort((a, b) => a.id - b.id)
+    //       );
+    //     }
+    //   } catch (error) {
+    //     console.error("Error fetching hari:", error);
+    //   }
+    // };
 
-    if (isOpen) {
-      fetchHari();
-    }
+    // if (isOpen) {
+    //   fetchHari();
+    // }
   }, [isOpen]);
 
   const handleInputChange = (
@@ -143,7 +124,7 @@ export function AddProductModal({
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
 
-    if (files.length + formData.images.length > 1) {
+    if (files.length + formData.gambars.length > 1) {
       setErrors((prev) => ({
         ...prev,
         images: "Maksimal 1 gambar. Hapus gambar lama jika ingin mengganti.",
@@ -165,14 +146,14 @@ export function AddProductModal({
       reader.readAsDataURL(file);
     });
 
-    setFormData((prev) => ({ ...prev, images: [...prev.images, ...files] }));
+    setFormData((prev) => ({ ...prev, gambars: [...prev.gambars, ...files] }));
     setErrors((prev) => ({ ...prev, images: "" }));
   };
 
   const removeImage = (index: number) => {
     setFormData((prev) => ({
       ...prev,
-      images: prev.images.filter((_, i) => i !== index),
+      gambars: prev.gambars.filter((_, i) => i !== index),
     }));
     setImagePreviews((prev) => prev.filter((_, i) => i !== index));
   };
@@ -180,9 +161,9 @@ export function AddProductModal({
   const handleAddIngredient = () => {
     setFormData((prev) => ({
       ...prev,
-      ingredients: [
-        ...prev.ingredients,
-        { nama_id: "", nama_en: "", jumlah: "" },
+      bahans: [
+        ...prev.bahans,
+        { nama_id: "", nama_en: "", jumlah: 0 },
       ],
     }));
   };
@@ -190,7 +171,7 @@ export function AddProductModal({
   const handleRemoveIngredient = (index: number) => {
     setFormData((prev) => ({
       ...prev,
-      ingredients: prev.ingredients.filter((_, i) => i !== index),
+      bahans: prev.bahans.filter((_, i) => i !== index),
     }));
   };
 
@@ -200,25 +181,16 @@ export function AddProductModal({
     value: string
   ) => {
     setFormData((prev) => {
-      const newIngredients = [...prev.ingredients];
+      const newIngredients = [...prev.bahans];
       newIngredients[index] = { ...newIngredients[index], [field]: value };
-      return { ...prev, ingredients: newIngredients };
+      return { ...prev, bahans: newIngredients };
     });
-  };
-
-  const selectJenis = (jenisId: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      jenis_id: prev.jenis_id === jenisId ? null : jenisId, // Toggle or select single
-    }));
   };
 
   const toggleSubJenis = (subJenisId: number) => {
     setFormData((prev) => ({
       ...prev,
-      sub_jenis_ids: prev.sub_jenis_ids.includes(subJenisId)
-        ? prev.sub_jenis_ids.filter((id) => id !== subJenisId)
-        : [...prev.sub_jenis_ids, subJenisId],
+      ref_sub_jenis_id: prev.ref_sub_jenis_id === subJenisId ? 0 : subJenisId,
     }));
   };
 
@@ -249,8 +221,8 @@ export function AddProductModal({
     if (!formData.ref_sub_jenis_id) {
       newErrors.ref_sub_jenis_id = "Sub Jenis harus dipilih";
     }
-    if (formData.images.length === 0) {
-      newErrors.images = "Minimal 1 gambar produk";
+    if (formData.gambars.length === 0) {
+      newErrors.gambars = "Minimal 1 gambar produk";
     }
 
     setErrors(newErrors);
@@ -265,45 +237,59 @@ export function AddProductModal({
     setIsSubmitting(true);
 
     try {
-      // Prepare product data for backend
-      // The ProductsContext.addProduct will handle:
-      // 1. Create basic product (POST /products)
-      // 2. Add hari relations (POST /products/{id}/hari/{hari_id})
-      // 3. Upload images (POST /products/{id}/gambar)
-      const newProduct = {
+      const newProduct : FormProduct = {
         nama_id: formData.nama_id,
         nama_en: formData.nama_en,
         deskripsi_id: formData.deskripsi_id,
         deskripsi_en: formData.deskripsi_en,
-        harga: parseFloat(formData.harga),
+        calc_count: 1,
+        harga: Number(formData.harga),
         harga_diskon: formData.harga_diskon
-          ? parseFloat(formData.harga_diskon)
+          ? Number(formData.harga_diskon)
           : null,
-        // stok removed - backend doesn't need it
-        ...(formData.isDaily && {
-          daily_stock: parseInt(formData.daily_stock),
-        }),
+
+        daily_stock: formData.daily_stock
+          ? Number(formData.daily_stock)
+          : null,
+
         isBestSeller: formData.isBestSeller,
         isDaily: formData.isDaily,
-        // Convert single ref_sub_jenis_id to array for backend
-        sub_jenis_ids: formData.ref_sub_jenis_id
-          ? [formData.ref_sub_jenis_id]
-          : [],
-        // Hari not needed - sub_jenis already has day configuration
-        // Image files - will be uploaded separately
-        imageFiles: formData.images,
-        bahans: formData.ingredients.map((ing) => ({
-          nama_id: ing.nama_id,
-          nama_en: ing.nama_en,
-          jumlah: parseFloat(ing.jumlah) || 0,
-        })),
+
+        ref_sub_jenis_id: formData.ref_sub_jenis_id,
       };
 
-      onAddProduct(newProduct);
+      const appendBahan = {
+        bahans: formData.bahans.map((bahan) => ({
+          nama_id: bahan.nama_id || "",
+          nama_en: bahan.nama_en || "",
+          jumlah: Number(bahan.jumlah) || 0,
+        })),
+      }
+
+      // onAddProduct(newProduct);
+      onAddProduct(newProduct).then((created) => {
+        if (created?.id) {
+          for (const bahan of appendBahan.bahans) {
+            appendBahanToProduct(created.id, 0, bahan);
+          }
+
+          if(formData.gambars[0]){
+            const reader = new FileReader();
+            reader.onload = (event) => {
+              if (event.target?.result) {
+                appendGambarToProduct(created.id, event.target.result as string);
+              }
+            };
+            reader.readAsDataURL(formData.gambars[0]);
+          }
+        }
+      });
+
       resetForm();
-    } catch (error) {
-      console.error("Error adding product:", error);
-      setErrors({ submit: "Gagal menambah produk. Silakan coba lagi." });
+      onClose();
+    } catch (e) {
+      const errorMessage = e instanceof Error ? e.message : "Terjadi kesalahan";
+      await error("Gagal", errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -317,14 +303,13 @@ export function AddProductModal({
       deskripsi_en: "",
       harga: "",
       harga_diskon: "",
-      stok: "0",
       daily_stock: "",
-      ref_sub_jenis_id: null,
-      images: [],
+      ref_sub_jenis_id: 0,
+      gambars: [],
 
       isBestSeller: false,
       isDaily: false,
-      ingredients: [],
+      bahans: [],
     });
     setImagePreviews([]);
     setErrors({});
@@ -474,6 +459,44 @@ export function AddProductModal({
                   </div>
                 </div>
 
+                {/* Best Seller & Daily Options */}
+                <div className="flex gap-6">
+                  <label className="flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.isBestSeller}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          isBestSeller: e.target.checked,
+                        }))
+                      }
+                      className="w-4 h-4 text-orange-500 border-gray-300 rounded focus:ring-orange-500"
+                      disabled={isSubmitting}
+                    />
+                    <span className="ml-2 text-sm text-gray-700">
+                      Best Seller
+                    </span>
+                  </label>
+                  <label className="flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.isDaily}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          isDaily: e.target.checked,
+                        }))
+                      }
+                      className="w-4 h-4 text-orange-500 border-gray-300 rounded focus:ring-orange-500"
+                      disabled={isSubmitting}
+                    />
+                    <span className="ml-2 text-sm text-gray-700">
+                      Produk Harian
+                    </span>
+                  </label>
+                </div>
+
                 {/* Price and Stock */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
@@ -542,9 +565,7 @@ export function AddProductModal({
                     onChange={(e) => {
                       setFormData((prev) => ({
                         ...prev,
-                        ref_sub_jenis_id: e.target.value
-                          ? Number(e.target.value)
-                          : null,
+                        ref_sub_jenis_id: e.target.value ? Number(e.target.value) : 0,
                       }));
                       if (errors.ref_sub_jenis_id) {
                         setErrors((prev) => ({
@@ -600,13 +621,13 @@ export function AddProductModal({
                     </button>
                   </div>
 
-                  {formData.ingredients.length === 0 ? (
+                  {formData.bahans.length === 0 ? (
                     <p className="text-sm text-gray-500 italic border rounded-lg p-3 text-center">
                       Belum ada bahan ditambahkan
                     </p>
                   ) : (
                     <div className="space-y-3">
-                      {formData.ingredients.map((ingredient, index) => (
+                      {formData.bahans.map((bahan, index) => (
                         <div
                           key={index}
                           className="flex flex-col gap-2 p-3 border rounded-lg bg-gray-50"
@@ -616,7 +637,7 @@ export function AddProductModal({
                               <input
                                 type="text"
                                 placeholder="Nama Bahan (ID)"
-                                value={ingredient.nama_id}
+                                value={bahan.nama_id}
                                 onChange={(e) =>
                                   handleIngredientChange(
                                     index,
@@ -631,7 +652,7 @@ export function AddProductModal({
                               <input
                                 type="text"
                                 placeholder="Ingredient Name (EN)"
-                                value={ingredient.nama_en}
+                                value={bahan.nama_en}
                                 onChange={(e) =>
                                   handleIngredientChange(
                                     index,
@@ -648,7 +669,7 @@ export function AddProductModal({
                               <input
                                 type="number"
                                 placeholder="Jml"
-                                value={ingredient.jumlah}
+                                value={bahan.jumlah}
                                 onChange={(e) =>
                                   handleIngredientChange(
                                     index,
@@ -676,44 +697,6 @@ export function AddProductModal({
                       ))}
                     </div>
                   )}
-                </div>
-
-                {/* Best Seller & Daily Options */}
-                <div className="flex gap-6">
-                  <label className="flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={formData.isBestSeller}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          isBestSeller: e.target.checked,
-                        }))
-                      }
-                      className="w-4 h-4 text-orange-500 border-gray-300 rounded focus:ring-orange-500"
-                      disabled={isSubmitting}
-                    />
-                    <span className="ml-2 text-sm text-gray-700">
-                      Best Seller
-                    </span>
-                  </label>
-                  <label className="flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={formData.isDaily}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          isDaily: e.target.checked,
-                        }))
-                      }
-                      className="w-4 h-4 text-orange-500 border-gray-300 rounded focus:ring-orange-500"
-                      disabled={isSubmitting}
-                    />
-                    <span className="ml-2 text-sm text-gray-700">
-                      Produk Harian
-                    </span>
-                  </label>
                 </div>
 
                 {/* Harga Diskon */}
@@ -750,12 +733,12 @@ export function AddProductModal({
                       onChange={handleImageUpload}
                       className="hidden"
                       id="image-upload"
-                      disabled={isSubmitting || formData.images.length >= 1}
+                      disabled={isSubmitting || formData.gambars.length >= 1}
                     />
                     <label
                       htmlFor="image-upload"
                       className={`cursor-pointer ${
-                        isSubmitting || formData.images.length >= 1
+                        isSubmitting || formData.gambars.length >= 1
                           ? "cursor-not-allowed opacity-50"
                           : ""
                       }`}
@@ -792,8 +775,8 @@ export function AddProductModal({
                     </div>
                   )}
 
-                  {errors.images && (
-                    <p className="mt-1 text-sm text-red-600">{errors.images}</p>
+                  {errors.gambars && (
+                    <p className="mt-1 text-sm text-red-600">{errors.gambars}</p>
                   )}
                 </div>
 
