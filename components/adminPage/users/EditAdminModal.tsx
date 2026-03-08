@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { X, User, Phone, Shield, Eye, EyeOff, Loader2 } from "lucide-react";
 import { AdminData, RoleData } from "@/app/contexts/UsersContext";
+import { useAppAlert } from "@/components/AppAlert";
 
 interface EditAdminModalProps {
   isOpen: boolean;
@@ -35,6 +36,7 @@ export function EditAdminModal({
   const [changePassword, setChangePassword] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { success, error : alertError, confirm } =  useAppAlert();
 
   // Initialize form data when admin changes
   useEffect(() => {
@@ -125,7 +127,8 @@ export function EditAdminModal({
       await onUpdateAdmin(admin.id, updateData);
       onClose();
     } catch (error) {
-      console.error("Error updating admin:", error);
+      // console.error("Error updating admin:", error);
+      await alertError("Gagal Memperbarui Admin", error instanceof Error ? error.message : "Terjadi kesalahan");
     } finally {
       setIsSubmitting(false);
     }

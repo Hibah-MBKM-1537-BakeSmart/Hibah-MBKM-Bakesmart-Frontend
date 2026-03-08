@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, User, Mail, Phone, Shield, Eye, EyeOff } from 'lucide-react';
+import { useAppAlert } from "@/components/AppAlert";
 
 interface EditUserModalProps {
   isOpen: boolean;
@@ -46,6 +47,7 @@ export function EditUserModal({ isOpen, onClose, user, onUpdateUser }: EditUserM
   const [errors, setErrors] = useState<Partial<EditUserData>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [changePassword, setChangePassword] = useState(false);
+  const { success, error : alertError, confirm } =  useAppAlert();
 
   // Initialize form data when user changes
   useEffect(() => {
@@ -140,8 +142,7 @@ export function EditUserModal({ isOpen, onClose, user, onUpdateUser }: EditUserM
       alert('User berhasil diperbarui!');
       
     } catch (error) {
-      console.error('Error updating user:', error);
-      alert('Gagal memperbarui user. Silakan coba lagi.');
+      await alertError("Gagal Memperbarui User", error instanceof Error ? error.message : "Terjadi kesalahan");
     } finally {
       setIsSubmitting(false);
     }

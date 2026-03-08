@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useCustomers } from "@/app/contexts/CustomersContext";
 import { X, MessageCircle, Users, Calendar, Send } from "lucide-react";
+import { useAppAlert } from "@/components/AppAlert";
 
 interface WhatsAppBlastModalProps {
   isOpen: boolean;
@@ -31,6 +32,7 @@ export function WhatsAppBlastModal({
   const [selectedCustomerIds, setSelectedCustomerIds] = useState<number[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const { success, error : alertError, confirm } =  useAppAlert();
 
   // Template pesan default
   const defaultMessages = {
@@ -143,8 +145,9 @@ export function WhatsAppBlastModal({
       });
       onClose();
     } catch (error) {
-      console.error("Error sending blast:", error);
-      alert("Terjadi kesalahan saat mengirim blast. Silakan coba lagi.");
+      // console.error("Error sending blast:", error);
+      // alert("Terjadi kesalahan saat mengirim blast. Silakan coba lagi.");
+      await alertError("Gagal Mengirim Blast", error instanceof Error ? error.message : "Terjadi kesalahan");
     } finally {
       setIsSending(false);
     }

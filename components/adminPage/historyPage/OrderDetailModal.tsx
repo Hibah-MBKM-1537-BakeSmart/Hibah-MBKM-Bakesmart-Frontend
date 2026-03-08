@@ -17,10 +17,12 @@ import {
   Calendar,
   AlertCircle
 } from 'lucide-react';
+import { useAppAlert } from "@/components/AppAlert";
 
 export function OrderDetailModal() {
   const { state, closeOrderDetail } = useHistory();
   const { t } = useAdminTranslation();
+  const { success, error : alertError, confirm } =  useAppAlert();
 
   // Handle escape key to close modal
   useEffect(() => {
@@ -53,8 +55,9 @@ export function OrderDetailModal() {
       // Simply trigger print - the CSS @media print will handle the styling
       window.print();
     } catch (error) {
-      console.error("Print failed:", error);
-      alert(t("orderDetail.printFailed"));
+      // console.error("Print failed:", error);
+      // alert(t("orderDetail.printFailed"));
+      alertError(t("orderDetail.printFailed"));
     }
   };
 

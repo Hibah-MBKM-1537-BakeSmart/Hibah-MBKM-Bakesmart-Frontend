@@ -19,10 +19,7 @@ import { useAdminTranslation } from "@/app/contexts/AdminTranslationContext";
 import { AddUserModal } from "@/components/adminPage/users/AddUserModal";
 import { ViewUserModal } from "@/components/adminPage/users/ViewUserModal";
 import { EditAdminModal } from "@/components/adminPage/users/EditAdminModal";
-import {
-  ToastNotification,
-  useToast,
-} from "@/components/adminPage/users/Toast";
+import { useAppAlert } from "@/components/AppAlert";
 import { ConfirmDialog } from "@/components/adminPage/users/ConfirmDialog";
 
 // Use RoleData from context
@@ -62,8 +59,7 @@ export default function UsersPage() {
   const [selectedAdmin, setSelectedAdmin] = useState<AdminData | null>(null);
 
   // Toast and confirm dialog state
-  const { toasts, showSuccess, showError, showWarning, removeToast } =
-    useToast();
+  const { success, error : alertError, confirm } =  useAppAlert();
   const [errorShown, setErrorShown] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState<{
     isOpen: boolean;
@@ -123,7 +119,7 @@ export default function UsersPage() {
         ]);
       }
     } catch (error) {
-      console.error("Error fetching roles:", error);
+      await alertError("Gagal Memuat Data Role", error instanceof Error ? error.message : "Terjadi kesalahan");
       // Use fallback roles on error (admin roles only)
       setRoles([
         { id: 1, name: "owner" },
@@ -137,7 +133,7 @@ export default function UsersPage() {
   // Show error toast if there's an error from context (only once)
   useEffect(() => {
     if (error && !errorShown) {
-      showError("Gagal memuat data admin", error);
+      alertError("Gagal Memuat Data Admin", error.message);
       setErrorShown(true);
     } else if (!error && errorShown) {
       // Reset flag when error is cleared
@@ -179,15 +175,11 @@ export default function UsersPage() {
   const handleUpdateRole = async (adminId: number, newRoleIds: number[]) => {
     try {
       await updateAdmin(adminId, { role_ids: newRoleIds });
-      showSuccess(
-        t("users.roleUpdated"),
-        t("users.roleUpdateSaved")
-      );
+      await success(t("users.roleUpdated"), t("users.roleUpdateSaved"));
     } catch (error) {
-      console.error("Error updating role:", error);
       const errorMessage =
         error instanceof Error ? error.message : t("users.roleUpdateFailed");
-      showError(t("users.roleUpdateFailed"), errorMessage);
+      await alertError(t("users.roleUpdateFailed"), errorMessage);
     }
   };
 
@@ -208,7 +200,7 @@ export default function UsersPage() {
       for (const roleName of roleNames) {
         const role = roles.find((r) => r.name.toLowerCase() === roleName);
         if (!role) {
-          showError(t("users.roleNotValid"), t("users.roleNotFound").replace("{role}", roleName));
+          await alertError(t("users.roleNotValid"), t("users.roleNotFound").replace("{role}", roleName));
           return;
         }
         roleIds.push(role.id);
@@ -221,15 +213,12 @@ export default function UsersPage() {
         password: userData.password,
       });
 
-      showSuccess(
-        t("users.adminAdded"),
-        t("users.userCreated").replace("{name}", userData.name)
-      );
+      await success(t("users.adminAdded"), t("users.userCreated").replace("{name}", userData.name));
       setShowAddModal(false);
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : t("users.addAdminFailed");
-      showError(t("users.addAdminFailed"), errorMessage);
+      await alertError(t("users.addAdminFailed"), errorMessage);
     }
   };
 
@@ -280,13 +269,13 @@ export default function UsersPage() {
 
       await updateAdmin(userId, updateData);
 
-      showSuccess(t("users.adminUpdated"), t("users.changesSaved"));
+      await success(t("users.adminUpdated"), t("users.changesSaved"));
       setShowEditModal(false);
       setSelectedAdmin(null);
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : t("users.updateFailed");
-      showError(t("users.updateFailed"), errorMessage);
+      await alertError(t("users.updateFailed"), errorMessage);
     }
   };
 
@@ -298,15 +287,12 @@ export default function UsersPage() {
       onConfirm: async () => {
         try {
           await deleteAdmin(userId);
-          showSuccess(
-            t("users.adminDeleted"),
-            t("users.userDeleted").replace("{name}", userName)
-          );
+          await success(t("users.adminDeleted"), t("users.userDeleted").replace("{name}", userName));
           setConfirmDialog({ ...confirmDialog, isOpen: false });
         } catch (error) {
           const errorMessage =
             error instanceof Error ? error.message : t("users.deleteFailed");
-          showError(t("users.deleteFailed"), errorMessage);
+          await alertError(t("users.deleteFailed"), errorMessage);
         }
       },
       type: "danger",
@@ -654,9 +640,6 @@ export default function UsersPage() {
         roles={roles}
         onUpdateAdmin={handleUpdateUser}
       />
-
-      {/* Toast Notifications */}
-      <ToastNotification toasts={toasts} onClose={removeToast} />
 
       {/* Confirm Dialog */}
       <ConfirmDialog

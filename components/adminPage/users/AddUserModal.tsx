@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { X, User, Phone, Shield, Eye, EyeOff, Loader2 } from "lucide-react";
+import { useAppAlert } from "@/components/AppAlert";
 
 interface RoleData {
   id: number;
@@ -36,6 +37,7 @@ export function AddUserModal({
     role: "",
     password: "",
   });
+  const { success, error : alertError, confirm } =  useAppAlert();
   const [selectedRoles, setSelectedRoles] = useState<number[]>([]);
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<keyof NewUserData | 'roles', string>>>({});
@@ -123,7 +125,8 @@ export function AddUserModal({
       setSelectedRoles([]);
       setErrors({});
     } catch (error) {
-      console.error("Error adding user:", error);
+      // console.error("Error adding user:", error);
+      await alertError("Gagal Menambahkan User", error instanceof Error ? error.message : "Terjadi kesalahan");
     } finally {
       setIsSubmitting(false);
     }

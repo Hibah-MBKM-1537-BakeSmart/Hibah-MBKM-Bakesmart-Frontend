@@ -28,10 +28,11 @@ export function ProductionTable() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showPrintModal, setShowPrintModal] = useState(false);
   const itemsPerPage = 10;
+  const { summary } = useProduction();
 
   // Get verified orders (completed and incompleted only)
   const completedOrders = getOrdersByStatus('completed');
-  const incompletedOrders = getOrdersByStatus('incompleted');
+  const incompletedOrders = getOrdersByStatus('ongoing');
   const allVerifiedOrders = [...completedOrders, ...incompletedOrders].sort(
     (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
   );

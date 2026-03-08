@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Package, Clock, ChefHat, CheckCircle, CreditCard } from 'lucide-react';
+import { Package, Clock, ChefHat, CheckCircle, XCircle, PackageCheck } from 'lucide-react';
 import { useProduction } from '@/app/contexts/ProductionContext';
 
 export function ProductionStats() {
@@ -9,46 +9,46 @@ export function ProductionStats() {
 
   const stats = [
     {
-      title: 'Total Orders',
+      title: "Total Orders",
       value: summary.totalOrders,
       icon: Package,
-      color: '#8b6f47',
-      bgColor: '#f9f7f4'
+      color: "#8b6f47",
+      bgColor: "#f9f7f4"
     },
     {
-      title: 'Pending',
-      value: summary.pending,
+      title: "Ongoing",
+      value: summary.ongoing,
       icon: Clock,
-      color: '#d97706',
-      bgColor: '#fef3c7'
+      color: "#d97706",
+      bgColor: "#fef3c7"
     },
     {
-      title: 'Verifying',
-      value: summary.verifying,
-      icon: Package,
-      color: '#6366f1',
-      bgColor: '#e0e7ff'
-    },
-    {
-      title: 'Paid',
-      value: summary.paid,
-      icon: CreditCard,
-      color: '#16a34a',
-      bgColor: '#dcfce7'
-    },
-    {
-      title: 'Baking',
-      value: summary.baked,
+      title: "In Production",
+      value: summary.inProduction,
       icon: ChefHat,
-      color: '#2563eb',
-      bgColor: '#dbeafe'
+      color: "#2563eb",
+      bgColor: "#dbeafe"
     },
     {
-      title: 'Completed',
+      title: "Production Finished",
+      value: summary.productionCompleted,
+      icon: PackageCheck,
+      color: "#16a34a",
+      bgColor: "#dcfce7"
+    },
+    {
+      title: "Completed",
       value: summary.completed,
       icon: CheckCircle,
-      color: '#059669',
-      bgColor: '#d1fae5'
+      color: "#059669",
+      bgColor: "#d1fae5"
+    },
+    {
+      title: "Cancelled",
+      value: summary.cancelled,
+      icon: XCircle,
+      color: "#dc2626",
+      bgColor: "#fee2e2"
     }
   ];
 

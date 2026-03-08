@@ -34,6 +34,7 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { id as idLocale, enUS } from "date-fns/locale";
+import { useAppAlert } from "@/components/AppAlert";
 
 export function KasirCart() {
   const {
@@ -83,6 +84,7 @@ export function KasirCart() {
   const [changeAmount, setChangeAmount] = useState<number>(0);
   const [lastTotal, setLastTotal] = useState<number>(0);
   const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
+  const { success, error : alertError, confirm } =  useAppAlert();
 
   const formatPrice = (price: number | null | undefined) => {
     if (price === null || price === undefined) return "Rp 0";
@@ -460,7 +462,7 @@ export function KasirCart() {
         setProcessingPayment(false);
       }
     } catch (error) {
-      console.error("Payment failed:", error);
+      await alertError("Payment failed:", String(error))
       setProcessingPayment(false);
     }
   };
