@@ -120,8 +120,8 @@ function ProductTableRow({
       </td>
       <td className="px-3 lg:px-6 py-4 whitespace-nowrap w-[140px]">
         <span className="inline-flex items-center px-2 lg:px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-          {product.jenis?.[0]?.nama_en ||
-            product.jenis?.[0]?.nama_id ||
+          {product.sub_jenis?.nama_id ||
+            product.sub_jenis?.nama_en ||
             "Unknown"}
         </span>
       </td>
@@ -567,15 +567,13 @@ export function ProductsTab() {
   const handleAddProduct = async (newProductData: FormProduct): Promise<Product | null> => {
     try {
       const result = await addProduct(newProductData);
-      await fetchProduct();
-
+      
       setShowAddModal(false);
-
+      
       success(
         "Product added successfully!",
         `${newProductData.nama_id} has been added to product catalog.`
       );
-
       return result;
     } catch (e) {
       error(
@@ -598,7 +596,6 @@ export function ProductsTab() {
     ) {
       try {
         await deleteProduct(productId);
-        await fetchProduct();
         await success("Product deleted successfully!", `${productName} has been removed from product catalog.`)
       } catch (e) {
         await error("Failed to delete product", e instanceof Error ? e.message : "An unknown error occurred")

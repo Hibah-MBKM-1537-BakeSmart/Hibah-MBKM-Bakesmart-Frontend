@@ -11,15 +11,18 @@ interface RouteParams {
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
     const { id: productId, bahanId } = await params;
-    console.log(
-      `[Product Bahan API] POST relation - product: ${productId}, bahan: ${bahanId}`
-    );
+
+    const body = await request.json(); // get frontend body
 
     const response = await fetch(
       `${BACKEND_URL}/products/${productId}/bahan/${bahanId}`,
       {
         method: "POST",
-        headers: createAuthHeaders(request),
+        headers: {
+          ...createAuthHeaders(request),
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body), // forward body
       }
     );
 

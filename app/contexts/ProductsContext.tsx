@@ -14,7 +14,7 @@ interface ExtendedProductContext {
   deleteProduct: (id: number) => Promise<boolean>;
   appendBahanToProduct: (productId: number, bahanId: number, bahan: { nama_id: string; nama_en: string; jumlah?: number }) => Promise<boolean>;
   removeBahanFromProduct: (productId: number, bahanId: number) => Promise<boolean>;
-  appendGambarToProduct: (productId: number, file_path: string) => Promise<boolean>;
+  appendGambarToProduct: (productId: number, file: File) => Promise<boolean>;
   removeGambarFromProduct: (productId: number, gambarId: number) => Promise<boolean>;
   exportProduct: () => Promise<void>;
   importProduct: (file: File) => Promise<unknown>;
@@ -50,40 +50,42 @@ function ExtendedProvider({ children }: { children: ReactNode }) {
     bahan: { nama_id: string; nama_en: string; jumlah?: number }
   ) => {
     try {
-      if (!bahanId && bahanId != 0) {
-        const bahanRes = await fetch("/api/atribut", {
+      // Create bahan if ID not provided
+      if (!bahanId || bahanId == 0) {
+        const bahanRes = await fetch("/api/bahan", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             nama_id: bahan.nama_id,
             nama_en: bahan.nama_en,
-            jumlah: bahan.jumlah,
           }),
         });
 
-        if (!bahanRes.ok) throw new Error();
+        if (!bahanRes.ok) throw new Error("Gagal membuat bahan");
 
-        const attrResult = await bahanRes.json();
-        bahanId = attrResult.id || attrResult?.data?.id;
-      } else {
-        const appendRes = await fetch(
-          `/api/product/${productId}/bahan/${bahanId}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              jumlah: bahan.jumlah || 0,
-            }),
-          }
-        );
+        const bahanResult = await bahanRes.json();
+        bahanId = bahanResult.id || bahanResult?.data?.id;
+      }
 
-        if (!appendRes.ok && appendRes.status !== 409) {
-          throw new Error("Gagal menambahkan atribut");
+      // Append bahan to product
+      const appendRes = await fetch(
+        `/api/products/${productId}/bahan/${bahanId}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            jumlah: bahan.jumlah || 0,
+          }),
         }
+      );
+
+      if (!appendRes.ok && appendRes.status !== 409) {
+        throw new Error("Gagal menambahkan bahan");
       }
 
       return true;
-    } catch {
+    } catch (error) {
+      console.error(error);
       return false;
     }
   };
@@ -94,7 +96,7 @@ function ExtendedProvider({ children }: { children: ReactNode }) {
   ) => {
     try {
       const appendRes = await fetch(
-        `/api/product/${productId}/bahan/${bahanId}`,
+        `/api/products/${productId}/bahan/${bahanId}`,
         {
           method: "DELETE",
           headers: { "Content-Type": "application/json" },
@@ -102,7 +104,7 @@ function ExtendedProvider({ children }: { children: ReactNode }) {
       );
 
       if (!appendRes.ok && appendRes.status !== 409) {
-        throw new Error("Gagal menghapus atribut");
+        throw new Error("Gagal menghapus bahan");
       }
 
       return true;
@@ -113,15 +115,17 @@ function ExtendedProvider({ children }: { children: ReactNode }) {
   
   const appendGambarToProduct = async (
     productId: number,
-    file_path: string
+    file: File
   ) => {
     try {
+      const formData = new FormData();
+      formData.append("file", file);
+
       const appendRes = await fetch(
-        `/api/product/${productId}/gambar`,
+        `/api/products/${productId}/gambar`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ file_path }),
+          body: formData, // ❗ DO NOT set Content-Type
         }
       );
 
@@ -141,7 +145,7 @@ function ExtendedProvider({ children }: { children: ReactNode }) {
   ) => {
     try {
       const appendRes = await fetch(
-        `/api/product/${productId}/gambar/${gambarId}`,
+        `/api/products/${productId}/gambar/${gambarId}`,
         {
           method: "DELETE",
           headers: { "Content-Type": "application/json" },

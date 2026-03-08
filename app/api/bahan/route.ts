@@ -1,0 +1,44 @@
+import { NextRequest, NextResponse } from "next/server";
+import { createAuthHeaders } from "@/lib/api/fetchWithAuth";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://0.0.0.0:5000";
+
+export async function GET(request: NextRequest) {
+  try {
+    const response = await fetch(`${API_URL}/bahan`, {
+      method: "GET",
+      headers: createAuthHeaders(request),
+    });
+
+    const data = await response.json();
+    return NextResponse.json(data, { status: response.status });
+  } catch (error) {
+    return NextResponse.json(
+      { error: "Failed to fetch bahans" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+
+    // Get auth headers
+    const authHeaders = createAuthHeaders(request);
+
+    const response = await fetch(`${API_URL}/bahan`, {
+      method: "POST",
+      headers: authHeaders,
+      body: JSON.stringify(body),
+    });
+
+    const data = await response.json();
+    return NextResponse.json(data, { status: response.status });
+  } catch (error) {
+    return NextResponse.json(
+      { error: "Failed to create bahan" },
+      { status: 500 }
+    );
+  }
+}

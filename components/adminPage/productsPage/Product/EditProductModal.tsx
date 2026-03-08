@@ -1,1000 +1,654 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { X, Upload, Settings, Trash2, Tag, Layers } from "lucide-react";
-import { Product } from "@/app/contexts/ProductsContext";
-import { useJenis } from "@/app/contexts/JenisContext";
-import { useSubJenis } from "@/app/contexts/SubJenisContext";
-import { ProductAddonsManager, ProductAddon } from "./ProductAddonsManager";
-
-import { getImageUrl, BACKEND_URL } from "@/lib/utils";
+import { X, Upload, Plus, Trash2, Layers, Save, Tag, Package } from "lucide-react";
+import { useJenis } from "../../../../app/contexts/JenisContext";
+import { useSubJenis } from "../../../../app/contexts/SubJenisContext";
+import { Bahan, FormProduct, Product } from "@/app/contexts/ProductCrud";
+import { useProducts } from "@/app/contexts/ProductsContext";
+import { useAppAlert } from "@/components/AppAlert";
 
 interface EditProductModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onEditProduct: (productData: Partial<Product>) => Promise<void>;
   product: Product | null;
+  onEditProduct: (data: FormProduct) => Promise<Product | null>;
 }
 
-export function EditProductModal({
-  isOpen,
-  onClose,
-  onEditProduct,
-  product,
-}: EditProductModalProps) {
-  const { jenisList } = useJenis();
-  const { subJenisList, getSubJenisByJenisId } = useSubJenis();
-  const [formData, setFormData] = useState({
-    nama_id: "",
-    nama_en: "",
-    deskripsi_id: "",
-    deskripsi_en: "",
-    harga: 0,
-    harga_diskon: null as number | null,
-    stok: 0,
-    daily_stock: 0,
-    ref_sub_jenis_id: null as number | null,
-    addons: [] as ProductAddon[],
-    images: [] as File[],
-    isBestSeller: false,
-    isDaily: false,
-    ingredients: [] as Array<{
-      id?: number;
-      nama_id: string;
-      nama_en: string;
-      jumlah: string;
-    }>,
+export interface FormData {
+  nama_id: string;
+  nama_en: string;
+  deskripsi_id: string;
+  deskripsi_en: string;
+  calc_count: number;
+  harga: string;
+  harga_diskon: string;
+  daily_stock: string;
+  ref_sub_jenis_id: number;
+  gambars: File[];
+  isBestSeller: boolean;
+  isDaily: boolean;
+  bahans: Partial<Bahan>[];
+}
+
+export function EditProductModal({ isOpen, onClose, product, onEditProduct }: EditProductModalProps) {
+  const { list: jenisList } = useJenis();
+  const { getSubJenisByJenisId } = useSubJenis();
+  const {
+    fetchProduct,
+    appendBahanToProduct,
+    removeBahanFromProduct,
+    appendGambarToProduct,
+    removeGambarFromProduct,
+  } = useProducts();
+  const { error } = useAppAlert();
+
+  const [formData, setFormData] = useState<FormData>({
+    nama_id: "", nama_en: "", deskripsi_id: "", deskripsi_en: "",
+    calc_count: 0, harga: "", harga_diskon: "", daily_stock: "",
+    ref_sub_jenis_id: 0, gambars: [], isBestSeller: false, isDaily: false, bahans: [],
   });
+
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showAddonsManager, setShowAddonsManager] = useState(false);
-  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
-  const [existingImages, setExistingImages] = useState<
-    Array<{ id: number; file_path: string }>
-  >([]);
+  const [newImagePreviews, setNewImagePreviews] = useState<string[]>([]);
+  const [existingImages, setExistingImages] = useState<Array<{ id: number; url: string }>>([]);
+  const [removedExistingImageIds, setRemovedExistingImageIds] = useState<number[]>([]);
 
-  // Store initial IDs for change detection (hari removed - comes from sub_jenis)
-  const [initialIds, setInitialIds] = useState<{
-    sub_jenis: number[];
-    attributes: number[];
-    ingredients: number[];
-  }>({ sub_jenis: [], attributes: [], ingredients: [] });
+  // ── Bahan master list ────────────────────────────────────────────────────
+  const [availableBahans, setAvailableBahans] = useState<Bahan[]>([]);
 
-  // Reset form when product changes
+  // ── Bahan form state ─────────────────────────────────────────────────────
+  const [showBahanForm, setShowBahanForm] = useState(false);
+  const [bahanInputMode, setBahanInputMode] = useState<"select" | "manual">("select");
+
+  // Select mode
+  const [selectedBahanId, setSelectedBahanId] = useState<number | "">("");
+  const [selectedBahanJumlah, setSelectedBahanJumlah] = useState<number>(0);
+
+  // Manual mode
+  const [newBahanNameId, setNewBahanNameId] = useState("");
+  const [newBahanNameEn, setNewBahanNameEn] = useState("");
+  const [newBahanJumlah, setNewBahanJumlah] = useState<number>(0);
+
+  // ── Fetch bahan master ───────────────────────────────────────────────────
   useEffect(() => {
-    if (product) {
-      // Map attributes to ProductAddon format
-      const mappedAddons: ProductAddon[] = (product.attributes || []).map(
-        (attr) => ({
-          id: attr.id,
-          nama_id: attr.nama_id || attr.nama || "",
-          nama_en: attr.nama_en || attr.nama || "",
-          nama: attr.nama,
-          harga: attr.harga || 0,
-        }),
-      );
+    const fetchBahans = async () => {
+      try {
+        const res = await fetch("/api/bahan");
+        if (!res.ok) throw new Error("Failed to fetch");
+        const data = await res.json();
+        setAvailableBahans(data.data ?? []);
+      } catch (err) {
+        console.error("Failed to fetch bahans:", err);
+      }
+    };
+    fetchBahans();
+  }, []);
 
-      // Initial IDs from props
-      setInitialIds({
-        sub_jenis: product.sub_jenis?.map((sj) => sj.id) || [],
-        attributes: mappedAddons.map((a) => a.id),
-        ingredients: product.bahans?.map((b) => b.id) || [],
-      });
-
+  // ── Populate form when product changes ───────────────────────────────────
+  useEffect(() => {
+    if (product && isOpen) {
+      // console.log("Populating form for product:", product);
       setFormData({
-        nama_id: product.nama_id || product.nama || "",
-        nama_en: product.nama_en || product.nama || "",
-        deskripsi_id: product.deskripsi_id || product.deskripsi || "",
-        deskripsi_en: product.deskripsi_en || product.deskripsi || "",
-        harga: product.harga,
-        harga_diskon: product.harga_diskon || null,
-        stok: product.stok || 0,
-        daily_stock: product.daily_stock || 0,
-        ref_sub_jenis_id: product.sub_jenis?.[0]?.id || null,
-        addons: mappedAddons,
-        images: [],
-        isBestSeller: product.isBestSeller || false,
-        isDaily: product.isDaily || false,
-        ingredients:
-          product.bahans?.map((b) => ({
-            id: b.id,
-            nama_id: b.nama_id || b.nama || "",
-            nama_en: b.nama_en || b.nama || "",
-            jumlah: (b.jumlah || 0).toString(),
-          })) || [],
+        nama_id: product.nama_id ?? "",
+        nama_en: product.nama_en ?? "",
+        deskripsi_id: product.deskripsi_id ?? "",
+        deskripsi_en: product.deskripsi_en ?? "",
+        calc_count: product.calc_count ?? 0,
+        harga: product.harga != null ? String(product.harga) : "",
+        harga_diskon: product.harga_diskon != null ? String(product.harga_diskon) : "",
+        daily_stock: product.daily_stock != null ? String(product.daily_stock) : "",
+        ref_sub_jenis_id: typeof product.sub_jenis === "number" ? product.sub_jenis : product.sub_jenis?.id ?? 0,
+        gambars: [],
+        isBestSeller: product.isBestSeller ?? false,
+        isDaily: product.isDaily ?? false,
+        // Preserve existing bahan ids for diff on submit
+        bahans: (product.bahans ?? []).map((b) => ({ ...b })),
       });
-      setExistingImages(product.gambars || []);
-      setImagePreviews([]);
-
-      // Fetch fresh details from API to ensure we have complete data (especially many-to-many arrays like hari)
-      const fetchProductDetails = async () => {
-        try {
-          const response = await fetch(`/api/products/${product.id}`);
-          if (response.ok) {
-            const result = await response.json();
-            const detail = result.data || result;
-
-            // If we got valid detail data, update the form
-            if (detail) {
-              console.log("📦 Fetched fresh product detail:", detail);
-
-              // Update initial IDs with fresh data
-              setInitialIds((prev) => ({
-                sub_jenis:
-                  detail.sub_jenis?.map((sj: any) => sj.id) || prev.sub_jenis,
-                attributes:
-                  detail.attributes?.map((a: any) => a.id) || prev.attributes,
-                ingredients:
-                  detail.bahans?.map((b: any) => b.id) || prev.ingredients,
-              }));
-
-              setFormData((prev) => ({
-                ...prev,
-                // Update arrays that might be truncated in list view
-                ref_sub_jenis_id:
-                  detail.sub_jenis?.[0]?.id || prev.ref_sub_jenis_id,
-                ingredients:
-                  detail.bahans?.map((b: any) => ({
-                    id: b.id,
-                    nama_id: b.nama_id || b.nama || "",
-                    nama_en: b.nama_en || b.nama || "",
-                    jumlah: (b.jumlah || 0).toString(),
-                  })) || prev.ingredients,
-              }));
-              // Also update images if needed
-              if (detail.gambars) {
-                setExistingImages(detail.gambars);
-              }
-            }
-          }
-        } catch (error) {
-          console.error("Failed to fetch product details:", error);
-        }
-      };
-
-      fetchProductDetails();
-    }
-  }, [product]);
-
-  if (!isOpen || !product) return null;
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (
-      !formData.nama_id.trim() ||
-      !formData.nama_en.trim() ||
-      !formData.deskripsi_id.trim() ||
-      !formData.deskripsi_en.trim() ||
-      formData.harga <= 0
-    ) {
-      alert("Harap isi semua field yang wajib");
-      return;
-    }
-
-    if (!product?.id) {
-      alert("Produk tidak ditemukan");
-      return;
-    }
-
-    setIsSubmitting(true);
-
-    try {
-      // 1. Update Core Product Data
-      const { addons, images, ...restFormData } = formData;
-      const productData = {
-        ...restFormData,
-        nama: formData.nama_id, // Keep nama for backward compatibility
-        deskripsi: formData.deskripsi_id, // Keep deskripsi for backward compatibility
-        // stok removed - backend doesn't need it for update
-        ...(formData.isDaily && { daily_stock: formData.daily_stock }),
-        // Convert single ref_sub_jenis_id to array for backend
-        sub_jenis_ids: formData.ref_sub_jenis_id
-          ? [formData.ref_sub_jenis_id]
-          : [],
-
-        // hari_ids NOT sent - hari comes from sub_jenis configuration
-        harga_diskon: formData.harga_diskon,
-        isBestSeller: formData.isBestSeller,
-        isDaily: formData.isDaily,
-      };
-
-      console.log("🚀 Sending core product data:", productData);
-      await onEditProduct(productData);
-
-      const pId = product.id;
-
-      // 2. Sync Attributes (Add-ons) - hari sync removed, comes from sub_jenis
-      const currentAttrIds = formData.addons.map((a) => a.id);
-      const attrToAdd = currentAttrIds.filter(
-        (id) => !initialIds.attributes.includes(id),
+      setExistingImages(
+        (product.gambars ?? []).filter((g: any) => g !== null).map((g: any) => ({ id: g.id, url: g.url }))
       );
-      const attrToRemove = initialIds.attributes.filter(
-        (id) => !currentAttrIds.includes(id),
-      );
-
-      for (const id of attrToAdd)
-        await fetch(`/api/products/${pId}/attributes/${id}`, {
-          method: "POST",
-        });
-      for (const id of attrToRemove)
-        await fetch(`/api/products/${pId}/attributes/${id}`, {
-          method: "DELETE",
-        });
-
-      // 5. Sync Ingredients (Bahans)
-      const currentIngredientIds = formData.ingredients
-        .map((i) => i.id)
-        .filter((id) => id !== undefined) as number[];
-      const ingredientsToRemove = initialIds.ingredients.filter(
-        (id) => !currentIngredientIds.includes(id),
-      );
-
-      for (const id of ingredientsToRemove) {
-        await fetch(`/api/products/${pId}/bahan/${id}`, { method: "DELETE" });
-      }
-
-      for (const ingredient of formData.ingredients) {
-        const payload = {
-          nama_id: ingredient.nama_id,
-          nama_en: ingredient.nama_en,
-          jumlah: parseFloat(ingredient.jumlah) || 0,
-        };
-
-        if (ingredient.id) {
-          // Update
-          await fetch(`/api/products/${pId}/bahan/${ingredient.id}`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-          });
-        } else {
-          // Add
-          await fetch(`/api/products/${pId}/bahan`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-          });
-        }
-      }
-
-      // 6. Sync Images
-
-      // Upload new images
-      if (formData.images.length > 0) {
-        console.log("🚀 Uploading new images...", formData.images);
-        for (const file of formData.images) {
-          const imageFormData = new FormData();
-          imageFormData.append("file", file);
-
-          try {
-            // Get auth token for the request
-            const token = localStorage.getItem("bakesmart_admin_auth");
-            const authHeader = token ? JSON.parse(token).token : null;
-
-            const headers: HeadersInit = {};
-            if (authHeader) {
-              headers["Authorization"] = `Bearer ${authHeader}`;
-            }
-
-            const response = await fetch(`/api/products/${pId}/gambar`, {
-              method: "POST",
-              body: imageFormData,
-              headers,
-            });
-
-            if (!response.ok) {
-              const text = await response.text();
-              console.error(
-                "Failed to upload image. Status:",
-                response.status,
-                "Response:",
-                text,
-              );
-              try {
-                const errorData = JSON.parse(text);
-                throw new Error(errorData.message || "Failed to upload image");
-              } catch (e) {
-                throw new Error(
-                  `Failed to upload image (Status ${response.status})`,
-                );
-              }
-            }
-          } catch (uploadError) {
-            console.error("Error uploading specific image:", uploadError);
-          }
-        }
-      }
-
-      // Delete removed images
-      // Find images that were present initially (or in product prop) but are not in existingImages state
-      const currentExistingIds = new Set(existingImages.map((img) => img.id));
-      const imagesToDelete = (product.gambars || []).filter(
-        (img) => !currentExistingIds.has(img.id),
-      );
-
-      for (const img of imagesToDelete) {
-        try {
-          // Get auth token for DELETE request
-          const token = localStorage.getItem("bakesmart_admin_auth");
-          const authHeader = token ? JSON.parse(token).token : null;
-
-          const headers: HeadersInit = {
-            "Content-Type": "application/json",
-          };
-          if (authHeader) {
-            headers["Authorization"] = `Bearer ${authHeader}`;
-          }
-
-          await fetch(`/api/products/${pId}/gambar/${img.id}`, {
-            method: "DELETE",
-            headers,
-          });
-        } catch (delError) {
-          console.error("Error deleting image:", delError);
-        }
-      }
-
-      handleClose();
-    } catch (error) {
-      console.error("Error updating product:", error);
-      alert("Gagal mengupdate produk. Silakan coba lagi.");
-    } finally {
-      setIsSubmitting(false);
+      setRemovedExistingImageIds([]);
+      setNewImagePreviews([]);
+      setErrors({});
+      resetBahanForm();
     }
-  };
+  }, [product, isOpen]);
 
-  const handleClose = () => {
-    setFormData({
-      nama_id: "",
-      nama_en: "",
-      deskripsi_id: "",
-      deskripsi_en: "",
-      harga: 0,
-      harga_diskon: null,
-      stok: 0,
-      daily_stock: 0,
-      ref_sub_jenis_id: null,
-      addons: [],
-      images: [],
-      isBestSeller: false,
-      isDaily: false,
-      ingredients: [],
-    });
-    setImagePreviews([]);
-    setExistingImages([]);
-    onClose();
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-
-    const totalImages =
-      existingImages.length + formData.images.length + files.length;
+    const totalImages = existingImages.length - removedExistingImageIds.length + formData.gambars.length + files.length;
     if (totalImages > 1) {
-      alert(
-        "Maksimal 1 gambar total. Hapus gambar lama terlebih dahulu jika ingin mengganti.",
-      );
+      setErrors((prev) => ({ ...prev, images: "Maksimal 1 gambar. Hapus gambar lama jika ingin mengganti." }));
       return;
     }
-
     const newPreviews: string[] = [];
     files.forEach((file) => {
       const reader = new FileReader();
       reader.onload = (event) => {
         if (event.target?.result) {
           newPreviews.push(event.target.result as string);
-          if (newPreviews.length === files.length) {
-            setImagePreviews((prev) => [...prev, ...newPreviews]);
-          }
+          if (newPreviews.length === files.length) setNewImagePreviews((prev) => [...prev, ...newPreviews]);
         }
       };
       reader.readAsDataURL(file);
     });
-
-    setFormData((prev) => ({ ...prev, images: [...prev.images, ...files] }));
+    setFormData((prev) => ({ ...prev, gambars: [...prev.gambars, ...files] }));
+    setErrors((prev) => ({ ...prev, images: "" }));
   };
 
   const removeNewImage = (index: number) => {
+    setFormData((prev) => ({ ...prev, gambars: prev.gambars.filter((_, i) => i !== index) }));
+    setNewImagePreviews((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const removeExistingImage = (id: number) => setRemovedExistingImageIds((prev) => [...prev, id]);
+
+  // ── Bahan helpers ────────────────────────────────────────────────────────
+  const resetBahanForm = () => {
+    setShowBahanForm(false);
+    setBahanInputMode("select");
+    setSelectedBahanId("");
+    setSelectedBahanJumlah(0);
+    setNewBahanNameId("");
+    setNewBahanNameEn("");
+    setNewBahanJumlah(0);
+    setErrors((prev) => ({ ...prev, bahan: "" }));
+  };
+
+  const addBahanFromSelect = () => {
+    if (!selectedBahanId) {
+      setErrors((prev) => ({ ...prev, bahan: "Pilih bahan terlebih dahulu" }));
+      return;
+    }
+    const alreadyAdded = formData.bahans.some((b) => (b as any).id === selectedBahanId);
+    if (alreadyAdded) {
+      setErrors((prev) => ({ ...prev, bahan: "Bahan ini sudah ditambahkan" }));
+      return;
+    }
+    const selected = availableBahans.find((b) => b.id === selectedBahanId);
+    if (!selected) return;
     setFormData((prev) => ({
       ...prev,
-      images: prev.images.filter((_, i) => i !== index),
+      bahans: [...prev.bahans, { id: selected.id, nama_id: selected.nama_id, nama_en: selected.nama_en, jumlah: selectedBahanJumlah }],
     }));
-    setImagePreviews((prev) => prev.filter((_, i) => i !== index));
+    resetBahanForm();
   };
 
-  const removeExistingImage = (index: number) => {
-    setExistingImages((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const handleAddIngredient = () => {
+  const addBahanManual = () => {
+    if (!newBahanNameId.trim() || !newBahanNameEn.trim()) {
+      setErrors((prev) => ({ ...prev, bahan: "Nama bahan (ID dan EN) wajib diisi" }));
+      return;
+    }
     setFormData((prev) => ({
       ...prev,
-      ingredients: [
-        ...prev.ingredients,
-        { nama_id: "", nama_en: "", jumlah: "" },
-      ],
+      bahans: [...prev.bahans, { id: 0, nama_id: newBahanNameId.trim(), nama_en: newBahanNameEn.trim(), jumlah: newBahanJumlah }],
     }));
+    resetBahanForm();
   };
 
-  const handleRemoveIngredient = (index: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      ingredients: prev.ingredients.filter((_, i) => i !== index),
-    }));
+  const handleRemoveBahan = (index: number) => {
+    setFormData((prev) => ({ ...prev, bahans: prev.bahans.filter((_, i) => i !== index) }));
   };
 
-  const handleIngredientChange = (
-    index: number,
-    field: "nama_id" | "nama_en" | "jumlah",
-    value: string,
-  ) => {
+  const handleBahanJumlahChange = (index: number, value: string) => {
     setFormData((prev) => {
-      const newIngredients = [...prev.ingredients];
-      newIngredients[index] = { ...newIngredients[index], [field]: value };
-      return { ...prev, ingredients: newIngredients };
+      const updated = [...prev.bahans];
+      updated[index] = { ...updated[index], jumlah: Number(value) };
+      return { ...prev, bahans: updated };
     });
   };
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("id-ID", {
-      style: "currency",
-      currency: "IDR",
-      minimumFractionDigits: 0,
-    }).format(price);
+  // ── Validation ───────────────────────────────────────────────────────────
+  const validateForm = (): boolean => {
+    const newErrors: Record<string, string> = {};
+    if (!formData.nama_id.trim()) newErrors.nama_id = "Nama produk (ID) harus diisi";
+    if (!formData.nama_en.trim()) newErrors.nama_en = "Nama produk (EN) harus diisi";
+    if (!formData.deskripsi_id.trim()) newErrors.deskripsi_id = "Deskripsi (ID) harus diisi";
+    if (!formData.deskripsi_en.trim()) newErrors.deskripsi_en = "Deskripsi (EN) harus diisi";
+    if (!formData.calc_count || parseFloat(String(formData.calc_count)) <= 0) newErrors.calc_count = "Hitungan Kalkulasi harus lebih dari 0";
+    if (!formData.harga || parseFloat(formData.harga) <= 0) newErrors.harga = "Harga harus lebih dari 0";
+    if (formData.isDaily && (!formData.daily_stock || parseInt(formData.daily_stock) < 0))
+      newErrors.daily_stock = "Daily Stock tidak boleh negatif";
+    if (!formData.ref_sub_jenis_id) newErrors.ref_sub_jenis_id = "Sub Jenis harus dipilih";
+    const remainingImages = existingImages.length - removedExistingImageIds.length;
+    if (remainingImages + formData.gambars.length === 0) newErrors.gambars = "Minimal 1 gambar produk";
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
+  // ── Submit ───────────────────────────────────────────────────────────────
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validateForm() || !product?.id) return;
+    setIsSubmitting(true);
+    try {
+      const updatedProduct: FormProduct = {
+        nama_id: formData.nama_id, nama_en: formData.nama_en,
+        deskripsi_id: formData.deskripsi_id, deskripsi_en: formData.deskripsi_en,
+        calc_count: Number(formData.calc_count),
+        harga: Number(formData.harga),
+        harga_diskon: formData.harga_diskon ? Number(formData.harga_diskon) : null,
+        daily_stock: formData.daily_stock ? Number(formData.daily_stock) : null,
+        isBestSeller: formData.isBestSeller, isDaily: formData.isDaily,
+        ref_sub_jenis_id: formData.ref_sub_jenis_id,
+      };
+
+      await onEditProduct(updatedProduct);
+
+      // Remove deleted images
+      for (const imgId of removedExistingImageIds) {
+        await removeGambarFromProduct(product.id, imgId);
+      }
+
+      // Upload new image
+      if (formData.gambars[0]) {
+        await appendGambarToProduct(product.id, formData.gambars[0]);
+      }
+
+      // Sync bahans:
+      // - Remove old bahans that are no longer in the list (by bahan.id > 0)
+      // - Keep existing ones that weren't removed
+      // - Add newly selected (id > 0) or newly manual (id === 0)
+      const existingBahanIds = (product.bahans ?? []).map((b) => b.id).filter(Boolean) as number[];
+      const incomingExisting = formData.bahans.filter((b) => (b as any).id > 0);
+      const incomingManual   = formData.bahans.filter((b) => (b as any).id === 0);
+      const incomingExistingIds = incomingExisting.map((b) => (b as any).id as number);
+
+      console.log("Existing bahan IDs:", existingBahanIds);
+      console.log("Incoming existing bahan IDs:", incomingExistingIds);
+
+      // Remove dropped ones
+      const toRemove = existingBahanIds.filter((id) => !incomingExistingIds.includes(id));
+      console.log("To remove:", toRemove);
+      for (const bahanId of toRemove) {
+        await removeBahanFromProduct(product.id, bahanId);
+      }
+
+      // Append newly selected existing bahans
+      const toAdd = incomingExisting.filter((b) => !existingBahanIds.includes((b as any).id));
+      console.log("To add:", toAdd);
+      for (const bahan of toAdd) {
+        await appendBahanToProduct(product.id, (bahan as any).id, {
+          nama_id: bahan.nama_id || "",
+          nama_en: bahan.nama_en || "",
+          jumlah: Number(bahan.jumlah) || 0,
+        });
+      }
+      
+      // Append all manual bahans (always new)
+      for (const bahan of incomingManual) {
+        console.log("Adding manual bahan:", bahan);
+        await appendBahanToProduct(product.id, 0, {
+          nama_id: bahan.nama_id || "",
+          nama_en: bahan.nama_en || "",
+          jumlah: Number(bahan.jumlah) || 0,
+        });
+      }
+      await fetchProduct();
+
+      onClose();
+    } catch (e) {
+      const errorMessage = e instanceof Error ? e.message : "Terjadi kesalahan";
+      await error("Gagal", errorMessage);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleClose = () => { if (!isSubmitting) onClose(); };
+  if (!isOpen || !product) return null;
+
+  const visibleExistingImages = existingImages.filter((img) => !removedExistingImageIds.includes(img.id));
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/40" onClick={handleClose} />
+    <div className="fixed inset-0 z-50" style={{ backgroundColor: "rgba(0, 0, 0, 0.3)" }}>
+      <div className="flex items-center justify-center min-h-screen p-4">
+        <div className="bg-white rounded-lg shadow-2xl w-full max-w-2xl border border-gray-300" style={{ maxHeight: "80vh" }}>
 
-      {/* Modal */}
-      <div className="relative z-10 w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-xl bg-white shadow-xl border border-gray-200">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b sticky top-0 bg-white">
-          <h3 className="text-xl font-semibold text-gray-900">Edit Produk</h3>
-          <button
-            onClick={handleClose}
-            className="p-2 rounded-md hover:bg-gray-100"
-            aria-label="Close"
-          >
-            <X className="w-5 h-5 text-gray-500" />
-          </button>
-        </div>
-
-        {/* Body */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          {/* Product Images Upload */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Gambar Produk (Max 1 gambar)
-            </label>
-
-            {/* Existing Images */}
-            {existingImages.length > 0 && (
-              <div className="mb-4">
-                <p className="text-xs text-gray-600 mb-2">Gambar saat ini:</p>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {existingImages.map((image, index) => (
-                    <div
-                      key={`existing-${image.id}`}
-                      className="relative group"
-                    >
-                      <img
-                        src={getImageUrl(image.file_path)}
-                        alt={`Product ${index + 1}`}
-                        className="w-full h-24 object-cover rounded-lg border border-gray-200"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeExistingImage(index)}
-                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                        disabled={isSubmitting}
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Upload New Images */}
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-orange-500 transition-colors">
-              <input
-                type="file"
-                multiple
-                accept="image/*"
-                onChange={handleImageUpload}
-                className="hidden"
-                id="image-upload-edit"
-                disabled={
-                  isSubmitting ||
-                  existingImages.length + formData.images.length >= 1
-                }
-              />
-              <label
-                htmlFor="image-upload-edit"
-                className={`cursor-pointer ${
-                  isSubmitting ||
-                  existingImages.length + formData.images.length >= 1
-                    ? "cursor-not-allowed opacity-50"
-                    : ""
-                }`}
-              >
-                <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                <p className="text-sm text-gray-600">
-                  Klik untuk upload gambar baru atau drag & drop
-                </p>
-                <p className="text-xs text-gray-500 mt-1">
-                  PNG, JPG, JPEG up to 10MB
-                </p>
-                <p className="text-xs text-orange-600 mt-1">
-                  {existingImages.length + formData.images.length} / 1 gambar
-                </p>
-              </label>
-            </div>
-
-            {/* New Images Preview */}
-            {imagePreviews.length > 0 && (
-              <div className="mt-4">
-                <p className="text-xs text-gray-600 mb-2">
-                  Gambar baru yang akan ditambahkan:
-                </p>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {imagePreviews.map((preview, index) => (
-                    <div key={`new-${index}`} className="relative group">
-                      <img
-                        src={preview}
-                        alt={`New ${index + 1}`}
-                        className="w-full h-24 object-cover rounded-lg border border-orange-200"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeNewImage(index)}
-                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                        disabled={isSubmitting}
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Product Name - Indonesian */}
-          <div>
-            <label
-              htmlFor="nama_id"
-              className="block text-sm font-medium text-gray-700 mb-2"
-            >
-              Nama Produk (Bahasa Indonesia) *
-            </label>
-            <input
-              type="text"
-              id="nama_id"
-              value={formData.nama_id}
-              onChange={(e) =>
-                setFormData((prev) => ({ ...prev, nama_id: e.target.value }))
-              }
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-              placeholder="Contoh: Roti Cokelat"
-              required
-            />
-          </div>
-
-          {/* Product Name - English */}
-          <div>
-            <label
-              htmlFor="nama_en"
-              className="block text-sm font-medium text-gray-700 mb-2"
-            >
-              Nama Produk (English) *
-            </label>
-            <input
-              type="text"
-              id="nama_en"
-              value={formData.nama_en}
-              onChange={(e) =>
-                setFormData((prev) => ({ ...prev, nama_en: e.target.value }))
-              }
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-              placeholder="Example: Chocolate Bread"
-              required
-            />
-          </div>
-
-          {/* Description - Indonesian */}
-          <div>
-            <label
-              htmlFor="deskripsi_id"
-              className="block text-sm font-medium text-gray-700 mb-2"
-            >
-              Deskripsi Produk (Bahasa Indonesia) *
-            </label>
-            <textarea
-              id="deskripsi_id"
-              value={formData.deskripsi_id}
-              onChange={(e) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  deskripsi_id: e.target.value,
-                }))
-              }
-              rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-              placeholder="Masukkan deskripsi produk dalam Bahasa Indonesia"
-              required
-            />
-          </div>
-
-          {/* Description - English */}
-          <div>
-            <label
-              htmlFor="deskripsi_en"
-              className="block text-sm font-medium text-gray-700 mb-2"
-            >
-              Deskripsi Produk (English) *
-            </label>
-            <textarea
-              id="deskripsi_en"
-              value={formData.deskripsi_en}
-              onChange={(e) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  deskripsi_en: e.target.value,
-                }))
-              }
-              rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-              placeholder="Enter product description in English"
-              required
-            />
-          </div>
-
-          {/* Sub Jenis Selection */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              <Layers className="w-4 h-4 inline mr-2 text-blue-500" />
-              Sub Jenis (Kategori) *
-            </label>
-            <select
-              name="ref_sub_jenis_id"
-              value={formData.ref_sub_jenis_id || ""}
-              onChange={(e) => {
-                setFormData((prev) => ({
-                  ...prev,
-                  ref_sub_jenis_id: e.target.value
-                    ? Number(e.target.value)
-                    : null,
-                }));
-              }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-              required
-            >
-              <option value="">Pilih Sub Jenis...</option>
-              {jenisList.map((jenis) => (
-                <optgroup key={jenis.id} label={jenis.nama_id}>
-                  {getSubJenisByJenisId(jenis.id).map((subJenis) => (
-                    <option key={subJenis.id} value={subJenis.id}>
-                      {subJenis.nama_id} ({subJenis.nama_en})
-                    </option>
-                  ))}
-                </optgroup>
-              ))}
-            </select>
-            <p className="text-xs text-gray-500 mt-1">
-              Produk akan terkait dengan sub jenis yang dipilih
-            </p>
-          </div>
-
-          {/* Ingredients (Bahan) */}
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <label className="flex items-center text-sm font-medium text-gray-700">
-                <Layers className="w-4 h-4 mr-2 text-green-500" />
-                Bahan (Ingredients)
-              </label>
-              <button
-                type="button"
-                onClick={handleAddIngredient}
-                disabled={isSubmitting}
-                className="text-sm text-orange-600 hover:text-orange-700 font-medium"
-              >
-                + Tambah Bahan
-              </button>
-            </div>
-
-            {formData.ingredients.length === 0 ? (
-              <p className="text-sm text-gray-500 italic border rounded-lg p-3 text-center">
-                Belum ada bahan ditambahkan
-              </p>
-            ) : (
-              <div className="space-y-3">
-                {formData.ingredients.map((ingredient, index) => (
-                  <div
-                    key={index}
-                    className="flex flex-col gap-2 p-3 border rounded-lg bg-gray-50"
-                  >
-                    <div className="flex gap-2">
-                      <div className="flex-1">
-                        <input
-                          type="text"
-                          placeholder="Nama Bahan (ID)"
-                          value={ingredient.nama_id}
-                          onChange={(e) =>
-                            handleIngredientChange(
-                              index,
-                              "nama_id",
-                              e.target.value,
-                            )
-                          }
-                          className="w-full px-2 py-1 text-sm border rounded"
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <input
-                          type="text"
-                          placeholder="Ingredient Name (EN)"
-                          value={ingredient.nama_en}
-                          onChange={(e) =>
-                            handleIngredientChange(
-                              index,
-                              "nama_en",
-                              e.target.value,
-                            )
-                          }
-                          className="w-full px-2 py-1 text-sm border rounded"
-                        />
-                      </div>
-                    </div>
-                    <div className="flex gap-2 items-center">
-                      <div className="w-24">
-                        <input
-                          type="number"
-                          placeholder="Jml"
-                          value={ingredient.jumlah}
-                          onChange={(e) =>
-                            handleIngredientChange(
-                              index,
-                              "jumlah",
-                              e.target.value,
-                            )
-                          }
-                          className="w-full px-2 py-1 text-sm border rounded"
-                          min="0"
-                          step="0.1"
-                        />
-                      </div>
-                      <span className="text-xs text-gray-500 flex-1">
-                        Unit/Jumlah
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveIngredient(index)}
-                        className="text-red-500 hover:text-red-700 p-1"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Best Seller & Daily Options */}
-          <div className="flex gap-6">
-            <label className="flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={formData.isBestSeller}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    isBestSeller: e.target.checked,
-                  }))
-                }
-                className="w-4 h-4 text-orange-500 border-gray-300 rounded focus:ring-orange-500"
-              />
-              <span className="ml-2 text-sm text-gray-700">Best Seller</span>
-            </label>
-            <label className="flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={formData.isDaily}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    isDaily: e.target.checked,
-                  }))
-                }
-                className="w-4 h-4 text-orange-500 border-gray-300 rounded focus:ring-orange-500"
-              />
-              <span className="ml-2 text-sm text-gray-700">Produk Harian</span>
-            </label>
-          </div>
-
-          {/* Harga Diskon */}
-          <div>
-            <label
-              htmlFor="harga_diskon"
-              className="block text-sm font-medium text-gray-700 mb-2"
-            >
-              Harga Diskon (Opsional)
-            </label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
-                Rp
-              </span>
-              <input
-                type="number"
-                id="harga_diskon"
-                value={formData.harga_diskon || ""}
-                onChange={(e) => {
-                  const value =
-                    e.target.value === "" ? null : parseInt(e.target.value, 10);
-                  setFormData((prev) => ({ ...prev, harga_diskon: value }));
-                }}
-                className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                placeholder="0"
-                min="0"
-              />
-            </div>
-            <p className="text-xs text-gray-500 mt-1">
-              Kosongkan jika tidak ada diskon
-            </p>
-          </div>
-
-          {/* Price and Daily Stock */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Header */}
+          <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-white rounded-t-lg">
             <div>
-              <label
-                htmlFor="harga"
-                className="block text-sm font-medium text-gray-700 mb-2"
-              >
-                Harga *
-              </label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
-                  Rp
-                </span>
-                <input
-                  type="number"
-                  id="harga"
-                  value={formData.harga || ""}
-                  onChange={(e) => {
-                    const value =
-                      e.target.value === "" ? 0 : parseInt(e.target.value, 10);
-                    setFormData((prev) => ({
-                      ...prev,
-                      harga: isNaN(value) ? 0 : value,
-                    }));
-                  }}
-                  className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                  placeholder="0"
-                  min="0"
-                  required
-                />
-              </div>
-              {formData.harga > 0 && (
-                <p className="text-xs text-gray-500 mt-1">
-                  {formatPrice(formData.harga)}
-                </p>
-              )}
+              <h2 className="text-xl font-bold text-gray-900">Edit Produk</h2>
+              <p className="text-sm text-gray-600 mt-1">
+                Perbarui informasi produk: <span className="font-medium text-orange-600">{product.nama_id}</span>
+              </p>
             </div>
-
-            {formData.isDaily && (
-              <div>
-                <label
-                  htmlFor="daily_stock"
-                  className="block text-sm font-medium text-gray-700 mb-2"
-                >
-                  Daily Stock *
-                </label>
-                <input
-                  type="number"
-                  id="daily_stock"
-                  value={formData.daily_stock || ""}
-                  onChange={(e) => {
-                    const value =
-                      e.target.value === "" ? 0 : parseInt(e.target.value, 10);
-                    setFormData((prev) => ({
-                      ...prev,
-                      daily_stock: isNaN(value) ? 0 : value,
-                    }));
-                  }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                  placeholder="50"
-                  min="0"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Stok harian yang akan di-reset setiap hari
-                </p>
-              </div>
-            )}
+            <button onClick={handleClose} disabled={isSubmitting} className="p-2 hover:bg-gray-100 rounded-lg transition-colors" type="button">
+              <X className="w-5 h-5 text-gray-600" />
+            </button>
           </div>
 
-          {/* Manage Addons */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Product Addons
-            </label>
-            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <Settings className="w-5 h-5 text-gray-600" />
-                  <span className="text-sm text-gray-700">
-                    {formData.addons.length === 0
-                      ? "No addons configured"
-                      : `${formData.addons.length} addon(s)`}
-                  </span>
+          <form onSubmit={handleSubmit}>
+            <div className="p-6 overflow-y-auto bg-white" style={{ maxHeight: "calc(80vh - 160px)" }}>
+              <div className="space-y-6">
+
+                {/* Nama ID */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Nama Produk (Bahasa Indonesia) *</label>
+                  <input type="text" name="nama_id" value={formData.nama_id} onChange={handleInputChange}
+                    placeholder="Contoh: Roti Cokelat" disabled={isSubmitting}
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 ${errors.nama_id ? "border-red-500" : "border-gray-300"}`} />
+                  {errors.nama_id && <p className="mt-1 text-sm text-red-600">{errors.nama_id}</p>}
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setShowAddonsManager(true)}
-                  className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors text-sm font-medium flex items-center gap-2"
-                >
-                  <Settings className="w-4 h-4" />
-                  Manage Addons
-                </button>
-              </div>
-              {formData.addons.length > 0 && (
-                <div className="space-y-1 max-h-24 overflow-y-auto">
-                  {formData.addons.slice(0, 3).map((addon) => (
-                    <div
-                      key={addon.id}
-                      className="text-xs text-gray-600 flex items-center justify-between bg-white px-2 py-1 rounded"
-                    >
-                      <span>{addon.nama_id || addon.nama || "Unnamed"}</span>
-                      <span className="text-gray-500">
-                        {addon.harga > 0
-                          ? `+Rp ${addon.harga.toLocaleString("id-ID")}`
-                          : "Gratis"}
-                      </span>
+
+                {/* Nama EN */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Nama Produk (English) *</label>
+                  <input type="text" name="nama_en" value={formData.nama_en} onChange={handleInputChange}
+                    placeholder="Example: Chocolate Bread" disabled={isSubmitting}
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 ${errors.nama_en ? "border-red-500" : "border-gray-300"}`} />
+                  {errors.nama_en && <p className="mt-1 text-sm text-red-600">{errors.nama_en}</p>}
+                </div>
+
+                {/* Deskripsi */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Deskripsi Produk (Bahasa Indonesia) *</label>
+                    <textarea name="deskripsi_id" value={formData.deskripsi_id} onChange={handleInputChange}
+                      rows={3} placeholder="Masukkan deskripsi produk dalam Bahasa Indonesia" disabled={isSubmitting}
+                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 ${errors.deskripsi_id ? "border-red-500" : "border-gray-300"}`} />
+                    {errors.deskripsi_id && <p className="mt-1 text-sm text-red-600">{errors.deskripsi_id}</p>}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Deskripsi Produk (English) *</label>
+                    <textarea name="deskripsi_en" value={formData.deskripsi_en} onChange={handleInputChange}
+                      rows={3} placeholder="Enter product description in English" disabled={isSubmitting}
+                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 ${errors.deskripsi_en ? "border-red-500" : "border-gray-300"}`} />
+                    {errors.deskripsi_en && <p className="mt-1 text-sm text-red-600">{errors.deskripsi_en}</p>}
+                  </div>
+                </div>
+
+                {/* Checkboxes */}
+                <div className="flex gap-6">
+                  <label className="flex items-center cursor-pointer">
+                    <input type="checkbox" checked={formData.isBestSeller}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, isBestSeller: e.target.checked }))}
+                      className="w-4 h-4 text-orange-500 border-gray-300 rounded focus:ring-orange-500" disabled={isSubmitting} />
+                    <span className="ml-2 text-sm text-gray-700">Best Seller</span>
+                  </label>
+                  <label className="flex items-center cursor-pointer">
+                    <input type="checkbox" checked={formData.isDaily}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, isDaily: e.target.checked }))}
+                      className="w-4 h-4 text-orange-500 border-gray-300 rounded focus:ring-orange-500" disabled={isSubmitting} />
+                    <span className="ml-2 text-sm text-gray-700">Produk Harian</span>
+                  </label>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Hitungan Kalkulasi*</label>
+                    <input type="number" name="calc_count" value={formData.calc_count} onChange={handleInputChange}
+                      placeholder="1" min="0" step="0.1" disabled={isSubmitting}
+                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 ${errors.harga ? "border-red-500" : "border-gray-300"}`} />
+                    {errors.calc_count && <p className="mt-1 text-sm text-red-600">{errors.calc_count}</p>}
+                  </div>
+                </div>
+                {/* Harga */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Harga (IDR) *</label>
+                    <input type="number" name="harga" value={formData.harga} onChange={handleInputChange}
+                      placeholder="125000" min="0" disabled={isSubmitting}
+                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 ${errors.harga ? "border-red-500" : "border-gray-300"}`} />
+                    {errors.harga && <p className="mt-1 text-sm text-red-600">{errors.harga}</p>}
+                  </div>
+                  {formData.isDaily && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Daily Stock *</label>
+                      <input type="number" name="daily_stock" value={formData.daily_stock} onChange={handleInputChange}
+                        placeholder="50" min="0" disabled={isSubmitting}
+                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 ${errors.daily_stock ? "border-red-500" : "border-gray-300"}`} />
+                      {errors.daily_stock && <p className="mt-1 text-sm text-red-600">{errors.daily_stock}</p>}
+                      <p className="mt-1 text-xs text-gray-500">Stok harian yang akan di-reset setiap hari</p>
                     </div>
-                  ))}
-                  {formData.addons.length > 3 && (
-                    <p className="text-xs text-gray-500 italic px-2">
-                      +{formData.addons.length - 3} more addon(s)
-                    </p>
                   )}
                 </div>
-              )}
+
+                {/* Sub Jenis */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <Layers className="w-4 h-4 inline mr-2 text-blue-500" />Sub Jenis (Kategori) *
+                  </label>
+                  <select name="ref_sub_jenis_id" value={formData.ref_sub_jenis_id?.toString() || ""} disabled={isSubmitting} required
+                    onChange={(e) => {
+                      setFormData((prev) => ({ ...prev, ref_sub_jenis_id: e.target.value ? Number(e.target.value) : 0 }));
+                      if (errors.ref_sub_jenis_id) setErrors((prev) => ({ ...prev, ref_sub_jenis_id: "" }));
+                    }}
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 ${errors.ref_sub_jenis_id ? "border-red-500" : "border-gray-300"}`}>
+                    <option value="">Pilih Sub Jenis...</option>
+                    {jenisList.map((jenis) => (
+                      <optgroup key={jenis.id} label={jenis.nama_id}>
+                        {getSubJenisByJenisId(jenis.id).map((subJenis) => (
+                          <option key={subJenis.id} value={subJenis.id}>{subJenis.nama_id} ({subJenis.nama_en})</option>
+                        ))}
+                      </optgroup>
+                    ))}
+                  </select>
+                  {errors.ref_sub_jenis_id && <p className="mt-2 text-sm text-red-600">{errors.ref_sub_jenis_id}</p>}
+                  <p className="text-xs text-gray-500 mt-1">Sub jenis sudah termasuk konfigurasi hari tersedia, jumlah pesanan, dan add-ons</p>
+                </div>
+
+                {/* ── Bahan ──────────────────────────────────────────────────────── */}
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <label className="flex items-center text-sm font-medium text-gray-700">
+                      <Package className="w-4 h-4 mr-2 text-green-500" />Bahan (Ingredients)
+                    </label>
+                    {!showBahanForm && (
+                      <button type="button" onClick={() => setShowBahanForm(true)} disabled={isSubmitting}
+                        className="flex items-center px-3 py-1.5 text-xs font-medium text-white bg-orange-500 rounded-lg hover:bg-orange-600 transition-colors">
+                        <Plus className="w-3 h-3 mr-1" /> Tambah Bahan
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Bahan form */}
+                  {showBahanForm && (
+                    <div className="mb-4 bg-white rounded-lg border border-orange-200 overflow-hidden">
+                      {/* Mode tabs */}
+                      <div className="flex border-b border-gray-200">
+                        <button type="button" onClick={() => { setBahanInputMode("select"); setErrors((p) => ({ ...p, bahan: "" })); }}
+                          className={`flex-1 px-4 py-2.5 text-xs font-medium transition-colors ${bahanInputMode === "select" ? "bg-orange-50 text-orange-600 border-b-2 border-orange-500" : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"}`}>
+                          <Tag className="w-3 h-3 inline mr-1" /> Pilih dari Daftar
+                        </button>
+                        <button type="button" onClick={() => { setBahanInputMode("manual"); setErrors((p) => ({ ...p, bahan: "" })); }}
+                          className={`flex-1 px-4 py-2.5 text-xs font-medium transition-colors ${bahanInputMode === "manual" ? "bg-orange-50 text-orange-600 border-b-2 border-orange-500" : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"}`}>
+                          <Plus className="w-3 h-3 inline mr-1" /> Input Manual
+                        </button>
+                      </div>
+
+                      <div className="p-3 space-y-3">
+                        {errors.bahan && <p className="text-xs text-red-600">{errors.bahan}</p>}
+
+                        {bahanInputMode === "select" && (
+                          <>
+                            <div>
+                              <label className="text-xs font-medium text-gray-700 mb-1 block">Pilih Bahan</label>
+                              <select value={selectedBahanId}
+                                onChange={(e) => setSelectedBahanId(Number(e.target.value))}
+                                className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500">
+                                <option value="">— Pilih Bahan —</option>
+                                {availableBahans
+                                  .filter((b) => !formData.bahans.some((added) => (added as any).id === b.id))
+                                  .map((b) => (
+                                    <option key={b.id} value={b.id}>{b.nama_id} ({b.nama_en})</option>
+                                  ))}
+                              </select>
+                            </div>
+                            <div>
+                              <label className="text-xs font-medium text-gray-700 mb-1 block">Jumlah</label>
+                              <input type="number" value={selectedBahanJumlah}
+                                onChange={(e) => setSelectedBahanJumlah(Number(e.target.value))}
+                                min={0} step="0.1" placeholder="0"
+                                className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500" />
+                            </div>
+                          </>
+                        )}
+
+                        {bahanInputMode === "manual" && (
+                          <>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <label className="text-xs font-medium text-gray-700 mb-1 block">Nama (Indonesia)</label>
+                                <input type="text" value={newBahanNameId} onChange={(e) => setNewBahanNameId(e.target.value)}
+                                  placeholder="Contoh: Tepung"
+                                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500" />
+                              </div>
+                              <div>
+                                <label className="text-xs font-medium text-gray-700 mb-1 block">Nama (English)</label>
+                                <input type="text" value={newBahanNameEn} onChange={(e) => setNewBahanNameEn(e.target.value)}
+                                  placeholder="Example: Flour"
+                                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500" />
+                              </div>
+                            </div>
+                            <div>
+                              <label className="text-xs font-medium text-gray-700 mb-1 block">Jumlah</label>
+                              <input type="number" value={newBahanJumlah} onChange={(e) => setNewBahanJumlah(Number(e.target.value))}
+                                min={0} step="0.1" placeholder="0"
+                                className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500" />
+                            </div>
+                          </>
+                        )}
+
+                        <div className="flex justify-end gap-2 pt-1">
+                          <button type="button" onClick={resetBahanForm}
+                            className="px-3 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
+                            Batal
+                          </button>
+                          <button type="button" onClick={bahanInputMode === "select" ? addBahanFromSelect : addBahanManual}
+                            className="px-3 py-1.5 text-xs font-medium text-white bg-orange-500 rounded-lg hover:bg-orange-600">
+                            Simpan Bahan
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Bahan list */}
+                  <div className="space-y-2">
+                    {formData.bahans.length === 0 ? (
+                      <p className="text-sm text-gray-400 italic text-center py-4">Belum ada bahan ditambahkan</p>
+                    ) : (
+                      formData.bahans.map((bahan, index) => (
+                        <div key={(bahan as any).id > 0 ? (bahan as any).id : `manual-${index}`}
+                          className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200">
+                          <div>
+                            <p className="font-medium text-gray-900 text-sm">{bahan.nama_id}</p>
+                            <p className="text-xs text-gray-500">{bahan.nama_en}</p>
+                            {(bahan as any).id === 0 && (
+                              <span className="text-[10px] text-blue-500 font-medium">• Input manual</span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-1">
+                              <input type="number" value={bahan.jumlah} min={0} step="0.1"
+                                onChange={(e) => handleBahanJumlahChange(index, e.target.value)}
+                                className="w-20 px-2 py-1 text-sm border border-gray-300 rounded-lg focus:ring-1 focus:ring-orange-500 text-right" />
+                              <span className="text-xs text-gray-500">unit</span>
+                            </div>
+                            <button type="button" onClick={() => handleRemoveBahan(index)}
+                              className="p-1 text-red-500 hover:bg-red-50 rounded">
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                {/* Harga Diskon */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Harga Diskon (Opsional)</label>
+                  <input type="number" name="harga_diskon" value={formData.harga_diskon} onChange={handleInputChange}
+                    placeholder="100000" min="0" disabled={isSubmitting}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500" />
+                  <p className="text-xs text-gray-500 mt-1">Kosongkan jika tidak ada diskon</p>
+                </div>
+
+                {/* Gambar */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Gambar Produk * (Max 1 gambar)</label>
+                  {visibleExistingImages.length > 0 && (
+                    <div className="mb-3">
+                      <p className="text-xs text-gray-500 mb-2">Gambar saat ini:</p>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        {visibleExistingImages.map((img) => (
+                          <div key={img.id} className="relative group">
+                            <img src={img.url} alt="Existing product" className="w-full h-24 object-cover rounded-lg border border-gray-200" />
+                            <button type="button" onClick={() => removeExistingImage(img.id)} disabled={isSubmitting}
+                              className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {visibleExistingImages.length + formData.gambars.length < 1 && (
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-orange-500 transition-colors">
+                      <input type="file" multiple accept="image/*" onChange={handleImageUpload}
+                        className="hidden" id="image-upload-edit" disabled={isSubmitting} />
+                      <label htmlFor="image-upload-edit" className={`cursor-pointer ${isSubmitting ? "cursor-not-allowed opacity-50" : ""}`}>
+                        <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                        <p className="text-sm text-gray-600">Klik untuk upload gambar baru atau drag & drop</p>
+                        <p className="text-xs text-gray-500 mt-1">PNG, JPG, JPEG up to 10MB</p>
+                      </label>
+                    </div>
+                  )}
+                  {newImagePreviews.length > 0 && (
+                    <div className="mt-4 grid grid-cols-2 md:grid-cols-3 gap-4">
+                      {newImagePreviews.map((preview, index) => (
+                        <div key={index} className="relative group">
+                          <img src={preview} alt={`New preview ${index + 1}`} className="w-full h-24 object-cover rounded-lg border border-orange-300" />
+                          <span className="absolute top-1 left-1 bg-orange-500 text-white text-xs px-1 rounded">Baru</span>
+                          <button type="button" onClick={() => removeNewImage(index)} disabled={isSubmitting}
+                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {errors.gambars && <p className="mt-1 text-sm text-red-600">{errors.gambars}</p>}
+                  {errors.images && <p className="mt-1 text-sm text-red-600">{errors.images}</p>}
+                </div>
+
+                {errors.submit && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                    <p className="text-sm text-red-600">{errors.submit}</p>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
 
-          {/* Footer */}
-          <div className="flex items-center justify-end gap-3 pt-4 border-t">
-            <button
-              type="button"
-              onClick={handleClose}
-              className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500"
-            >
-              Batal
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isSubmitting ? "Menyimpan..." : "Simpan Perubahan"}
-            </button>
-          </div>
-        </form>
-
-        {/* Product Addons Manager Modal */}
-        <ProductAddonsManager
-          isOpen={showAddonsManager}
-          onClose={() => setShowAddonsManager(false)}
-          productName={product?.nama || ""}
-          addons={formData.addons}
-          onSave={(updatedAddons) => {
-            setFormData((prev) => ({ ...prev, addons: updatedAddons }));
-          }}
-        />
+            {/* Footer */}
+            <div className="flex items-center justify-end gap-4 p-6 border-t border-gray-200 bg-gray-50 rounded-b-lg">
+              <button type="button" onClick={handleClose} disabled={isSubmitting}
+                className="px-8 py-3 text-sm font-medium text-gray-700 bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-100 focus:ring-2 focus:ring-gray-500 disabled:opacity-50 transition-colors">
+                Batal
+              </button>
+              <button type="submit" disabled={isSubmitting}
+                className="px-8 py-3 text-sm font-medium text-white bg-orange-500 border-2 border-orange-500 rounded-lg hover:bg-orange-600 focus:ring-2 focus:ring-orange-600 disabled:opacity-50 flex items-center gap-2 transition-colors">
+                {isSubmitting ? (
+                  <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /><span>Menyimpan...</span></>
+                ) : (
+                  <><Save className="w-4 h-4" /><span>Simpan Perubahan</span></>
+                )}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );

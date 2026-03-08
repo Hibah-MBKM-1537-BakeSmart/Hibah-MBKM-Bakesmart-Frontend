@@ -67,6 +67,7 @@ export const {
     nama_en: String(item.nama_en || ""),
     deskripsi_id: String(item.deskripsi_id || ""),
     deskripsi_en: String(item.deskripsi_en || ""),
+    calc_count: item.calc_count != null ? Number(item.calc_count) : 1,
     harga: Number(item.harga),
     harga_diskon: item.harga_diskon ? Number(item.harga_diskon) : null,
     stok: Number(item.stok),
