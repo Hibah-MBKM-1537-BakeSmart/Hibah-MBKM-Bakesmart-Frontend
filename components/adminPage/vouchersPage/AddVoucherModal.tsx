@@ -4,7 +4,7 @@ import type React from "react";
 import { useState } from "react";
 import { X } from "lucide-react";
 import { useVouchers } from "@/app/contexts/VouchersContext";
-import { useToast } from "@/app/contexts/ToastContext";
+import { useAppAlert } from "@/components/AppAlert";
 
 interface AddVoucherModalProps {
   isOpen: boolean;
@@ -13,7 +13,7 @@ interface AddVoucherModalProps {
 
 export function AddVoucherModal({ isOpen, onClose }: AddVoucherModalProps) {
   const { addVoucher } = useVouchers();
-  const { addToast } = useToast();
+  const { success, error : alertError, confirm } =  useAppAlert();
   const [formData, setFormData] = useState({
     nama: "",
     code: "",
@@ -27,11 +27,7 @@ export function AddVoucherModal({ isOpen, onClose }: AddVoucherModalProps) {
     e.preventDefault();
 
     if (!formData.code || !formData.discount || !formData.maxUsage) {
-      addToast({
-        type: "error",
-        title: "Validasi Gagal",
-        message: "Silakan isi kode voucher, diskon, dan penggunaan maksimal",
-      });
+      await alertError("Validasi Gagal", "Silakan isi kode voucher, diskon, dan penggunaan maksimal");
       return;
     }
 
@@ -48,11 +44,7 @@ export function AddVoucherModal({ isOpen, onClose }: AddVoucherModalProps) {
           : 0,
       } as any);
 
-      addToast({
-        type: "success",
-        title: "Voucher Berhasil Ditambahkan",
-        message: `Voucher ${formData.code} telah ditambahkan ke sistem`,
-      });
+      await success("Voucher Berhasil Ditambahkan", `Voucher ${formData.code} telah ditambahkan ke sistem`);
 
       setFormData({
         nama: "",
@@ -64,11 +56,7 @@ export function AddVoucherModal({ isOpen, onClose }: AddVoucherModalProps) {
       });
       onClose();
     } catch (error) {
-      addToast({
-        type: "error",
-        title: "Gagal Menambahkan Voucher",
-        message: error instanceof Error ? error.message : "Terjadi kesalahan",
-      });
+      await alertError("Gagal Menambahkan Voucher", error instanceof Error ? error.message : "Terjadi kesalahan");
     }
   };
 

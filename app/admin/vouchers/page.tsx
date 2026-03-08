@@ -22,7 +22,7 @@ import { EditVoucherModal } from "@/components/adminPage/vouchersPage/EditVouche
 import { VoucherDetailModal } from "@/components/adminPage/vouchersPage/VoucherDetailModal";
 import { QRCodeModal } from "@/components/adminPage/vouchersPage/QRCodeModal";
 import { DeleteConfirmModal } from "@/components/adminPage/vouchersPage/DeleteConfirmModal";
-import { useToast } from "@/app/contexts/ToastContext";
+import { useAppAlert } from "@/components/AppAlert";
 
 type SortField = "code" | "discount" | "expiryDate" | "usage" | "status";
 type SortDirection = "asc" | "desc" | null;
@@ -46,7 +46,7 @@ export default function VouchersPage() {
     id: string;
     code: string;
   } | null>(null);
-  const { addToast } = useToast();
+  const { success, error : alertError, confirm } =  useAppAlert();
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -158,17 +158,9 @@ export default function VouchersPage() {
 
     try {
       await deleteVoucher(voucherToDelete.id);
-      addToast({
-        type: "success",
-        title: "Voucher Berhasil di Hapus",
-        message: `Voucher ${voucherToDelete.code} telah dihapus dari sistem`,
-      });
+      await success("Voucher deleted successfully!", `Voucher ${voucherToDelete.code} has been removed from the system.`);
     } catch (error) {
-      addToast({
-        type: "error",
-        title: "Gagal menghapus voucher",
-        message: error instanceof Error ? error.message : "Terjadi kesalahan",
-      });
+      await alertError("Gagal menghapus voucher", error instanceof Error ? error.message : "Terjadi kesalahan");
     } finally {
       setVoucherToDelete(null);
     }
