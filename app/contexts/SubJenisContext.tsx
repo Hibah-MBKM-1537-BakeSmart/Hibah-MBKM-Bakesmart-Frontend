@@ -14,37 +14,19 @@ interface ExtendedSubJenisContext {
   errors: Record<string, string | null>;
   fetchSubJenis: () => Promise<void>;
   createSubJenis: (data: Omit<SubJenis, "id">) => Promise<SubJenis | null>;
-  updateSubJenis: (
-    id: number,
-    data: Partial<SubJenis>
-  ) => Promise<SubJenis | null>;
+  updateSubJenis: ( id: number, data: Partial<SubJenis> ) => Promise<SubJenis | null>;
   deleteSubJenis: (id: number) => Promise<boolean>;
+
   getSubJenisByJenisId: (jenisId: number) => SubJenis[];
-  addSubJenisToProduct: (
-    productId: number,
-    subJenisId: number
-  ) => Promise<boolean>;
-  appendHariToSubJenis: (
-    subJenisId: number,
-    hariId: number,
-  ) => Promise<boolean>;
-  removeHariFromSubJenis: (
-    subJenisId: number,
-    hariId: number,
-  ) => Promise<boolean>;
-  appendAttributeToSubJenis: (
-    subJenisId: number,
-    attributeId: number,
-    attr: { nama_id: string; nama_en: string; harga?: number }
-  ) => Promise<boolean>;
-  removeAttributeFromSubJenis: (
-    subJenisId: number,
-    attributeId: number
-  ) => Promise<boolean>;
-  removeSubJenisFromProduct: (
-    productId: number,
-    subJenisId: number
-  ) => Promise<boolean>;
+  addSubJenisToProduct: ( productId: number, subJenisId: number ) => Promise<boolean>;
+  appendHariToSubJenis: ( subJenisId: number, hariId: number, ) => Promise<boolean>;
+  removeHariFromSubJenis: ( subJenisId: number, hariId: number, ) => Promise<boolean>;
+
+  createAttribute : (attr: { nama_id: string; nama_en: string; }) => Promise<{ id: number; nama_id: string; nama_en: string; } | null>;
+  appendAttributeToSubJenis: ( subJenisId: number, attributeId: number, attr: { nama_id: string; nama_en: string; harga?: number } ) => Promise<boolean>;
+  removeAttributeFromSubJenis: ( subJenisId: number, attributeId: number ) => Promise<boolean>;
+
+  removeSubJenisFromProduct: ( productId: number, subJenisId: number ) => Promise<boolean>;
 }
 
 const ExtendedContext =
@@ -152,28 +134,50 @@ function ExtendedProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const createAttribute = async (attr: { nama_id: string; nama_en: string; }) => {
+    try {
+      const normalizedId = attr.nama_id.trim().toLowerCase();
+      const normalizedEn = attr.nama_en.trim().toLowerCase();
+
+      const checkRes = await fetch("/api/atribut");
+      if (!checkRes.ok) throw new Error("Failed to fetch");
+      const data = await checkRes.json();
+
+      const existingAttrs = data.data;
+
+      const existingAttr = existingAttrs.find((a: any) =>
+        a.nama_id?.trim().toLowerCase() === normalizedId ||
+        a.nama_en?.trim().toLowerCase() === normalizedEn
+      );
+
+      // If already exists, return it
+      if (existingAttr) {
+        // console.log("Atribut sudah ada:", existingAttr);
+        return existingAttr;
+      }
+
+      const res = await fetchWithAuth("/api/atribut", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...attr, harga: 0 }),
+      });
+
+      if (!res.ok) throw new Error();
+
+      const result = await res.json();
+      // console.log("Atribut baru dibuat:", result);
+      return result;
+    } catch {
+      return null;
+    }
+  };
+
   const appendAttributeToSubJenis = async (
     subJenisId: number,
     attributeId: number,
     attr: { nama_id: string; nama_en: string; harga?: number }
   ) => {
     try {
-      if (!attributeId) {
-        const attrRes = await fetch("/api/atribut", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            nama_id: attr.nama_id,
-            nama_en: attr.nama_en,
-          }),
-        });
-
-        if (!attrRes.ok) throw new Error();
-
-        const attrResult = await attrRes.json();
-        attributeId = attrResult.id || attrResult?.data?.id;
-      }
-
       // Append attribute with harga
       if (attributeId) {
         const appendRes = await fetch(
@@ -233,6 +237,7 @@ function ExtendedProvider({ children }: { children: ReactNode }) {
         deleteSubJenis: remove,
         appendHariToSubJenis,
         removeHariFromSubJenis,
+        createAttribute,
         appendAttributeToSubJenis,
         removeAttributeFromSubJenis,
         getSubJenisByJenisId,

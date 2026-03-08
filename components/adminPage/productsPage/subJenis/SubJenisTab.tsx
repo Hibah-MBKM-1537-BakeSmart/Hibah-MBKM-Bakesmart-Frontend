@@ -10,22 +10,17 @@ import {
   Globe,
   Search,
   Layers,
-  ChevronDown,
-  ChevronRight,
   Settings,
   Calendar,
   Package,
   Clock,
   Gift,
   X,
-  CheckCircle,
-  XCircle,
 } from "lucide-react";
 import { Jenis, useJenis } from "@/app/contexts/JenisContext";
 import { useSubJenis } from "@/app/contexts/SubJenisContext";
 import { useAppAlert } from "@/components/AppAlert";
 import { Attribute, Hari, SubJenis } from "@/app/contexts/SubJenisCrud";
-// import { useToast } from "../Toast";
 
 // Days options (matching backend /hari endpoint)
 const DAYS_OPTIONS = [
@@ -39,6 +34,7 @@ const DAYS_OPTIONS = [
 ];
 
 // Add/Edit Sub Jenis Form Modal with Configuration
+
 function SubJenisFormModal({
   isOpen,
   onClose,
@@ -64,59 +60,76 @@ function SubJenisFormModal({
   const [attributes, setAttributes] = useState<Attribute[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [activeSection, setActiveSection] = useState<"basic" | "config">(
-    "basic"
-  );
+  const [activeSection, setActiveSection] = useState<"basic" | "config">("basic");
 
-  // Form for adding new attribute
-  const [attributeMode, setAttributeMode] = useState<"manual" | "select">("manual");
-  const [selectedAttributeId, setSelectedAttributeId] = useState<number | null>(null);
+  // Attribute form state
+  const [availableAttributes, setAvailableAttributes] = useState<Attribute[]>([]);
   const [showAttributeForm, setShowAttributeForm] = useState(false);
-  const [newAttrId, setNewAttrId] = useState(0);
+  const [attrInputMode, setAttrInputMode] = useState<"select" | "manual">("select");
+
+  // Select mode
+  const [selectedAttrId, setSelectedAttrId] = useState<number | "">("");
+  const [selectedAttrPrice, setSelectedAttrPrice] = useState<number>(0);
+
+  // Manual mode
   const [newAttrNameId, setNewAttrNameId] = useState("");
   const [newAttrNameEn, setNewAttrNameEn] = useState("");
   const [newAttrPrice, setNewAttrPrice] = useState<number>(0);
 
+  // ─── Fetch available attributes ───────────────────────────────────────────
+  useEffect(() => {
+    const fetchAttributes = async () => {
+      try {
+        const res = await fetch("/api/atribut");
+        if (!res.ok) throw new Error("Failed to fetch");
+        const data = await res.json();
+        setAvailableAttributes(data.data);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchAttributes();
+  }, []);
+
+  // ─── Reset form on open ────────────────────────────────────────────────────
   useEffect(() => {
     if (isOpen) {
-      // console.log("editingSubJenis:", editingSubJenis);
       setNamaId(editingSubJenis?.nama_id || "");
       setNamaEn(editingSubJenis?.nama_en || "");
       setJenisId(editingSubJenis?.jenis_id || jenisList[0]?.id || 0);
       setMinAmount(editingSubJenis?.min_amount || 1);
       setMaxAmount(editingSubJenis?.max_amount || 100);
       setPoClosed(editingSubJenis?.po_closed || "15:00:00");
-      setSelectedDays(editingSubJenis?.hari?.length ? editingSubJenis.hari.map((h: Hari) => h.id) : [1, 2, 3, 4, 5, 6, 7]);
+      setSelectedDays(
+        editingSubJenis?.hari?.length
+          ? editingSubJenis.hari.map((h: Hari) => h.id)
+          : [1, 2, 3, 4, 5, 6, 7]
+      );
       setAttributes(editingSubJenis?.attributes || []);
       setError("");
       setActiveSection("basic");
-      setShowAttributeForm(false);
+      resetAttrForm();
 
-      // Load existing hari and attributes from backend when editing
       if (editingSubJenis?.id) {
         loadExistingConfiguration(editingSubJenis.id);
       }
     }
   }, [isOpen, editingSubJenis, jenisList]);
 
+  const resetAttrForm = () => {
+    setShowAttributeForm(false);
+    setAttrInputMode("select");
+    setSelectedAttrId("");
+    setSelectedAttrPrice(0);
+    setNewAttrNameId("");
+    setNewAttrNameEn("");
+    setNewAttrPrice(0);
+    setError("");
+  };
+
+  // ─── Load config from backend when editing ────────────────────────────────
   const loadExistingConfiguration = async (subJenisId: number) => {
     try {
-      // Fetch detail sub_jenis untuk mendapatkan min_amount, max_amount, po_closed
-      // const detailRes = await fetch(`/api/sub_jenis/${subJenisId}`);
-      // if (detailRes.ok) {
-      //   const detailData = await detailRes.json();
-      //   const detail = detailData.data;
-
-      //   // Update form dengan data lengkap dari backend
-      //   setMinAmount(detail.min_amount || 1);
-      //   setMaxAmount(detail.max_amount || 100);
-      //   setPoClosed(detail.po_closed || "15:00:00");
-      //   setNamaId(detail.nama_id || "");
-      //   setNamaEn(detail.nama_en || "");
-      //   setJenisId(detail.ref_jenis_id || jenisList[0]?.id || 0);
-      // }
-
-      // Fetch existing hari
       const hariRes = await fetch(`/api/sub_jenis/${subJenisId}/hari`);
       if (hariRes.ok) {
         const hariData = await hariRes.json();
@@ -124,13 +137,12 @@ function SubJenisFormModal({
         setSelectedDays(hariIds.length > 0 ? hariIds : [1, 2, 3, 4, 5, 6, 7]);
       }
 
-      // Fetch existing attributes
       const attrRes = await fetch(`/api/sub_jenis/${subJenisId}/attribute`);
       if (attrRes.ok) {
         const attrData = await attrRes.json();
-        const attrs =
+        const attrs: Attribute[] =
           attrData.data?.map((a: any) => ({
-            id: a.attribute_id,
+            id: a.attribute_id,       // real DB id — 0 means manual/new
             nama_id: a.attribute_nama_id,
             nama_en: a.attribute_nama_en,
             harga: a.harga_attribute || 0,
@@ -142,6 +154,7 @@ function SubJenisFormModal({
     }
   };
 
+  // ─── Submit ───────────────────────────────────────────────────────────────
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -150,17 +163,14 @@ function SubJenisFormModal({
       setError("Nama Indonesia dan English wajib diisi");
       return;
     }
-
     if (!jenisId) {
       setError("Pilih Jenis (Kategori Utama) terlebih dahulu");
       return;
     }
-
     if (minAmount > maxAmount) {
       setError("Min Amount tidak boleh lebih besar dari Max Amount");
       return;
     }
-
     if (selectedDays.length === 0) {
       setError("Pilih minimal satu hari tersedia");
       return;
@@ -176,8 +186,8 @@ function SubJenisFormModal({
         min_amount: minAmount,
         max_amount: maxAmount,
         po_closed: poClosed,
-        hari: selectedDays.map(dayId => ({ id: dayId })),
-        attributes: attributes,
+        hari: selectedDays.map((dayId) => ({ id: dayId })),
+        attributes,
       });
       onClose();
     } catch (err) {
@@ -187,99 +197,107 @@ function SubJenisFormModal({
     }
   };
 
+  // ─── Days ─────────────────────────────────────────────────────────────────
   const toggleDay = (dayId: number) => {
     setSelectedDays((prev) =>
       prev.includes(dayId) ? prev.filter((d) => d !== dayId) : [...prev, dayId]
     );
   };
+  const selectAllDays = () => setSelectedDays(DAYS_OPTIONS.map((d) => d.id));
+  const clearAllDays = () => setSelectedDays([]);
 
-  const addAttribute = () => {
-    if (!newAttrNameId.trim() || !newAttrNameEn.trim()) {
-      setError("Nama atribut (ID dan EN) wajib diisi");
+  // ─── Attributes ───────────────────────────────────────────────────────────
+  /**
+   * Derive a stable list key. For existing attrs (id > 0) use the id.
+   * For manual attrs (id === 0) we fall back to the index during render.
+   */
+  const addAttributeFromSelect = () => {
+    if (!selectedAttrId) {
+      setError("Pilih atribut terlebih dahulu");
       return;
     }
+    // Prevent duplicate
+    const alreadyAdded = attributes.some((a) => a.id === selectedAttrId);
+    if (alreadyAdded) {
+      setError("Atribut ini sudah ditambahkan");
+      return;
+    }
+    const selected = availableAttributes.find((a) => a.id === selectedAttrId);
+    if (!selected) return;
 
     setAttributes((prev) => [
       ...prev,
       {
-        id: 0, //!fix
+        id: selected.id,
+        nama_id: selected.nama_id,
+        nama_en: selected.nama_en,
+        harga: selectedAttrPrice,
+      },
+    ]);
+    resetAttrForm();
+  };
+
+  const addAttributeManual = () => {
+    if (!newAttrNameId.trim() || !newAttrNameEn.trim()) {
+      setError("Nama atribut (ID dan EN) wajib diisi");
+      return;
+    }
+    setAttributes((prev) => [
+      ...prev,
+      {
+        id: 0, // 0 = brand-new, will be created on save
         nama_id: newAttrNameId.trim(),
         nama_en: newAttrNameEn.trim(),
         harga: newAttrPrice,
       },
     ]);
-
-    setNewAttrNameId("");
-    setNewAttrNameEn("");
-    setNewAttrPrice(0);
-    setShowAttributeForm(false);
-    setError("");
+    resetAttrForm();
   };
 
   const removeAttribute = (index: number) => {
     setAttributes((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const editAttribute = (index: number, updatedAttr: Attribute) => {
-    setAttributes((prev) =>
-      prev.map((attr, i) => (i === index ? updatedAttr : attr))
-    );
-  };
-
-  const selectAllDays = () => {
-    setSelectedDays(DAYS_OPTIONS.map((d) => d.id));
-  };
-
-  const clearAllDays = () => {
-    setSelectedDays([]);
-  };
-
   if (!isOpen) return null;
 
+  // ─── JSX ──────────────────────────────────────────────────────────────────
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="fixed inset-0 bg-black/40" onClick={onClose} />
       <div className="flex min-h-full items-center justify-center p-4">
         <div className="relative w-full max-w-2xl bg-white rounded-lg shadow-xl max-h-[90vh] flex flex-col">
-          <form
-            onSubmit={handleSubmit}
-            className="flex flex-col h-full max-h-[90vh]"
-          >
+          <form onSubmit={handleSubmit} className="flex flex-col h-full max-h-[90vh]">
+
             {/* Header */}
             <div className="p-6 border-b border-gray-200 flex-shrink-0">
               <h3 className="text-lg font-semibold text-gray-900">
                 {editingSubJenis ? "Edit Sub Jenis" : "Tambah Sub Jenis"}
               </h3>
               <p className="text-sm text-gray-500 mt-1">
-                Konfigurasi sub kategori beserta pengaturan jumlah, hari, dan
-                atribut
+                Konfigurasi sub kategori beserta pengaturan jumlah, hari, dan atribut
               </p>
             </div>
 
-            {/* Section Tabs */}
+            {/* Tabs */}
             <div className="flex border-b border-gray-200 flex-shrink-0">
-              <button
-                type="button"
-                onClick={() => setActiveSection("basic")}
-                className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${activeSection === "basic"
-                    ? "text-orange-600 border-b-2 border-orange-600 bg-orange-50"
-                    : "text-gray-500 hover:text-gray-700"
+              {(["basic", "config"] as const).map((section) => (
+                <button
+                  key={section}
+                  type="button"
+                  onClick={() => setActiveSection(section)}
+                  className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+                    activeSection === section
+                      ? "text-orange-600 border-b-2 border-orange-600 bg-orange-50"
+                      : "text-gray-500 hover:text-gray-700"
                   }`}
-              >
-                <Layers className="w-4 h-4 inline mr-2" />
-                Informasi Dasar
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveSection("config")}
-                className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${activeSection === "config"
-                    ? "text-orange-600 border-b-2 border-orange-600 bg-orange-50"
-                    : "text-gray-500 hover:text-gray-700"
-                  }`}
-              >
-                <Settings className="w-4 h-4 inline mr-2" />
-                Konfigurasi
-              </button>
+                >
+                  {section === "basic" ? (
+                    <><Layers className="w-4 h-4 inline mr-2" />Informasi Dasar</>
+                  ) : (
+                    <><Settings className="w-4 h-4 inline mr-2" />Konfigurasi</>
+                  )}
+                </button>
+              ))}
             </div>
 
             {/* Content */}
@@ -290,14 +308,13 @@ function SubJenisFormModal({
                 </div>
               )}
 
-              {activeSection === "basic" ? (
+              {/* ── BASIC ─────────────────────────────────────────────── */}
+              {activeSection === "basic" && (
                 <div className="space-y-4">
-                  {/* Jenis Selection */}
                   <div>
                     <label className="flex items-center text-sm font-medium text-gray-700 mb-1">
                       <Tag className="w-4 h-4 mr-1 text-orange-500" />
-                      Jenis (Kategori Utama){" "}
-                      <span className="text-red-500">*</span>
+                      Jenis (Kategori Utama) <span className="text-red-500">*</span>
                     </label>
                     <select
                       value={jenisId}
@@ -314,7 +331,6 @@ function SubJenisFormModal({
                     </select>
                   </div>
 
-                  {/* Name ID */}
                   <div>
                     <label className="flex items-center text-sm font-medium text-gray-700 mb-1">
                       <Globe className="w-4 h-4 mr-1 text-red-500" />
@@ -330,7 +346,6 @@ function SubJenisFormModal({
                     />
                   </div>
 
-                  {/* Name EN */}
                   <div>
                     <label className="flex items-center text-sm font-medium text-gray-700 mb-1">
                       <Globe className="w-4 h-4 mr-1 text-blue-500" />
@@ -346,9 +361,13 @@ function SubJenisFormModal({
                     />
                   </div>
                 </div>
-              ) : (
+              )}
+
+              {/* ── CONFIG ────────────────────────────────────────────── */}
+              {activeSection === "config" && (
                 <div className="space-y-6">
-                  {/* Amount Settings */}
+
+                  {/* Amount */}
                   <div className="bg-gray-50 rounded-lg p-4">
                     <h4 className="flex items-center text-sm font-medium text-gray-900 mb-3">
                       <Package className="w-4 h-4 mr-2 text-blue-500" />
@@ -356,60 +375,45 @@ function SubJenisFormModal({
                     </h4>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="text-sm text-gray-600 mb-1 block">
-                          Min Amount
-                        </label>
-                        <input
-                          type="number"
-                          value={minAmount}
-                          onChange={(e) => setMinAmount(Number(e.target.value))}
-                          min={0}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                        />
+                        <label className="text-sm text-gray-600 mb-1 block">Min Amount</label>
+                        <input type="number" value={minAmount}
+                          onChange={(e) => setMinAmount(Number(e.target.value))} min={0}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500" />
                       </div>
                       <div>
-                        <label className="text-sm text-gray-600 mb-1 block">
-                          Max Amount
-                        </label>
-                        <input
-                          type="number"
-                          value={maxAmount}
-                          onChange={(e) => setMaxAmount(Number(e.target.value))}
-                          min={1}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                        />
+                        <label className="text-sm text-gray-600 mb-1 block">Max Amount</label>
+                        <input type="number" value={maxAmount}
+                          onChange={(e) => setMaxAmount(Number(e.target.value))} min={1}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500" />
                       </div>
                     </div>
                   </div>
 
-                  {/* PO Closed Time */}
+                  {/* PO Closed */}
                   <div className="bg-gray-50 rounded-lg p-4">
                     <h4 className="flex items-center text-sm font-medium text-gray-900 mb-3">
                       <Clock className="w-4 h-4 mr-2 text-purple-500" />
                       Waktu Tutup Pre-Order
                     </h4>
-                    <div>
-                      <label className="text-sm text-gray-600 mb-2 block">
-                        Jam Tutup PO (Format: HH:mm:ss)
-                      </label>
-                      <input
-                        type="time"
-                        value={poClosed.substring(0, 5)} // Display as HH:mm
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          // time input may return HH:mm or HH:mm:ss depending on browser/step
-                          setPoClosed(val.split(":").length === 2 ? val + ":00" : val);
-                        }}
-                        step="1"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                      />
-                      <p className="text-xs text-gray-500 mt-1">
-                        Pre-order akan ditutup pada jam: {poClosed}
-                      </p>
-                    </div>
+                    <label className="text-sm text-gray-600 mb-2 block">
+                      Jam Tutup PO (Format: HH:mm:ss)
+                    </label>
+                    <input
+                      type="time"
+                      value={poClosed.substring(0, 5)}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setPoClosed(val.split(":").length === 2 ? val + ":00" : val);
+                      }}
+                      step="1"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Pre-order akan ditutup pada jam: {poClosed}
+                    </p>
                   </div>
 
-                  {/* Available Days */}
+                  {/* Days */}
                   <div className="bg-gray-50 rounded-lg p-4">
                     <div className="flex items-center justify-between mb-3">
                       <h4 className="flex items-center text-sm font-medium text-gray-900">
@@ -417,182 +421,248 @@ function SubJenisFormModal({
                         Hari Tersedia
                       </h4>
                       <div className="flex space-x-2">
-                        <button
-                          type="button"
-                          onClick={selectAllDays}
-                          className="text-xs text-orange-600 hover:text-orange-700"
-                        >
-                          Pilih Semua
-                        </button>
+                        <button type="button" onClick={selectAllDays}
+                          className="text-xs text-orange-600 hover:text-orange-700">Pilih Semua</button>
                         <span className="text-gray-300">|</span>
-                        <button
-                          type="button"
-                          onClick={clearAllDays}
-                          className="text-xs text-gray-500 hover:text-gray-700"
-                        >
-                          Hapus Semua
-                        </button>
+                        <button type="button" onClick={clearAllDays}
+                          className="text-xs text-gray-500 hover:text-gray-700">Hapus Semua</button>
                       </div>
                     </div>
                     <div className="grid grid-cols-4 gap-2">
                       {DAYS_OPTIONS.map((day) => (
-                        <button
-                          key={day.id}
-                          type="button"
-                          onClick={() => toggleDay(day.id)}
-                          className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${selectedDays.includes(day.id)
+                        <button key={day.id} type="button" onClick={() => toggleDay(day.id)}
+                          className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                            selectedDays.includes(day.id)
                               ? "bg-orange-500 text-white"
                               : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"
-                            }`}
-                        >
+                          }`}>
                           {day.nama_id}
                         </button>
                       ))}
                     </div>
                     {selectedDays.length === 0 && (
-                      <p className="text-xs text-red-500 mt-2">
-                        Pilih minimal satu hari
-                      </p>
+                      <p className="text-xs text-red-500 mt-2">Pilih minimal satu hari</p>
                     )}
                   </div>
 
-                  {/* Attributes / Add-ons */}
+                  {/* ── Attributes ──────────────────────────────────────── */}
                   <div className="bg-gray-50 rounded-lg p-4">
                     <div className="flex items-center justify-between mb-3">
                       <h4 className="flex items-center text-sm font-medium text-gray-900">
                         <Gift className="w-4 h-4 mr-2 text-pink-500" />
                         Add-ons / Atribut Tambahan
                       </h4>
-                      <button type="button"
-                      onClick={() => setShowAttributeForm(!showAttributeForm)}
-                      className="flex items-center px-3 py-1.5 text-xs font-medium text-white bg-orange-500 rounded-lg hover:bg-orange-600 transition-colors" >
-                        <Plus className="w-3 h-3 mr-1" /> Tambah Atribut
-                      </button>
+                      {!showAttributeForm && (
+                        <button type="button"
+                          onClick={() => setShowAttributeForm(true)}
+                          className="flex items-center px-3 py-1.5 text-xs font-medium text-white bg-orange-500 rounded-lg hover:bg-orange-600 transition-colors">
+                          <Plus className="w-3 h-3 mr-1" /> Tambah Atribut
+                        </button>
+                      )}
                     </div>
-                    
-                    {/* Add Attribute Form */}
+
+                    {/* Attribute Form */}
                     {showAttributeForm && (
-                      <div className="mb-4 p-3 bg-white rounded-lg border border-orange-200 space-y-3">
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <label className="text-xs font-medium text-gray-700 mb-1 block"> Nama (Indonesia) </label>
-                            <input type="text" value={newAttrNameId}
-                            onChange={(e) => setNewAttrNameId(e.target.value)}
-                            placeholder="Masukkan atribut..."
-                            className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500" />
-                          </div>
-                          <div>
-                            <label className="text-xs font-medium text-gray-700 mb-1 block"> Nama (English) </label>
-                            <input type="text" value={newAttrNameEn}
-                            onChange={(e) => setNewAttrNameEn(e.target.value)}
-                            placeholder="Insert Attribute..."
-                            className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500" />
-                          </div>
-                        </div>
-                        <div>
-                          <label className="text-xs font-medium text-gray-700 mb-1 block"> Harga Tambahan (Rp) </label>
-                          <input type="number" value={newAttrPrice}
-                          onChange={(e) => setNewAttrPrice(Number(e.target.value)) }
-                          min={0}
-                          placeholder="15000" className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500" />
-                        </div>
-                        <div className="flex justify-end gap-2">
-                          <button type="button"
-                          onClick={() => {
-                            setShowAttributeForm(false);
-                            setNewAttrNameId(""); 
-                            setNewAttrNameEn(""); 
-                            setNewAttrPrice(0); 
-                            setError(""); }}
-                          className="px-3 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50" >
-                            Batal
-                          </button>
+                      <div className="mb-4 bg-white rounded-lg border border-orange-200 overflow-hidden">
 
-                          <button type="button"
-                          onClick={addAttribute}
-                          className="px-3 py-1.5 text-xs font-medium text-white bg-orange-500 rounded-lg hover:bg-orange-600" >
-                            Simpan Atribut
+                        {/* Mode toggle */}
+                        <div className="flex border-b border-gray-200">
+                          <button
+                            type="button"
+                            onClick={() => { setAttrInputMode("select"); setError(""); }}
+                            className={`flex-1 px-4 py-2.5 text-xs font-medium transition-colors ${
+                              attrInputMode === "select"
+                                ? "bg-orange-50 text-orange-600 border-b-2 border-orange-500"
+                                : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+                            }`}
+                          >
+                            <Tag className="w-3 h-3 inline mr-1" />
+                            Pilih dari Daftar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => { setAttrInputMode("manual"); setError(""); }}
+                            className={`flex-1 px-4 py-2.5 text-xs font-medium transition-colors ${
+                              attrInputMode === "manual"
+                                ? "bg-orange-50 text-orange-600 border-b-2 border-orange-500"
+                                : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+                            }`}
+                          >
+                            <Plus className="w-3 h-3 inline mr-1" />
+                            Input Manual
                           </button>
                         </div>
-                      </div> )}
 
-                      {/* Attributes List */}
-                      <div className="space-y-2">
-                        {attributes.length === 0 ? (
-                          <div className="text-center py-8 text-gray-400">
-                            <Gift className="w-12 h-12 mx-auto mb-2 opacity-20" />
-                            <p className="text-sm"> Belum ada atribut ditambahkan </p>
-                            <p className="text-xs mt-1"> Klik "Tambah Atribut" untuk menambahkan add-ons </p> </div>
-                          ) : ( 
-                            attributes.map((attr, index) => ( 
-                              <div key={index}
-                              className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200" >
-                                <div>
-                                  <p className="font-medium text-gray-900"> {attr.nama_id} </p>
-                                  <p className="text-xs text-gray-500"> {attr.nama_en} </p>
-                                </div>
-                                <div className="flex items-center gap-3"> 
-                                  <span className="text-sm font-medium text-orange-600"> +Rp {attr?.harga?.toLocaleString("id-ID") ?? "0"} </span>
-                                  <button type="button"
-                                  onClick={() => removeAttribute(index)}
-                                  className="p-1 text-red-500 hover:bg-red-50 rounded" > <X className="w-4 h-4" />
-                                  </button>
-                                </div>
-                              </div> 
-                            )) 
+                        <div className="p-3 space-y-3">
+                          {/* ── SELECT MODE ─────────────────────────────── */}
+                          {attrInputMode === "select" && (
+                            <>
+                              <div>
+                                <label className="text-xs font-medium text-gray-700 mb-1 block">
+                                  Pilih Atribut
+                                </label>
+                                <select
+                                  value={selectedAttrId}
+                                  onChange={(e) => {
+                                    const id = Number(e.target.value);
+                                    setSelectedAttrId(id);
+                                    const found = availableAttributes.find((a) => a.id === id);
+                                    // Pre-fill price from master attribute
+                                    setSelectedAttrPrice(found?.harga ?? 0);
+                                  }}
+                                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                                >
+                                  <option value="">— Pilih Atribut —</option>
+                                  {availableAttributes
+                                    .filter((a) => !attributes.some((added) => added.id === a.id))
+                                    .map((attr) => (
+                                      <option key={attr.id} value={attr.id}>
+                                        {attr.nama_id} ({attr.nama_en})
+                                      </option>
+                                    ))}
+                                </select>
+                              </div>
+                              <div>
+                                <label className="text-xs font-medium text-gray-700 mb-1 block">
+                                  Harga Tambahan (Rp)
+                                </label>
+                                <input
+                                  type="number"
+                                  value={selectedAttrPrice}
+                                  onChange={(e) => setSelectedAttrPrice(Number(e.target.value))}
+                                  min={0}
+                                  placeholder="0"
+                                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                                />
+                              </div>
+                            </>
                           )}
+
+                          {/* ── MANUAL MODE ─────────────────────────────── */}
+                          {attrInputMode === "manual" && (
+                            <>
+                              <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                  <label className="text-xs font-medium text-gray-700 mb-1 block">
+                                    Nama (Indonesia)
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={newAttrNameId}
+                                    onChange={(e) => setNewAttrNameId(e.target.value)}
+                                    placeholder="Contoh: Lilin"
+                                    className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-xs font-medium text-gray-700 mb-1 block">
+                                    Nama (English)
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={newAttrNameEn}
+                                    onChange={(e) => setNewAttrNameEn(e.target.value)}
+                                    placeholder="Example: Candle"
+                                    className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                                  />
+                                </div>
+                              </div>
+                              <div>
+                                <label className="text-xs font-medium text-gray-700 mb-1 block">
+                                  Harga Tambahan (Rp)
+                                </label>
+                                <input
+                                  type="number"
+                                  value={newAttrPrice}
+                                  onChange={(e) => setNewAttrPrice(Number(e.target.value))}
+                                  min={0}
+                                  placeholder="15000"
+                                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                                />
+                              </div>
+                            </>
+                          )}
+
+                          {/* Actions */}
+                          <div className="flex justify-end gap-2 pt-1">
+                            <button type="button" onClick={resetAttrForm}
+                              className="px-3 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
+                              Batal
+                            </button>
+                            <button
+                              type="button"
+                              onClick={attrInputMode === "select" ? addAttributeFromSelect : addAttributeManual}
+                              className="px-3 py-1.5 text-xs font-medium text-white bg-orange-500 rounded-lg hover:bg-orange-600">
+                              Simpan Atribut
+                            </button>
+                          </div>
                         </div>
                       </div>
+                    )}
+
+                    {/* Attributes list */}
+                    <div className="space-y-2">
+                      {attributes.length === 0 ? (
+                        <div className="text-center py-8 text-gray-400">
+                          <Gift className="w-12 h-12 mx-auto mb-2 opacity-20" />
+                          <p className="text-sm">Belum ada atribut ditambahkan</p>
+                          <p className="text-xs mt-1">Klik "Tambah Atribut" untuk menambahkan add-ons</p>
+                        </div>
+                      ) : (
+                        attributes.map((attr, index) => (
+                          <div key={attr.id > 0 ? attr.id : `manual-${index}`}
+                            className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200">
+                            <div>
+                              <p className="font-medium text-gray-900 text-sm">{attr.nama_id}</p>
+                              <p className="text-xs text-gray-500">{attr.nama_en}</p>
+                              {attr.id === 0 && (
+                                <span className="text-[10px] text-blue-500 font-medium">• Input manual</span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <span className="text-sm font-medium text-orange-600">
+                                +Rp {attr?.harga?.toLocaleString("id-ID") ?? "0"}
+                              </span>
+                              <button type="button" onClick={() => removeAttribute(index)}
+                                className="p-1 text-red-500 hover:bg-red-50 rounded">
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
                   </div>
-                )}
+                </div>
+              )}
             </div>
 
             {/* Footer */}
             <div className="flex justify-between items-center p-6 border-t border-gray-200 bg-gray-50 flex-shrink-0">
               <div className="text-sm text-gray-500">
-                {activeSection === "basic" ? (
-                  <span>Langkah 1/2: Informasi Dasar</span>
-                ) : (
-                  <span>Langkah 2/2: Konfigurasi</span>
-                )}
+                {activeSection === "basic"
+                  ? <span>Langkah 1/2: Informasi Dasar</span>
+                  : <span>Langkah 2/2: Konfigurasi</span>}
               </div>
               <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
-                  disabled={loading}
-                >
+                <button type="button" onClick={onClose} disabled={loading}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
                   Batal
                 </button>
                 {activeSection === "basic" ? (
-                  <button
-                    type="button"
-                    onClick={() => setActiveSection("config")}
-                    className="px-4 py-2 text-sm font-medium text-white bg-orange-500 rounded-lg hover:bg-orange-600"
-                  >
+                  <button type="button" onClick={() => setActiveSection("config")}
+                    className="px-4 py-2 text-sm font-medium text-white bg-orange-500 rounded-lg hover:bg-orange-600">
                     Lanjut ke Konfigurasi
                   </button>
                 ) : (
                   <>
-                    <button
-                      type="button"
-                      onClick={() => setActiveSection("basic")}
-                      className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
-                      disabled={loading}
-                    >
+                    <button type="button" onClick={() => setActiveSection("basic")} disabled={loading}
+                      className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
                       Kembali
                     </button>
-                    <button
-                      type="submit"
-                      disabled={loading}
-                      className="px-4 py-2 text-sm font-medium text-white bg-orange-500 rounded-lg hover:bg-orange-600 disabled:opacity-50"
-                    >
-                      {loading
-                        ? "Menyimpan..."
-                        : editingSubJenis
-                          ? "Simpan Perubahan"
-                          : "Simpan"}
+                    <button type="submit" disabled={loading}
+                      className="px-4 py-2 text-sm font-medium text-white bg-orange-500 rounded-lg hover:bg-orange-600 disabled:opacity-50">
+                      {loading ? "Menyimpan..." : editingSubJenis ? "Simpan Perubahan" : "Simpan"}
                     </button>
                   </>
                 )}
@@ -680,6 +750,7 @@ export function SubJenisTab() {
     deleteSubJenis,
     appendHariToSubJenis,
     removeHariFromSubJenis,
+    createAttribute,
     appendAttributeToSubJenis,
     removeAttributeFromSubJenis,
   } = useSubJenis();
@@ -709,30 +780,9 @@ export function SubJenisTab() {
     return matchesSearch && matchesJenis;
   });
 
-  const readErrorMessage = async (
-    response: Response,
-    fallbackMessage: string
-  ) => {
-    try {
-      const text = await response.text();
-      if (!text) return fallbackMessage;
-
-      try {
-        const json = JSON.parse(text);
-        return json.message || json.error || fallbackMessage;
-      } catch {
-        return text;
-      }
-    } catch {
-      return fallbackMessage;
-    }
-  };
-
   const handleAddSubJenis = async (data: SubJenis) => {
     try {
-      // ================================
-      // STEP 1 — Use Context to Create
-      // ================================
+      // ── STEP 1: Create base SubJenis ─────────────────────────────────────
       const created = await createSubJenis({
         nama_id: data.nama_id,
         nama_en: data.nama_en,
@@ -749,57 +799,53 @@ export function SubJenisTab() {
 
       const subJenisId = created.id;
 
-      // ================================
-      // STEP 2 — Append Hari
-      // ================================
-      for (const hariId of data.hari || []) {
-        const res = await appendHariToSubJenis(subJenisId, hariId.id);
-
+      // ── STEP 2: Append Hari ──────────────────────────────────────────────
+      for (const hari of data.hari || []) {
+        const res = await appendHariToSubJenis(subJenisId, hari.id);
         if (!res) {
           await error("Gagal", `Gagal menambahkan hari`);
           return;
         }
       }
 
-      // ================================
-      // STEP 3 — Create & Append Attributes
-      // ================================
+      // ── STEP 3: Append Attributes ────────────────────────────────────────
+      // attr.id > 0  → existing master attribute, attach directly
+      // attr.id === 0 → manual input, create new attribute first then attach
       for (const attr of data.attributes || []) {
         let attributeId = attr.id;
 
-        if (attributeId) {
-          const res = await appendAttributeToSubJenis(
-            subJenisId, 
-            attributeId,
-            {
-              nama_id: attr.nama_id,
-              nama_en: attr.nama_en,
-              harga: attr.harga || 0,
-            }
-          );
-
-          if (!res) {
-            await error("Gagal", `Gagal menambahkan hari`);
+        if (attributeId === 0) {
+          // Create the attribute in master table first
+          const newAttr = await createAttribute({
+            nama_id: attr.nama_id,
+            nama_en: attr.nama_en,
+          });
+          if (!newAttr) {
+            await error("Gagal", `Gagal membuat atribut "${attr.nama_id}"`);
             return;
           }
+          attributeId = newAttr.id;
+        }
+
+        const res = await appendAttributeToSubJenis(subJenisId, attributeId, {
+          nama_id: attr.nama_id,
+          nama_en: attr.nama_en,
+          harga: attr.harga ?? 0,
+        });
+
+        if (!res) {
+          await error("Gagal", `Gagal menambahkan atribut "${attr.nama_id}"`);
+          return;
         }
       }
 
-      // ================================
-      // SUCCESS
-      // ================================
-      await success(
-        "Berhasil",
-        `"${data.nama_id}" berhasil ditambahkan dengan konfigurasi.`
-      );
-
+      // ── SUCCESS ──────────────────────────────────────────────────────────
+      await success("Berhasil", `"${data.nama_id}" berhasil ditambahkan dengan konfigurasi.`);
     } catch (err) {
       console.error(err);
       await error(
         "Terjadi Kesalahan",
-        err instanceof Error
-          ? err.message
-          : "Gagal menambahkan sub jenis"
+        err instanceof Error ? err.message : "Gagal menambahkan sub jenis"
       );
     }
   };
@@ -808,10 +854,8 @@ export function SubJenisTab() {
     if (!editingSubJenis) return;
 
     try {
-      // ================================
-      // STEP 1 — Use Context to Create
-      // ================================
-      const created = await updateSubJenis(editingSubJenis.id, {
+      // ── STEP 1: Update base fields ───────────────────────────────────────
+      const updated = await updateSubJenis(editingSubJenis.id, {
         nama_id: data.nama_id,
         nama_en: data.nama_en,
         jenis_id: data.jenis_id,
@@ -820,109 +864,91 @@ export function SubJenisTab() {
         po_closed: data.po_closed,
       });
 
-      if (!created) {
+      if (!updated) {
         await error("Gagal", "Gagal mengupdate sub jenis");
         return;
       }
 
-      // ================================
-      // STEP 2
-      // ================================
+      // ── STEP 2: Sync Hari ────────────────────────────────────────────────
       try {
-        const existingHariIds: number[] = editingSubJenis.hari?.map((h) => Number(h.id)) || [];
+        const existingHariIds = editingSubJenis.hari?.map((h) => Number(h.id)) ?? [];
+        const newHariIds = data.hari?.map((h) => Number(h.id)) ?? [];
 
-        const newHariIds: number[] =
-          data.hari?.map((h) => Number(h.id)) || [];
+        const toRemove = existingHariIds.filter((id) => !newHariIds.includes(id));
+        const toAdd    = newHariIds.filter((id) => !existingHariIds.includes(id));
 
-        const toRemove = existingHariIds.filter(
-          (id) => !newHariIds.includes(id)
-        );
-
-        const toAdd = newHariIds.filter(
-          (id) => !existingHariIds.includes(id)
-        );
-
-        // Hapus yang tidak dipakai lagi
-        await Promise.all(
-          toRemove.map((hariId) =>
-            removeHariFromSubJenis(editingSubJenis.id, hariId)
-          )
-        );
-
-        // Tambah yang baru
-        await Promise.all(
-          toAdd.map((hariId) =>
-            appendHariToSubJenis(editingSubJenis.id, hariId)
-          )
-        );
-      } catch (error) {
-        console.error("Gagal update hari:", error);
+        await Promise.all(toRemove.map((hariId) => removeHariFromSubJenis(editingSubJenis.id, hariId)));
+        await Promise.all(toAdd.map((hariId) => appendHariToSubJenis(editingSubJenis.id, hariId)));
+      } catch (e) {
+        console.error("Gagal sync hari:", e);
       }
 
-      // ================================
-      // STEP 3
-      // ================================
+      // ── STEP 3: Sync Attributes ──────────────────────────────────────────
+      // Strategy:
+      //   • Separate incoming attrs into "existing" (id > 0) and "manual/new" (id === 0)
+      //   • For existing: diff against what was previously saved — remove dropped ones, add new ones
+      //   • For manual (id === 0): always create + attach (they are brand new)
       try {
-        const existingAttributeIds: number[] = editingSubJenis.attributes?.map((a) => Number(a.id)) || [];
+        const existingAttrIds = editingSubJenis.attributes?.map((a) => Number(a.id)) ?? [];
 
-        const newAttributes = data.attributes || [];
+        const incomingExisting = data.attributes?.filter((a) => a.id > 0) ?? [];
+        const incomingManual   = data.attributes?.filter((a) => a.id === 0) ?? [];
 
-        const newAttributeIds: number[] =
-          newAttributes.map((a) => Number(a.id));
+        const incomingExistingIds = incomingExisting.map((a) => Number(a.id));
 
-        // Cari yang harus dihapus
-        const toRemove = existingAttributeIds.filter(
-          (id) => !newAttributeIds.includes(id)
-        );
-
-        // Cari yang harus ditambahkan
-        const toAdd = newAttributes.filter(
-          (attr) => !existingAttributeIds.includes(Number(attr.id))
-        );
-
-        // ✅ 1. Remove dulu
+        // Remove attributes that were present before but are no longer selected
+        const toRemove = existingAttrIds.filter((id) => !incomingExistingIds.includes(id));
         await Promise.all(
-          toRemove.map((attributeId) =>
-            removeAttributeFromSubJenis(editingSubJenis.id, attributeId)
-          )
+          toRemove.map((attrId) => removeAttributeFromSubJenis(editingSubJenis.id, attrId))
         );
 
-        // ✅ 2. Tambah hanya yang benar-benar baru
+        // Add existing-master attributes that are newly added (weren't there before)
+        const toAdd = incomingExisting.filter((a) => !existingAttrIds.includes(Number(a.id)));
         for (const attr of toAdd) {
-          const res = await appendAttributeToSubJenis(
-            editingSubJenis.id,
-            Number(attr.id),
-            {
-              nama_id: attr.nama_id,
-              nama_en: attr.nama_en,
-              harga: attr.harga ?? 0,
-            }
-          );
-
+          const res = await appendAttributeToSubJenis(editingSubJenis.id, attr.id, {
+            nama_id: attr.nama_id,
+            nama_en: attr.nama_en,
+            harga: attr.harga ?? 0,
+          });
           if (!res) {
-            await error("Gagal", "Gagal menambahkan atribut");
+            await error("Gagal", `Gagal menambahkan atribut "${attr.nama_id}"`);
             return;
           }
         }
 
-      } catch (error) {
-        console.error("Gagal update atribut:", error);
+        // Create & attach all manual attributes (always new)
+        for (const attr of incomingManual) {
+          const newAttr = await createAttribute({
+            nama_id: attr.nama_id,
+            nama_en: attr.nama_en,
+          });
+          console.log("newAttr:", newAttr);
+          if (!newAttr) {
+            await error("Gagal", `Gagal membuat atribut "${attr.nama_id}"`);
+            return;
+          }
+          const res = await appendAttributeToSubJenis(editingSubJenis.id, newAttr.id, {
+            nama_id: attr.nama_id,
+            nama_en: attr.nama_en,
+            harga: attr.harga ?? 0,
+          });
+          if (!res) {
+            await error("Gagal", `Gagal menambahkan atribut "${attr.nama_id}"`);
+            return;
+          }
+        }
+      } catch (e) {
+        console.error("Gagal sync atribut:", e);
       }
 
 
       setEditingSubJenis(null);
-      await success(
-        "Berhasil",
-        `"${data.nama_id}" berhasil memperbarui dengan konfigurasi.`
-      );
-
+      await success("Berhasil", `"${data.nama_id}" berhasil diperbarui dengan konfigurasi.`);
     } catch (err) {
       console.error(err);
       await error(
         "Terjadi Kesalahan",
-        err instanceof Error
-          ? err.message
-          : "Gagal mengupdate sub jenis"
+        err instanceof Error ? err.message : "Gagal mengupdate sub jenis"
       );
     }
   };
