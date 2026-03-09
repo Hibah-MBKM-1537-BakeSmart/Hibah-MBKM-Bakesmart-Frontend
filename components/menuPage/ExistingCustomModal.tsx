@@ -53,7 +53,7 @@ export function ExistingCustomizationModal({
   // Calculate current stock based on product type
   const currentStock = item.isDaily
     ? item.dailyStock || 0
-    : item.sub_jenis?.[0]?.min_amount || 0;
+    : item.sub_jenis?.max_amount || 0;
 
   // Get all cart items for this product
   const productCartItems = cartItems.filter(

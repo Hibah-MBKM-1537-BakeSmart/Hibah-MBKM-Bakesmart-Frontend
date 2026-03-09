@@ -93,8 +93,8 @@ export interface ApiProduct {
   created_at?: string;
   updated_at?: string;
   gambars?: Array<{ id: number; file_path: string } | null>;
-  jenis?: Array<{ id: number; nama_en: string; nama_id: string }>;
-  sub_jenis?: Array<{
+  jenis?: { id: number; nama_en: string; nama_id: string };
+  sub_jenis?: {
     id: number;
     nama_en: string;
     nama_id: string;
@@ -102,7 +102,7 @@ export interface ApiProduct {
     is_closed?: boolean;
     min_amount?: number;
     max_amount?: number;
-  }>;
+  };
   hari?: Array<{ id: number; nama_en: string; nama_id: string }>;
   attributes?: Array<{
     id: number;
@@ -145,8 +145,8 @@ export interface MenuItem {
     created_at?: string;
     updated_at?: string;
   }>;
-  jenis: Array<{ id: number; nama_en: string; nama_id: string }>;
-  sub_jenis?: Array<{
+  jenis: { id: number; nama_en: string; nama_id: string };
+  sub_jenis?: {
     id: number;
     nama_en: string;
     nama_id: string;
@@ -154,7 +154,7 @@ export interface MenuItem {
     is_closed?: boolean;
     min_amount?: number;
     max_amount?: number;
-  }>;
+  };
   isSubJenisClosed?: boolean; // Flag to indicate if product's sub_jenis is closed
   hari: Array<{ id: number; nama_en: string; nama_id: string }>;
   attributes: Array<{

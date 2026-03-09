@@ -77,7 +77,7 @@ export function Menu() {
             deskripsi_en: product.deskripsi_en || "",
             harga: product.harga,
             harga_diskon: product.harga_diskon || null,
-            stok: product.sub_jenis?.[0]?.min_amount || 0, // Use min_amount from sub_jenis as stock
+            stok: product.sub_jenis?.max_amount || 0, // Use max_amount from sub_jenis as stock
             isBestSeller: product.isBestSeller || false,
             isDaily: product.isDaily || false,
             dailyStock: product.daily_stock || 0,
@@ -91,7 +91,7 @@ export function Menu() {
                 created_at: "", // Sesuaikan jika ada datanya
                 updated_at: "", // Sesuaikan jika ada datanya
               })),
-            jenis: product.jenis || [],
+            jenis: product.jenis || { id: 0, nama_en: "Unknown", nama_id: "Tidak Diketahui" },
             hari: product.hari || [],
             attributes: product.attributes || [],
             bahans: product.bahans || [],
@@ -105,14 +105,10 @@ export function Menu() {
           { id: number; nama_id: string; nama_en: string }
         >();
         products.forEach((p) => {
-          p.jenis.forEach((j) => {
-            if (!categoryMap.has(j.id)) {
-              categoryMap.set(j.id, {
-                id: j.id,
-                nama_id: j.nama_id,
-                nama_en: j.nama_en,
-              });
-            }
+          categoryMap.set(p.jenis.id, {
+            id: p.jenis.id,
+            nama_id: p.jenis.nama_id,
+            nama_en: p.jenis.nama_en,
           });
         });
         const uniqueCategories = Array.from(categoryMap.values());
@@ -142,9 +138,9 @@ export function Menu() {
     ...categories
       .filter((cat) => cat.id !== 0)
       .map((cat) => ({
-        id: cat.nama_id.toLowerCase().replace(/ /g, "-"),
+        id: `cat-${cat.id}`,
         name: language === "id" ? cat.nama_id : cat.nama_en,
-        active: activeCategory === cat.nama_id.toLowerCase().replace(/ /g, "-"),
+        active: activeCategory === `cat-${cat.id}`,
       })),
   ];
 
@@ -153,10 +149,7 @@ export function Menu() {
     activeCategory === "all"
       ? menuItems
       : menuItems.filter((item) =>
-          item.jenis.some(
-            (j) =>
-              j.nama_id.toLowerCase().replace(/ /g, "-") === activeCategory,
-          ),
+          `cat-${item.jenis.id}` === activeCategory,
         );
 
   const itemsPerView = 4;

@@ -69,9 +69,7 @@ export function MenuGrid() {
         const products: MenuItem[] = (data.data || []).map(
           (product: ApiProduct) => {
             // Check if any sub_jenis has is_closed = true
-            const isSubJenisClosed = (product.sub_jenis || []).some(
-              (sj) => sj?.is_closed === true,
-            );
+            const isSubJenisClosed = product.sub_jenis?.is_closed === true;
 
             return {
               id: product.id,
@@ -81,7 +79,7 @@ export function MenuGrid() {
               deskripsi_en: product.deskripsi_en || "",
               harga: product.harga,
               harga_diskon: product.harga_diskon || null,
-              stok: product.sub_jenis?.[0]?.min_amount || 0, // Use min_amount from sub_jenis as stock
+              stok: product.sub_jenis?.max_amount || 0, // Use max_amount from sub_jenis as stock
               isBestSeller: product.isBestSeller || false,
               // Sesuaikan dengan data dari API (berdasarkan contoh JSON kamu)
               isDaily: product.isDaily || false,
@@ -89,7 +87,7 @@ export function MenuGrid() {
               created_at: product.created_at || "",
               updated_at: product.updated_at || "",
               isSubJenisClosed, // Add the flag
-              sub_jenis: product.sub_jenis || [],
+              sub_jenis: product.sub_jenis || {id: 0, nama_en: "Unknown", nama_id: "Tidak Diketahui", jenis_id: 0, is_closed: false, min_amount: 0, max_amount: 0},
               gambars: (product.gambars || [])
                 .filter(
                   (g): g is { id: number; file_path: string } => g !== null,
@@ -100,7 +98,7 @@ export function MenuGrid() {
                   created_at: "", // Sesuaikan jika ada datanya
                   updated_at: "", // Sesuaikan jika ada datanya
                 })),
-              jenis: product.jenis || [],
+              jenis: product.jenis || { id: 0, nama_en: "Unknown", nama_id: "Tidak Diketahui" },
               hari: product.hari || [],
               attributes: product.attributes || [],
               bahans: product.bahans || [],
@@ -116,14 +114,10 @@ export function MenuGrid() {
           { id: number; nama_id: string; nama_en: string }
         >();
         products.forEach((p) => {
-          p.jenis.forEach((j) => {
-            if (!categoryMap.has(j.id)) {
-              categoryMap.set(j.id, {
-                id: j.id,
-                nama_id: j.nama_id,
-                nama_en: j.nama_en,
-              });
-            }
+          categoryMap.set(p.jenis.id, {
+            id: p.jenis.id,
+            nama_id: p.jenis.nama_id,
+            nama_en: p.jenis.nama_en,
           });
         });
         const uniqueCategories = Array.from(categoryMap.values());
@@ -271,7 +265,7 @@ export function MenuGrid() {
     activeCategory === "all"
       ? menuItems
       : menuItems.filter((item) =>
-          item.jenis.some((j) => `cat-${j.id}` === activeCategory),
+          `cat-${item.jenis.id}` === activeCategory,
         );
 
   // Filter products based on selected order day
@@ -293,16 +287,8 @@ export function MenuGrid() {
   // Group products by jenis (category) for display with separators
   const groupedByJenis = dayFilteredItems.reduce(
     (acc, item) => {
-      const jenisKey =
-        item.jenis.length > 0 ? `${item.jenis[0].id}` : "uncategorized";
-      const jenisName =
-        item.jenis.length > 0
-          ? language === "id"
-            ? item.jenis[0].nama_id
-            : item.jenis[0].nama_en
-          : language === "id"
-            ? "Lainnya"
-            : "Others";
+      const jenisKey = `${item.jenis.id}`;
+      const jenisName = language === "id" ? item.jenis.nama_id : item.jenis.nama_en;
 
       if (!acc[jenisKey]) {
         acc[jenisKey] = {

@@ -9,8 +9,6 @@ import {
   Trash2,
   Eye,
   Package,
-  Settings,
-  Minus,
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
@@ -24,7 +22,6 @@ import {
 import { AddProductModal } from "@/components/adminPage/productsPage/Product/AddProductModal";
 import { ProductDetailModal } from "@/components/adminPage/productsPage/Product/ProductDetailModal";
 import { EditProductModal } from "@/components/adminPage/productsPage/Product/EditProductModal";
-// import { useToast } from "@/components/adminPage/Toast";
 import { Jenis, useJenis } from "@/app/contexts/JenisContext";
 import { useSubJenis } from "@/app/contexts/SubJenisContext";
 import { useProducts } from "@/app/contexts/ProductsContext";
@@ -157,7 +154,7 @@ function ProductTableRow({
         )}
       </td>
       <td className="px-3 lg:px-6 py-4 whitespace-nowrap text-xs lg:text-sm text-gray-900 w-[100px]">
-        {product.sales ?? 0}
+        {product.sales_total ?? 0} ({formatPrice(product.revenue_total ?? 0)})
       </td>
       <td className="px-3 lg:px-6 py-4 whitespace-nowrap text-right text-sm font-medium w-[140px]">
         <div className="flex items-center justify-end gap-2">
