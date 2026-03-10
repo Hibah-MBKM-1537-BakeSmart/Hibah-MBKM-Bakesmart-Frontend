@@ -41,6 +41,10 @@ export interface Product {
   sales?: number;
   rating?: number;
   status: "active" | "inactive";
+  sales_total?: number;
+  sales_total_today?: number;
+  revenue_total?: number;
+  revenue_today?: number;
 }
 
 export interface FormProduct {
@@ -85,5 +89,9 @@ export const {
     sales: Number(item.sales || 0),
     rating: Number(item.rating || 0),
     status: (item.status as "active" | "inactive") || "active",
+    sales_total: item.sales_total ? Number(item.sales_total) : 0,
+    sales_total_today: item.sales_total_today ? Number(item.sales_total_today) : 0,
+    revenue_total: item.revenue_total ? Number(item.revenue_total) : 0,
+    revenue_today: item.revenue_today ? Number(item.revenue_today) : 0,
   }),
 });

@@ -234,7 +234,7 @@ export function OrderCard({ order }: OrderCardProps) {
             >
               <div className="flex justify-between gap-2">
                 <span className="truncate flex-1">
-                  {item.nama_id || item.nama_en || "Product"}
+                  {item.product_name_id || item.product_name_en || "Product"}
                 </span>
                 <span className="whitespace-nowrap">{item.jumlah}x</span>
               </div>

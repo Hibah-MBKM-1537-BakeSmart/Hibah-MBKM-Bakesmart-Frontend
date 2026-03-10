@@ -238,10 +238,14 @@ export function AddProductModal({
         ref_sub_jenis_id: formData.ref_sub_jenis_id,
       };
 
+      console.log("Submitting new product:", newProduct);
       onAddProduct(newProduct).then(async (created) => {
+        console.log("created:", created);
         if (!created?.id) return;
 
         // Append bahans — id > 0 = existing master, id === 0 = manual new
+        // console.log("created:", created);
+        // console.log("Uploaded bahan 1:", formData.bahans);
         for (const bahan of formData.bahans) {
           await appendBahanToProduct(created.id, (bahan as any).id ?? 0, {
             nama_id: bahan.nama_id || "",
@@ -249,7 +253,9 @@ export function AddProductModal({
             jumlah: Number(bahan.jumlah) || 0,
           });
         }
-
+        
+        // console.log("Uploaded bahan 2:", formData.bahans);
+        // console.log("Uploaded images:", formData.gambars);
         if (formData.gambars[0]) {
           await appendGambarToProduct(created.id, formData.gambars[0]);
         }

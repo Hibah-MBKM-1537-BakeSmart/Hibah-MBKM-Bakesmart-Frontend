@@ -97,7 +97,7 @@ export function OrderList() {
           <div className="text-center col-span-2 lg:col-span-1">
             <p className="text-2xl lg:text-3xl font-bold font-admin-heading" style={{ color: '#5d4037' }}>
               Rp {state.filteredOrders.reduce((sum, order) => {
-                return sum + (order.total_harga || 0);
+                return sum + Number(order.total_harga || 0);
               }, 0).toLocaleString('id-ID')}
             </p>
             <p className="text-xs lg:text-sm font-admin-body mt-1" style={{ color: '#8b6f47' }}>

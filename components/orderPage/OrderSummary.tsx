@@ -424,10 +424,10 @@ export function OrderSummary({
               <span className="font-medium">{formatPrice(subtotal)}</span>
             </div>
 
-            <div className="flex justify-between items-center text-sm">
+            {/* <div className="flex justify-between items-center text-sm">
               <span className="text-gray-600">{t("orderSummary.tax")}</span>
               <span>{formatPrice(tax)}</span>
-            </div>
+            </div> */}
 
             <div className="flex justify-between items-center text-sm">
               <span className="text-gray-600">

@@ -52,16 +52,15 @@ export function MenuCard({
   const availableDays = (item.hari || [])
     .filter((day) => day !== null)
     .map((day) => day.nama_id);
-  const category =
-    (item.jenis || []).filter((jenis) => jenis !== null).length > 0
-      ? language === "id"
-        ? item.jenis[0].nama_id
-        : item.jenis[0].nama_en
-      : "";
+  const category = item.jenis
+    ? language === "id"
+      ? item.jenis.nama_id
+      : item.jenis.nama_en
+    : "";
   // Use daily_stock for daily products, min_amount from sub_jenis for others
   const stock = item.isDaily
     ? item.dailyStock || 0
-    : item.sub_jenis?.[0]?.max_amount || 0;
+    : item.sub_jenis?.max_amount || 0;
   const attributes = item.attributes.map((attr) => ({
     id: attr.id,
     name: language === "id" ? attr.nama_id : attr.nama_en,
