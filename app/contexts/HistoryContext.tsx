@@ -3,8 +3,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { fetchWithAuth } from "@/lib/api/fetchWithAuth";
 
-const BACKEND_API_URL = '/api/orders';
-
 // Based on order_product table structure
 export interface OrderItem {
   id: number;
@@ -91,10 +89,10 @@ export function HistoryProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const fetchOrders = async () => {
       try {
-        console.log('[HistoryContext] Fetching orders from backend...');
+        // console.log('[HistoryContext] Fetching orders from backend...');
         setState(prev => ({ ...prev, isLoading: true }));
         
-        const response = await fetchWithAuth(`${BACKEND_API_URL}?relation=products`, {
+        const response = await fetchWithAuth('/api/orders', {
           method: 'GET',
           cache: 'no-store',
         });
@@ -104,21 +102,17 @@ export function HistoryProvider({ children }: { children: React.ReactNode }) {
         }
 
         const result = await response.json();
-        console.log('[HistoryContext] Backend response:', result);
+        // console.log('[HistoryContext] Backend response:', result);
         
         if (result.success && result.data) {
           // Normalize data: convert string numbers to numbers
           const normalizedOrders = result.data.map((order: any) => ({
             ...order,
-            total_harga: typeof order.total_harga === 'string' 
-              ? parseFloat(order.total_harga) 
-              : order.total_harga,
-            shipping_cost: typeof order.shipping_cost === 'string'
-              ? parseFloat(order.shipping_cost)
-              : order.shipping_cost,
+            total_harga: Number(order.total_harga),
+            shipping_cost: Number(order.shipping_cost),
           }));
 
-          console.log('[HistoryContext] Loaded', normalizedOrders.length, 'orders');
+          // console.log('[HistoryContext] Loaded', normalizedOrders.length, 'orders');
           
           setState(prev => ({
             ...prev,
@@ -269,10 +263,10 @@ export function HistoryProvider({ children }: { children: React.ReactNode }) {
 
   const refreshOrders = async () => {
     try {
-      console.log('[HistoryContext] Refreshing orders...');
+      // console.log('[HistoryContext] Refreshing orders...');
       setState(prev => ({ ...prev, isLoading: true }));
       
-      const response = await fetchWithAuth(`${BACKEND_API_URL}?relation=products`, {
+      const response = await fetchWithAuth('/api/orders', {
         method: 'GET',
         cache: 'no-store',
       });
@@ -287,15 +281,11 @@ export function HistoryProvider({ children }: { children: React.ReactNode }) {
         // Normalize data
         const normalizedOrders = result.data.map((order: any) => ({
           ...order,
-          total_harga: typeof order.total_harga === 'string' 
-            ? parseFloat(order.total_harga) 
-            : order.total_harga,
-          shipping_cost: typeof order.shipping_cost === 'string'
-            ? parseFloat(order.shipping_cost)
-            : order.shipping_cost,
+          total_harga: Number(order.total_harga),
+          shipping_cost: Number(order.shipping_cost)
         }));
 
-        console.log('[HistoryContext] Refreshed', normalizedOrders.length, 'orders');
+        // console.log('[HistoryContext] Refreshed', normalizedOrders.length, 'orders');
 
         setState(prev => ({
           ...prev,
