@@ -56,9 +56,10 @@ export async function POST(request: Request) {
     }
 
     const data = await response.json();
+    // console.log(`[Products API] POST Success:`, data);
     console.log(`[Products API] POST Success`);
 
-    return NextResponse.json(data);
+    return NextResponse.json(data.data);
   } catch (error) {
     console.error("[Products API] POST Error:", error);
     return NextResponse.json(

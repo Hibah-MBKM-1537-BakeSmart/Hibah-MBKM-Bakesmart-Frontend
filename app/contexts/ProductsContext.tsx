@@ -125,7 +125,7 @@ function ExtendedProvider({ children }: { children: ReactNode }) {
         `/api/products/${productId}/gambar`,
         {
           method: "POST",
-          body: formData, // ❗ DO NOT set Content-Type
+          body: formData,
         }
       );
 
