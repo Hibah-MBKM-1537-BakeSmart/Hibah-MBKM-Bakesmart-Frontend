@@ -198,7 +198,7 @@ export function KasirProvider({ children }: { children: React.ReactNode }) {
         // Map daily_stock to stok field for compatibility with existing cart logic
         const mappedProducts = availableProducts.map((p: Product) => ({
           ...p,
-          stok: p.daily_stock || 0
+          stok: p.stok || 0
         }));
 
         // Extract unique categories from products' jenis field
