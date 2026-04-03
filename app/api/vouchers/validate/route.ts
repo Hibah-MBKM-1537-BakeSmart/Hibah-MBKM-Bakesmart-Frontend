@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { createAuthHeaders } from "@/lib/api/fetchWithAuth";
 
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+
 /**
  * Ini adalah API Handler untuk POST /api/vouchers/validate
  * Proxy ke backend: POST http://localhost:5000/voucher/check
@@ -9,38 +11,40 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const { voucherCode, amount, userId } = body;
+    const normalizedAmount = Number(amount) || 0;
+    const normalizedUserId = Number(userId);
 
     if (!voucherCode) {
       return NextResponse.json(
         { message: "Kode voucher harus diisi" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     // Panggil backend API
-    const backendUrl = "http://localhost:5000/voucher/check";
+    const backendUrl = `${BACKEND_URL}/voucher/check`;
 
     const response = await fetch(backendUrl, {
       method: "POST",
       headers: createAuthHeaders(request),
       body: JSON.stringify({
         code: voucherCode,
-        amount: amount || 0, // Default 0 jika tidak ada
-        userId: userId || 12, // Default 12 sesuai request user jika tidak ada
+        amount: normalizedAmount,
+        userId: Number.isFinite(normalizedUserId) ? normalizedUserId : null,
       }),
     });
 
     const result = await response.json();
     console.log(
       "[API Validate Voucher] Backend response:",
-      JSON.stringify(result, null, 2)
+      JSON.stringify(result, null, 2),
     );
 
     if (!response.ok) {
       // Jika backend mengembalikan error (4xx, 5xx)
       return NextResponse.json(
         { message: result.message || "Gagal memvalidasi voucher" },
-        { status: response.status }
+        { status: response.status },
       );
     }
 
@@ -64,11 +68,11 @@ export async function POST(request: Request) {
     if (!voucherData) {
       console.error(
         "[API Validate Voucher] Voucher data not found in response:",
-        result
+        result,
       );
       return NextResponse.json(
         { message: "Terjadi kesalahan: Data voucher tidak ditemukan" },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -79,7 +83,7 @@ export async function POST(request: Request) {
 
     let discountAmount = 0;
     if (voucherData.persen) {
-      discountAmount = (amount * voucherData.persen) / 100;
+      discountAmount = (normalizedAmount * voucherData.persen) / 100;
 
       // Apply max discount cap
       const maxDiscount = voucherData.maksimal_diskon || 0;
@@ -104,7 +108,7 @@ export async function POST(request: Request) {
     console.error("Error validating voucher:", error);
     return NextResponse.json(
       { message: "Terjadi kesalahan internal server" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

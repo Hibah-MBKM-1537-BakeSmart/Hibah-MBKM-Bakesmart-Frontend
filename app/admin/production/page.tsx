@@ -119,6 +119,13 @@ interface OrderGroup {
   orders: BackendOrder[];
 }
 
+const toDateKey = (value?: string | null): string | null => {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return format(date, "yyyy-MM-dd");
+};
+
 // Transform backend data to frontend Order format
 const transformBackendData = (groups: OrderGroup[]): Order[] => {
   const allOrders: Order[] = [];
@@ -127,7 +134,9 @@ const transformBackendData = (groups: OrderGroup[]): Order[] => {
     group.orders.forEach((order) => {
       // Skip orders with empty products array (nothing to produce)
       if (!order.products || order.products.length === 0) {
-        console.log(`[Production] Skipping order #${order.id} - no products to produce`);
+        console.log(
+          `[Production] Skipping order #${order.id} - no products to produce`,
+        );
         return;
       }
 
@@ -151,7 +160,7 @@ const transformBackendData = (groups: OrderGroup[]): Order[] => {
         })),
         status: order.status,
         created_at: order.created_at || group.tanggal,
-        scheduled_date: group.tanggal,
+        scheduled_date: toDateKey(group.tanggal) || group.tanggal,
         notes: order.notes || "",
         production_status: order.production_status || "pending",
       });
@@ -216,7 +225,7 @@ function ProductionItemRow({
                   <p className="text-xs text-gray-600">
                     Rp{" "}
                     {((addon.quantity || 0) * addon.harga).toLocaleString(
-                      "id-ID"
+                      "id-ID",
                     )}
                   </p>
                 </div>
@@ -250,7 +259,7 @@ function ProductionOrderCard({
 
   const totalItems = order.order_products.reduce(
     (sum, item) => sum + item.jumlah,
-    0
+    0,
   );
 
   const totalAmount = order.order_products.reduce((sum, item) => {
@@ -258,7 +267,7 @@ function ProductionOrderCard({
     const addonTotal =
       item.addons?.reduce(
         (addSum, addon) => addSum + (addon.quantity || 0) * addon.harga,
-        0
+        0,
       ) || 0;
     return sum + baseTotal + addonTotal;
   }, 0);
@@ -305,13 +314,19 @@ function ProductionOrderCard({
 
       {/* Contact Info */}
       <div className="text-xs text-gray-600 mb-3 space-y-1">
-        <p className="flex items-center gap-1"><Phone size={12} /> {order.user.no_hp}</p>
-        <p className="flex items-center gap-1"><Package size={12} /> {totalItems} {t("production.itemsCount")}</p>
+        <p className="flex items-center gap-1">
+          <Phone size={12} /> {order.user.no_hp}
+        </p>
+        <p className="flex items-center gap-1">
+          <Package size={12} /> {totalItems} {t("production.itemsCount")}
+        </p>
       </div>
 
       {/* Products List */}
       <div className="bg-white rounded p-3 border border-gray-200 mb-3 text-sm space-y-1">
-        <p className="font-semibold text-gray-900 mb-2">{t("production.products")}:</p>
+        <p className="font-semibold text-gray-900 mb-2">
+          {t("production.products")}:
+        </p>
         {order.order_products.map((item) => (
           <div key={item.id}>
             <p className="text-gray-900">
@@ -319,7 +334,9 @@ function ProductionOrderCard({
               <span className="text-blue-600 font-bold">x{item.jumlah}</span>
             </p>
             {item.note && (
-              <p className="text-xs text-gray-600 flex items-center gap-1"><FileText size={12} /> {item.note}</p>
+              <p className="text-xs text-gray-600 flex items-center gap-1">
+                <FileText size={12} /> {item.note}
+              </p>
             )}
           </div>
         ))}
@@ -339,7 +356,7 @@ function ProductionOrderCard({
         <p>
           {t("production.schedule")}:{" "}
           {new Date(order.scheduled_date || new Date()).toLocaleDateString(
-            "id-ID"
+            "id-ID",
           )}
         </p>
       </div>
@@ -395,11 +412,11 @@ export default function ProductionPage() {
   const { canAccessSubPage } = useRBAC();
   const { t, language } = useAdminTranslation();
   const dateLocale = language === "id" ? idLocale : enUS;
-  
+
   // Determine accessible tabs based on user role
-  const canAccessProductionList = canAccessSubPage('production:list');
-  const canAccessManageOrder = canAccessSubPage('production:manage');
-  
+  const canAccessProductionList = canAccessSubPage("production:list");
+  const canAccessManageOrder = canAccessSubPage("production:manage");
+
   // Set initial active tab based on what the user can access
   const getInitialTab = (): "orders" | "production" => {
     if (canAccessManageOrder) return "orders";
@@ -408,11 +425,11 @@ export default function ProductionPage() {
   };
 
   const [selectedDate, setSelectedDate] = useState<string>(
-    format(new Date(), "yyyy-MM-dd")
+    format(new Date(), "yyyy-MM-dd"),
   );
   // Multi-select dates for Order tab (using Set for easy toggle)
   const [selectedOrderDates, setSelectedOrderDates] = useState<Set<string>>(
-    new Set()
+    new Set(),
   );
   // Multi-select dates for Production tab
   const [selectedProductionDates, setSelectedProductionDates] = useState<
@@ -426,9 +443,11 @@ export default function ProductionPage() {
     Record<string, string>
   >({});
   const [generalNotes, setGeneralNotes] = useState("");
-  const [activeTab, setActiveTab] = useState<"orders" | "production">(getInitialTab);
+  const [activeTab, setActiveTab] = useState<"orders" | "production">(
+    getInitialTab,
+  );
   const [expandedCategory, setExpandedCategory] = useState<string | null>(
-    "verifying"
+    "verifying",
   );
   const [productionStatusFilter, setProductionStatusFilter] = useState<
     "all" | "pending" | "in_production" | "completed"
@@ -443,7 +462,7 @@ export default function ProductionPage() {
     "id" | "pelanggan" | "status" | "qty" | "tanggal" | "total"
   >("id");
   const [orderSortDirection, setOrderSortDirection] = useState<"asc" | "desc">(
-    "desc"
+    "desc",
   );
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
   const [isEditingOrder, setIsEditingOrder] = useState(false);
@@ -470,7 +489,7 @@ export default function ProductionPage() {
         const transformedOrders = transformBackendData(result.data);
         console.log(
           "[Production] Transformed orders:",
-          transformedOrders.length
+          transformedOrders.length,
         );
         setAllOrders(transformedOrders);
 
@@ -478,11 +497,11 @@ export default function ProductionPage() {
         // Production shows orders that are paid (ready for production) or completed
         const productionOrders = transformedOrders.filter(
           (order: Order) =>
-            order.status === "paid" || order.status === "completed"
+            order.status === "paid" || order.status === "completed",
         );
         console.log(
           "[Production] Orders for production:",
-          productionOrders.length
+          productionOrders.length,
         );
         setOrders(productionOrders);
       } else if (result.status === "error") {
@@ -510,15 +529,13 @@ export default function ProductionPage() {
   const filteredProductionOrders = orders.filter((order: Order) => {
     if (showAllProductionDates || selectedProductionDates.size === 0)
       return true;
-    const orderDate = order.scheduled_date
-      ? order.scheduled_date.split("T")[0]
-      : null;
+    const orderDate = toDateKey(order.scheduled_date || null);
     return orderDate && selectedProductionDates.has(orderDate);
   });
 
   const totalProducts = filteredProductionOrders.reduce(
     (sum, order) => sum + order.order_products.length,
-    0
+    0,
   );
 
   const totalAddons = filteredProductionOrders.reduce((sum, order) => {
@@ -529,7 +546,7 @@ export default function ProductionPage() {
           itemSum +
           (item.addons?.reduce(
             (addonSum, addon) => addonSum + (addon.quantity || 0),
-            0
+            0,
           ) || 0)
         );
       }, 0)
@@ -720,10 +737,10 @@ export default function ProductionPage() {
               order.status === "completed"
                 ? "Selesai"
                 : order.status === "cancelled"
-                ? "Dibatalkan"
-                : order.status === "production"
-                ? "Produksi"
-                : order.status
+                  ? "Dibatalkan"
+                  : order.status === "production"
+                    ? "Produksi"
+                    : order.status
             }</span>
           </div>
         </div>
@@ -737,7 +754,7 @@ export default function ProductionPage() {
               const addonsTotal =
                 item.addons?.reduce(
                   (sum, addon) => sum + (addon.quantity || 0) * addon.harga,
-                  0
+                  0,
                 ) || 0;
               const total = itemTotal + addonsTotal;
 
@@ -755,13 +772,13 @@ export default function ProductionPage() {
                         (addon) => `
                   <div class="product-details" style="font-size: 9pt; color: #666; font-style: italic;">
                     <span style="padding-left: 10px;">+ ${addon.nama} (${
-                          addon.quantity || 0
-                        }x)</span>
+                      addon.quantity || 0
+                    }x)</span>
                     <span>${formatCurrency(
-                      (addon.quantity || 0) * addon.harga
+                      (addon.quantity || 0) * addon.harga,
                     )}</span>
                   </div>
-                `
+                `,
                       )
                       .join("")
                   : ""
@@ -835,7 +852,7 @@ export default function ProductionPage() {
           }
           productMap[productName].addons[addon.nama] += addon.quantity || 0;
         });
-      })
+      }),
     );
 
     // Convert to array format for rendering
@@ -900,7 +917,7 @@ export default function ProductionPage() {
               : Array.from(selectedProductionDates)
                   .sort()
                   .map((d) =>
-                    format(new Date(d), "dd MMM", { locale: idLocale })
+                    format(new Date(d), "dd MMM", { locale: idLocale }),
                   )
                   .join(", ")
           }</p>
@@ -985,7 +1002,7 @@ export default function ProductionPage() {
                     <td class="addon-col"><span class="addon-item">└─ ${item.label}</span></td>
                     <td class="qty-col">${item.qty}</td>
                   </tr>
-                `
+                `,
                   )
                   .join("")}
               `;
@@ -1013,15 +1030,15 @@ export default function ProductionPage() {
         orders.map((order) =>
           order.id === orderId
             ? { ...order, production_status: "completed" as const }
-            : order
-        )
+            : order,
+        ),
       );
       setAllOrders(
         allOrders.map((order) =>
           order.id === orderId
             ? { ...order, production_status: "completed" as const }
-            : order
-        )
+            : order,
+        ),
       );
 
       // Call backend API to update production status
@@ -1047,8 +1064,8 @@ export default function ProductionPage() {
       // Optimistic update
       setAllOrders(
         allOrders.map((o) =>
-          o.id === orderId ? { ...o, status: "pending" as const } : o
-        )
+          o.id === orderId ? { ...o, status: "pending" as const } : o,
+        ),
       );
 
       // Call backend API to update order status
@@ -1095,8 +1112,8 @@ export default function ProductionPage() {
       // Optimistic update
       setAllOrders(
         allOrders.map((o) =>
-          o.id === orderId ? { ...o, status: "paid" as const } : o
-        )
+          o.id === orderId ? { ...o, status: "paid" as const } : o,
+        ),
       );
 
       // Call backend API to update order status to paid
@@ -1121,8 +1138,8 @@ export default function ProductionPage() {
       // Optimistic update
       setAllOrders(
         allOrders.map((o) =>
-          o.id === orderId ? { ...o, status: "completed" as const } : o
-        )
+          o.id === orderId ? { ...o, status: "completed" as const } : o,
+        ),
       );
 
       // Call backend API to update order status to completed
@@ -1203,16 +1220,16 @@ export default function ProductionPage() {
         locale: idLocale,
       })}`,
       15,
-      35
+      35,
     );
     doc.text(
       `Jadwal: ${format(
         new Date(order.scheduled_date || new Date()),
         "dd MMM yyyy",
-        { locale: idLocale }
+        { locale: idLocale },
       )}`,
       15,
-      40
+      40,
     );
 
     // Info Right
@@ -1303,14 +1320,14 @@ export default function ProductionPage() {
   const handleShareWA = (order: Order) => {
     const totalItems = order.order_products.reduce(
       (sum, item) => sum + item.jumlah,
-      0
+      0,
     );
     const totalPrice = order.order_products.reduce((sum, item) => {
       const baseTotal = item.jumlah * item.harga_beli;
       const addonTotal =
         item.addons?.reduce(
           (addSum, addon) => addSum + (addon.quantity || 0) * addon.harga,
-          0
+          0,
         ) || 0;
       return sum + baseTotal + addonTotal;
     }, 0);
@@ -1331,7 +1348,7 @@ export default function ProductionPage() {
             (p.addons && p.addons.length > 0
               ? "\n" +
                 p.addons.map((a) => `  + ${a.nama} (${a.quantity}x)`).join("\n")
-              : "")
+              : ""),
         )
         .join("\n") +
       `\n\n*Total: Rp ${totalPrice.toLocaleString("id-ID")}*\n` +
@@ -1340,9 +1357,9 @@ export default function ProductionPage() {
     window.open(
       `https://wa.me/62${order.user.no_hp.replace(
         /^0/,
-        ""
+        "",
       )}?text=${encodeURIComponent(message)}`,
-      "_blank"
+      "_blank",
     );
   };
 
@@ -1354,21 +1371,15 @@ export default function ProductionPage() {
 
   const groupedOrders = {
     verifying: allOrders.filter((o) => {
-      const orderDate = o.scheduled_date
-        ? o.scheduled_date.split("T")[0]
-        : null;
+      const orderDate = toDateKey(o.scheduled_date || null);
       return isOrderDateSelected(orderDate) && o.status === "verifying";
     }),
     pending: allOrders.filter((o) => {
-      const orderDate = o.scheduled_date
-        ? o.scheduled_date.split("T")[0]
-        : null;
+      const orderDate = toDateKey(o.scheduled_date || null);
       return isOrderDateSelected(orderDate) && o.status === "pending";
     }),
     ongoing: allOrders.filter((o) => {
-      const orderDate = o.scheduled_date
-        ? o.scheduled_date.split("T")[0]
-        : null;
+      const orderDate = toDateKey(o.scheduled_date || null);
       // Map 'ongoing' or 'in_production' to ongoing group if backend returns different strings
       return (
         isOrderDateSelected(orderDate) &&
@@ -1376,21 +1387,15 @@ export default function ProductionPage() {
       );
     }),
     paid: allOrders.filter((o) => {
-      const orderDate = o.scheduled_date
-        ? o.scheduled_date.split("T")[0]
-        : null;
+      const orderDate = toDateKey(o.scheduled_date || null);
       return isOrderDateSelected(orderDate) && o.status === "paid";
     }),
     completed: allOrders.filter((o) => {
-      const orderDate = o.scheduled_date
-        ? o.scheduled_date.split("T")[0]
-        : null;
+      const orderDate = toDateKey(o.scheduled_date || null);
       return isOrderDateSelected(orderDate) && o.status === "completed";
     }),
     cancelled: allOrders.filter((o) => {
-      const orderDate = o.scheduled_date
-        ? o.scheduled_date.split("T")[0]
-        : null;
+      const orderDate = toDateKey(o.scheduled_date || null);
       return isOrderDateSelected(orderDate) && o.status === "cancelled";
     }),
   };
@@ -1442,14 +1447,15 @@ export default function ProductionPage() {
                 <Calendar size={16} /> {t("production.filter")}
                 {selectedOrderDates.size > 0 && !showAllDates && (
                   <span className="text-[10px] text-gray-500 font-normal ml-2">
-                    ({selectedOrderDates.size}/7 {t("production.datesSelected")})
+                    ({selectedOrderDates.size}/7 {t("production.datesSelected")}
+                    )
                   </span>
                 )}
               </h3>
               <div className="flex gap-1.5 flex-wrap">
                 {Array.from({ length: 7 }).map((_, i) => {
                   const currentDate = new Date(
-                    new Date().getTime() + i * 24 * 60 * 60 * 1000
+                    new Date().getTime() + i * 24 * 60 * 60 * 1000,
                   );
                   const dateStr = format(currentDate, "yyyy-MM-dd");
                   const dayName = format(currentDate, "EEE", {
@@ -1526,10 +1532,10 @@ export default function ProductionPage() {
                     dates.add(
                       format(
                         new Date(
-                          new Date().getTime() + i * 24 * 60 * 60 * 1000
+                          new Date().getTime() + i * 24 * 60 * 60 * 1000,
                         ),
-                        "yyyy-MM-dd"
-                      )
+                        "yyyy-MM-dd",
+                      ),
                     );
                   }
                   setSelectedOrderDates(dates);
@@ -1570,7 +1576,7 @@ export default function ProductionPage() {
                   : Array.from(selectedOrderDates)
                       .sort()
                       .map((d) =>
-                        format(new Date(d), "d MMM", { locale: dateLocale })
+                        format(new Date(d), "d MMM", { locale: dateLocale }),
                       )
                       .join(", ")}
               </span>
@@ -1647,7 +1653,7 @@ export default function ProductionPage() {
                       onClick={() => {
                         if (orderSortField === "id") {
                           setOrderSortDirection(
-                            orderSortDirection === "asc" ? "desc" : "asc"
+                            orderSortDirection === "asc" ? "desc" : "asc",
                           );
                         } else {
                           setOrderSortField("id");
@@ -1673,7 +1679,7 @@ export default function ProductionPage() {
                       onClick={() => {
                         if (orderSortField === "pelanggan") {
                           setOrderSortDirection(
-                            orderSortDirection === "asc" ? "desc" : "asc"
+                            orderSortDirection === "asc" ? "desc" : "asc",
                           );
                         } else {
                           setOrderSortField("pelanggan");
@@ -1699,7 +1705,7 @@ export default function ProductionPage() {
                       onClick={() => {
                         if (orderSortField === "status") {
                           setOrderSortDirection(
-                            orderSortDirection === "asc" ? "desc" : "asc"
+                            orderSortDirection === "asc" ? "desc" : "asc",
                           );
                         } else {
                           setOrderSortField("status");
@@ -1725,7 +1731,7 @@ export default function ProductionPage() {
                       onClick={() => {
                         if (orderSortField === "qty") {
                           setOrderSortDirection(
-                            orderSortDirection === "asc" ? "desc" : "asc"
+                            orderSortDirection === "asc" ? "desc" : "asc",
                           );
                         } else {
                           setOrderSortField("qty");
@@ -1751,7 +1757,7 @@ export default function ProductionPage() {
                       onClick={() => {
                         if (orderSortField === "tanggal") {
                           setOrderSortDirection(
-                            orderSortDirection === "asc" ? "desc" : "asc"
+                            orderSortDirection === "asc" ? "desc" : "asc",
                           );
                         } else {
                           setOrderSortField("tanggal");
@@ -1777,7 +1783,7 @@ export default function ProductionPage() {
                       onClick={() => {
                         if (orderSortField === "total") {
                           setOrderSortDirection(
-                            orderSortDirection === "asc" ? "desc" : "asc"
+                            orderSortDirection === "asc" ? "desc" : "asc",
                           );
                         } else {
                           setOrderSortField("total");
@@ -1833,7 +1839,7 @@ export default function ProductionPage() {
                     ].filter(
                       (o) =>
                         orderStatusFilter === "all" ||
-                        o.type === orderStatusFilter
+                        o.type === orderStatusFilter,
                     );
 
                     if (allOrdersList.length === 0) {
@@ -1863,19 +1869,19 @@ export default function ProductionPage() {
 
                       const aTotalItems = a.order_products.reduce(
                         (sum, p) => sum + p.jumlah,
-                        0
+                        0,
                       );
                       const bTotalItems = b.order_products.reduce(
                         (sum, p) => sum + p.jumlah,
-                        0
+                        0,
                       );
                       const aTotalPrice = a.order_products.reduce(
                         (sum, p) => sum + p.jumlah * p.harga_beli,
-                        0
+                        0,
                       );
                       const bTotalPrice = b.order_products.reduce(
                         (sum, p) => sum + p.jumlah * p.harga_beli,
-                        0
+                        0,
                       );
 
                       switch (orderSortField) {
@@ -1894,10 +1900,10 @@ export default function ProductionPage() {
                           break;
                         case "tanggal":
                           const dateA = new Date(
-                            a.scheduled_date || a.created_at
+                            a.scheduled_date || a.created_at,
                           ).getTime();
                           const dateB = new Date(
-                            b.scheduled_date || b.created_at
+                            b.scheduled_date || b.created_at,
                           ).getTime();
                           comparison = dateA - dateB;
                           break;
@@ -1955,11 +1961,11 @@ export default function ProductionPage() {
                       const config = statusConfig[order.type];
                       const totalItems = order.order_products.reduce(
                         (sum, p) => sum + p.jumlah,
-                        0
+                        0,
                       );
                       const totalPrice = order.order_products.reduce(
                         (sum, p) => sum + p.jumlah * p.harga_beli,
-                        0
+                        0,
                       );
 
                       return (
@@ -1992,10 +1998,10 @@ export default function ProductionPage() {
                           <td className="px-4 py-3 text-sm text-gray-700">
                             {format(
                               new Date(
-                                order.scheduled_date || order.created_at
+                                order.scheduled_date || order.created_at,
                               ),
                               "dd/MM/yy",
-                              { locale: idLocale }
+                              { locale: idLocale },
                             )}
                           </td>
                           <td className="px-4 py-3 text-right text-sm font-semibold text-gray-900">
@@ -2036,7 +2042,7 @@ export default function ProductionPage() {
                                           body: JSON.stringify({
                                             status: newStatus,
                                           }),
-                                        }
+                                        },
                                       );
 
                                       if (response.ok) {
@@ -2044,25 +2050,25 @@ export default function ProductionPage() {
                                         const updatedOrders = orders.map((o) =>
                                           o.id === orderId
                                             ? { ...o, status: newStatus }
-                                            : o
+                                            : o,
                                         );
                                         const updatedAllOrders = allOrders.map(
                                           (o) =>
                                             o.id === orderId
                                               ? { ...o, status: newStatus }
-                                              : o
+                                              : o,
                                         );
                                         setOrders(updatedOrders as any);
                                         setAllOrders(updatedAllOrders as any);
                                       } else {
                                         console.error(
-                                          "Failed to update status manually"
+                                          "Failed to update status manually",
                                         );
                                       }
                                     } catch (err) {
                                       console.error(
                                         "Error updating status:",
-                                        err
+                                        err,
                                       );
                                     }
                                   }}
@@ -2074,12 +2080,8 @@ export default function ProductionPage() {
                                 >
                                   <option value="pending">Pending</option>
                                   <option value="ongoing">Ongoing</option>
-                                  <option value="completed">
-                                    Completed
-                                  </option>
-                                  <option value="cancelled">
-                                    Cancelled
-                                  </option>
+                                  <option value="completed">Completed</option>
+                                  <option value="cancelled">Cancelled</option>
                                 </select>
                                 <div className="absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none text-current opacity-50">
                                   <ChevronDown size={12} />
@@ -2089,28 +2091,29 @@ export default function ProductionPage() {
                               <a
                                 href={`https://wa.me/62${order.user.no_hp.replace(
                                   /^0/,
-                                  ""
+                                  "",
                                 )}?text=${encodeURIComponent(
                                   `Halo Kak ${order.user.nama}, berikut detail pesanan Anda:\n\n` +
                                     `*Pesanan #${order.id}*\n` +
                                     `Jadwal: ${format(
                                       new Date(
-                                        order.scheduled_date || order.created_at
+                                        order.scheduled_date ||
+                                          order.created_at,
                                       ),
                                       "dd MMM yyyy",
-                                      { locale: idLocale }
+                                      { locale: idLocale },
                                     )}\n\n` +
                                     `*Rincian Produk:*\n` +
                                     order.order_products
                                       .map(
                                         (p) =>
-                                          `- ${p.product.nama} (${p.jumlah}x)`
+                                          `- ${p.product.nama} (${p.jumlah}x)`,
                                       )
                                       .join("\n") +
                                     `\n\n*Total: Rp ${totalPrice.toLocaleString(
-                                      "id-ID"
+                                      "id-ID",
                                     )}*\n\n` +
-                                    `Mohon ditunggu updatenya ya kak! Terima kasih`
+                                    `Mohon ditunggu updatenya ya kak! Terima kasih`,
                                 )}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
@@ -2144,14 +2147,15 @@ export default function ProductionPage() {
                   {selectedProductionDates.size > 0 &&
                     !showAllProductionDates && (
                       <span className="text-[10px] text-gray-500 font-normal ml-2">
-                        ({selectedProductionDates.size}/7 {t("production.datesSelected")})
+                        ({selectedProductionDates.size}/7{" "}
+                        {t("production.datesSelected")})
                       </span>
                     )}
                 </h3>
                 <div className="flex gap-1.5 flex-wrap">
                   {Array.from({ length: 7 }).map((_, i) => {
                     const currentDate = new Date(
-                      new Date().getTime() + i * 24 * 60 * 60 * 1000
+                      new Date().getTime() + i * 24 * 60 * 60 * 1000,
                     );
                     const dateStr = format(currentDate, "yyyy-MM-dd");
                     const dayName = format(currentDate, "EEE", {
@@ -2215,7 +2219,7 @@ export default function ProductionPage() {
                     !showAllProductionDates &&
                     selectedProductionDates.size === 1 &&
                     selectedProductionDates.has(
-                      format(new Date(), "yyyy-MM-dd")
+                      format(new Date(), "yyyy-MM-dd"),
                     )
                       ? "bg-[#9B6D49] text-white border-[#9B6D49]"
                       : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
@@ -2231,10 +2235,10 @@ export default function ProductionPage() {
                       dates.add(
                         format(
                           new Date(
-                            new Date().getTime() + i * 24 * 60 * 60 * 1000
+                            new Date().getTime() + i * 24 * 60 * 60 * 1000,
                           ),
-                          "yyyy-MM-dd"
-                        )
+                          "yyyy-MM-dd",
+                        ),
                       );
                     }
                     setSelectedProductionDates(dates);
@@ -2257,14 +2261,18 @@ export default function ProductionPage() {
                         | "all"
                         | "pending"
                         | "in_production"
-                        | "completed"
+                        | "completed",
                     )
                   }
                   className="px-3 py-2 text-sm border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-[#9B6D49] bg-white text-gray-700 font-medium"
                 >
                   <option value="all">{t("production.allStatus")}</option>
-                  <option value="in_production">{t("production.cookingProcess")}</option>
-                  <option value="completed">{t("production.cookingFinished")}</option>
+                  <option value="in_production">
+                    {t("production.cookingProcess")}
+                  </option>
+                  <option value="completed">
+                    {t("production.cookingFinished")}
+                  </option>
                 </select>
                 <input
                   type="date"
@@ -2282,7 +2290,7 @@ export default function ProductionPage() {
                     : Array.from(selectedProductionDates)
                         .sort()
                         .map((d) =>
-                          format(new Date(d), "d MMM", { locale: idLocale })
+                          format(new Date(d), "d MMM", { locale: idLocale }),
                         )
                         .join(", ")}
                 </span>
@@ -2292,19 +2300,25 @@ export default function ProductionPage() {
             {/* Stats - More Compact */}
             <div className="grid grid-cols-3 gap-2">
               <div className="bg-white rounded-lg px-3 py-2 shadow-sm border border-gray-200">
-                <p className="text-[10px] text-gray-500">{t("production.totalOrder")}</p>
+                <p className="text-[10px] text-gray-500">
+                  {t("production.totalOrder")}
+                </p>
                 <p className="text-lg font-bold text-blue-600">
                   {filteredProductionOrders.length}
                 </p>
               </div>
               <div className="bg-white rounded-lg px-3 py-2 shadow-sm border border-gray-200">
-                <p className="text-[10px] text-gray-500">{t("production.products")}</p>
+                <p className="text-[10px] text-gray-500">
+                  {t("production.products")}
+                </p>
                 <p className="text-lg font-bold text-green-600">
                   {totalProducts}
                 </p>
               </div>
               <div className="bg-white rounded-lg px-3 py-2 shadow-sm border border-gray-200">
-                <p className="text-[10px] text-gray-500">{t("production.addon")}</p>
+                <p className="text-[10px] text-gray-500">
+                  {t("production.addon")}
+                </p>
                 <p className="text-lg font-bold text-amber-600">
                   {totalAddons}
                 </p>
@@ -2327,7 +2341,8 @@ export default function ProductionPage() {
           {filteredProductionOrders.length > 0 && (
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 space-y-2">
               <h2 className="text-sm font-bold text-yellow-900 flex items-center gap-2">
-                <Star size={16} className="text-yellow-600" /> {t("production.productionTarget")}
+                <Star size={16} className="text-yellow-600" />{" "}
+                {t("production.productionTarget")}
               </h2>
 
               {/* General Notes */}
@@ -2345,13 +2360,13 @@ export default function ProductionPage() {
               <div className="grid grid-cols-3 gap-2">
                 {orders
                   .flatMap((order) =>
-                    order.order_products.map((product) => product.product.nama)
+                    order.order_products.map((product) => product.product.nama),
                   )
                   .filter((name, idx, arr) => arr.indexOf(name) === idx)
                   .map((productName) => {
                     const totalQty = orders.reduce((sum, order) => {
                       const item = order.order_products.find(
-                        (p) => p.product.nama === productName
+                        (p) => p.product.nama === productName,
                       );
                       return sum + (item?.jumlah || 0);
                     }, 0);
@@ -2436,11 +2451,11 @@ export default function ProductionPage() {
                   .map((order) => {
                     const totalItems = order.order_products.reduce(
                       (sum, p) => sum + p.jumlah,
-                      0
+                      0,
                     );
                     const totalPrice = order.order_products.reduce(
                       (sum, p) => sum + p.jumlah * p.harga_beli,
-                      0
+                      0,
                     );
                     const status = order.production_status || "pending";
 
@@ -2478,8 +2493,8 @@ export default function ProductionPage() {
                             status === "pending"
                               ? "bg-yellow-400"
                               : status === "in_production"
-                              ? "bg-blue-500"
-                              : "bg-green-500"
+                                ? "bg-blue-500"
+                                : "bg-green-500"
                           }`}
                         />
 
@@ -2502,12 +2517,14 @@ export default function ProductionPage() {
                               {(status === "pending" ||
                                 status === "in_production") && (
                                 <>
-                                  <Flame size={10} /> {t("production.cookingProcess")}
+                                  <Flame size={10} />{" "}
+                                  {t("production.cookingProcess")}
                                 </>
                               )}
                               {status === "completed" && (
                                 <>
-                                  <CheckCircle size={10} /> {t("production.completed")}
+                                  <CheckCircle size={10} />{" "}
+                                  {t("production.completed")}
                                 </>
                               )}
                             </span>
@@ -2591,15 +2608,15 @@ export default function ProductionPage() {
                                   orders.map((o) =>
                                     o.id === order.id
                                       ? { ...o, production_status: newStatus }
-                                      : o
-                                  )
+                                      : o,
+                                  ),
                                 );
                                 setAllOrders(
                                   allOrders.map((o) =>
                                     o.id === order.id
                                       ? { ...o, production_status: newStatus }
-                                      : o
-                                  )
+                                      : o,
+                                  ),
                                 );
 
                                 // Call backend API
@@ -2614,17 +2631,17 @@ export default function ProductionPage() {
                                       body: JSON.stringify({
                                         production_status: newStatus,
                                       }),
-                                    }
+                                    },
                                   );
                                   if (!response.ok) {
                                     console.error(
-                                      "[Production] Failed to update production status"
+                                      "[Production] Failed to update production status",
                                     );
                                   }
                                 } catch (err) {
                                   console.error(
                                     "[Production] Error updating production status:",
-                                    err
+                                    err,
                                   );
                                 }
                               }}
@@ -2632,8 +2649,8 @@ export default function ProductionPage() {
                                 status === "pending"
                                   ? "bg-yellow-50 text-yellow-700 border-yellow-200 hover:bg-yellow-100"
                                   : status === "in_production"
-                                  ? "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
-                                  : "bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
+                                    ? "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
+                                    : "bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
                               }`}
                             >
                               <option value="pending">Menunggu</option>
@@ -2709,7 +2726,7 @@ export default function ProductionPage() {
                       {format(
                         new Date(editedOrder.created_at),
                         "dd/MM/yyyy HH:mm",
-                        { locale: idLocale }
+                        { locale: idLocale },
                       )}
                     </p>
                   </div>
@@ -2719,7 +2736,7 @@ export default function ProductionPage() {
                       {format(
                         new Date(editedOrder.scheduled_date || new Date()),
                         "dd/MM/yyyy",
-                        { locale: idLocale }
+                        { locale: idLocale },
                       )}
                     </p>
                   </div>
@@ -2729,7 +2746,9 @@ export default function ProductionPage() {
               {/* Products List */}
               <div className="border border-gray-200 rounded-lg p-4">
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-bold text-gray-900 flex items-center gap-2"><Package size={16} /> Produk</h3>
+                  <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                    <Package size={16} /> Produk
+                  </h3>
                   {editedOrder.status === "verifying" && (
                     <button
                       onClick={() => setIsEditingOrder(!isEditingOrder)}
@@ -2788,7 +2807,7 @@ export default function ProductionPage() {
                           <p className="font-semibold text-gray-900">
                             Rp{" "}
                             {(item.harga_beli * item.jumlah).toLocaleString(
-                              "id-ID"
+                              "id-ID",
                             )}
                           </p>
                         </div>
@@ -2934,7 +2953,7 @@ function OrderManagementCard({
   const totalItems = order.order_products.reduce((sum, p) => sum + p.jumlah, 0);
   const totalPrice = order.order_products.reduce(
     (sum, p) => sum + p.jumlah * p.harga_beli,
-    0
+    0,
   );
 
   const statusLabels = {
@@ -2966,13 +2985,19 @@ function OrderManagementCard({
 
       {/* Info Row */}
       <div className="text-xs text-gray-600 space-y-1 mb-3 pb-3 border-b border-gray-300">
-        <p className="flex items-center gap-1"><Phone size={12} /> {order.user.no_hp}</p>
-        <p className="flex items-center gap-1"><Package size={12} /> {totalItems} {t("production.itemsCount")}</p>
+        <p className="flex items-center gap-1">
+          <Phone size={12} /> {order.user.no_hp}
+        </p>
+        <p className="flex items-center gap-1">
+          <Package size={12} /> {totalItems} {t("production.itemsCount")}
+        </p>
       </div>
 
       {/* Products Preview */}
       <div className="bg-white rounded p-3 border border-gray-200 mb-3 text-sm space-y-1">
-        <p className="font-semibold text-gray-900 text-xs mb-2">{t("production.products")}:</p>
+        <p className="font-semibold text-gray-900 text-xs mb-2">
+          {t("production.products")}:
+        </p>
         {order.order_products.map((item) => (
           <div key={item.id} className="text-xs">
             <p className="text-gray-900">
@@ -3003,7 +3028,7 @@ function OrderManagementCard({
             <p>
               Jadwal:{" "}
               {new Date(order.scheduled_date || new Date()).toLocaleDateString(
-                "id-ID"
+                "id-ID",
               )}
             </p>
           </div>

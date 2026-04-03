@@ -64,9 +64,14 @@ export default function LocationPicker({
 
   // 1. Menangani KLIK user di peta (Pindah Pin)
   function MapClickHandler() {
-    useMapEvents({
+    const map = useMapEvents({
       click(e) {
-        setPosition(e.latlng);
+        const newPos = { lat: e.latlng.lat, lng: e.latlng.lng };
+        setPosition(newPos);
+        map.flyTo(newPos, map.getZoom(), {
+          animate: true,
+          duration: 0.6,
+        });
       },
     });
     return null;
