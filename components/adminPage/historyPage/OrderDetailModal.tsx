@@ -338,6 +338,18 @@ export function OrderDetailModal() {
 
           <div className="receipt-section">
             <div className="section-title">INFORMASI PESANAN</div>
+            {order.customer_name && (
+              <div className="info-row">
+                <span>Pelanggan:</span>
+                <span>{order.customer_name}</span>
+              </div>
+            )}
+            {order.customer_phone && order.customer_phone !== '-' && (
+              <div className="info-row">
+                <span>No. HP:</span>
+                <span>{order.customer_phone}</span>
+              </div>
+            )}
             <div className="info-row">
               <span>Provider:</span>
               <span>{order.provider || "N/A"}</span>
@@ -498,6 +510,26 @@ export function OrderDetailModal() {
                   {t("orderCard.orderInfo")}
                 </h3>
                 <div className="space-y-2">
+                  {/* Customer Name */}
+                  {order.customer_name && (
+                    <div
+                      className="flex items-center space-x-2 font-admin-body"
+                      style={{ color: "#5d4037" }}
+                    >
+                      <User className="w-4 h-4" style={{ color: "#8b6f47" }} />
+                      <span className="font-medium">{order.customer_name}</span>
+                    </div>
+                  )}
+                  {/* Customer Phone */}
+                  {order.customer_phone && order.customer_phone !== '-' && (
+                    <div
+                      className="flex items-center space-x-2 font-admin-body text-sm"
+                      style={{ color: "#8b6f47" }}
+                    >
+                      <Phone className="w-4 h-4" />
+                      <span>{order.customer_phone}</span>
+                    </div>
+                  )}
                   <div
                     className="flex items-center space-x-2 font-admin-body"
                     style={{ color: "#8b6f47" }}

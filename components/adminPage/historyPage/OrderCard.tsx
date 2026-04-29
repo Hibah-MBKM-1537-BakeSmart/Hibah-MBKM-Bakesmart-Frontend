@@ -12,6 +12,7 @@ import {
   Clock,
   CreditCard,
   ShoppingBag,
+  User,
 } from "lucide-react";
 
 interface OrderCardProps {
@@ -168,6 +169,17 @@ export function OrderCard({ order }: OrderCardProps) {
             </button>
           </div>
         </div>
+
+        {/* Customer Name */}
+        {order.customer_name && (
+          <div
+            className="flex items-center gap-1.5 text-sm font-admin-body mb-2"
+            style={{ color: "#5d4037" }}
+          >
+            <User className="w-3.5 h-3.5" style={{ color: "#8b6f47" }} />
+            <span className="font-medium">{order.customer_name}</span>
+          </div>
+        )}
 
         <div
           className="flex items-center gap-3 text-xs font-admin-body"

@@ -14,13 +14,13 @@ export interface OrderItem {
   // Related product data via join
   nama_id?: string;
   nama_en?: string;
-  // Backend response format
+  // Backend response format from /orders/group
   product_name_id?: string;
   product_name_en?: string;
   product_price?: number;
 }
 
-// Based on orders table structure and backend response
+// Based on orders table structure and backend response from /orders/group
 export interface Order {
   id: number;
   bukti_path?: string;
@@ -38,6 +38,9 @@ export interface Order {
   updated_at: string;
   // Related data via joins
   products?: OrderItem[];
+  // Customer info — embedded from /orders/group user object
+  customer_name?: string;
+  customer_phone?: string;
 }
 
 interface HistoryFilters {
@@ -70,6 +73,55 @@ interface HistoryContextType {
 
 const HistoryContext = createContext<HistoryContextType | undefined>(undefined);
 
+/**
+ * Transform /orders/group response into a flat Order[] array.
+ * Each group has { id, tanggal, orders: [...] }.
+ * Each order inside has { id, ..., user: { id, nama, no_hp }, products: [...] }.
+ * We flatten all groups and map user → customer_name / customer_phone.
+ */
+function flattenOrderGroups(groups: any[]): Order[] {
+  const allOrders: Order[] = [];
+
+  groups.forEach((group: any) => {
+    if (!Array.isArray(group.orders)) return;
+
+    group.orders.forEach((order: any) => {
+      allOrders.push({
+        id: order.id,
+        bukti_path: order.bukti_path,
+        status: order.status,
+        waktu_ambil: order.waktu_ambil,
+        user_id: order.user?.id ?? order.user_id,
+        total_harga: Number(order.total_harga),
+        provider: order.provider,
+        courier_name: order.courier_name,
+        shipping_cost: Number(order.shipping_cost),
+        tracking_link: order.tracking_link,
+        note: order.note,
+        biteship_id: order.biteship_id,
+        created_at: order.created_at || group.tanggal,
+        updated_at: order.updated_at || order.created_at || group.tanggal,
+        products: (order.products || []).map((p: any) => ({
+          id: p.product_id,
+          order_id: order.id,
+          product_id: p.product_id,
+          jumlah: p.jumlah,
+          harga_beli: p.harga_beli,
+          note: p.note || '',
+          product_name_id: p.product_name_id,
+          product_name_en: p.product_name_en,
+          product_price: p.product_price,
+        })),
+        // Map user object → customer fields
+        customer_name: order.user?.nama || undefined,
+        customer_phone: order.user?.no_hp || undefined,
+      });
+    });
+  });
+
+  return allOrders;
+}
+
 export function HistoryProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<HistoryState>({
     orders: [],
@@ -85,67 +137,59 @@ export function HistoryProvider({ children }: { children: React.ReactNode }) {
     showOrderDetail: false
   });
 
-  // Fetch orders from backend
-  useEffect(() => {
-    const fetchOrders = async () => {
-      try {
-        // console.log('[HistoryContext] Fetching orders from backend...');
-        setState(prev => ({ ...prev, isLoading: true }));
-        
-        const response = await fetchWithAuth('/api/orders', {
-          method: 'GET',
-          cache: 'no-store',
-        });
+  // Fetch orders from /api/orders/group (includes user object in each order)
+  const doFetchOrders = async () => {
+    setState(prev => ({ ...prev, isLoading: true }));
+    try {
+      const response = await fetchWithAuth('/api/orders/group', {
+        method: 'GET',
+        cache: 'no-store',
+      });
 
-        if (!response.ok) {
-          throw new Error('Failed to fetch orders');
-        }
+      if (!response.ok) {
+        throw new Error(`Failed to fetch orders: ${response.status}`);
+      }
 
-        const result = await response.json();
-        // console.log('[HistoryContext] Backend response:', result);
-        
-        if (result.success && result.data) {
-          // Normalize data: convert string numbers to numbers
-          const normalizedOrders = result.data.map((order: any) => ({
-            ...order,
-            total_harga: Number(order.total_harga),
-            shipping_cost: Number(order.shipping_cost),
-          }));
+      const result = await response.json();
+      // Backend: { message: "Order retrieved", data: [...groups] }
+      const groups = result.data;
 
-          // console.log('[HistoryContext] Loaded', normalizedOrders.length, 'orders');
-          
-          setState(prev => ({
-            ...prev,
-            orders: normalizedOrders,
-            filteredOrders: normalizedOrders,
-            isLoading: false
-          }));
-        } else {
-          console.error('[HistoryContext] Invalid response format:', result);
-          setState(prev => ({ ...prev, isLoading: false }));
-        }
-      } catch (error) {
-        console.error('[HistoryContext] Error fetching orders:', error);
+      if (Array.isArray(groups)) {
+        const orders = flattenOrderGroups(groups);
+        setState(prev => ({
+          ...prev,
+          orders,
+          filteredOrders: orders,
+          isLoading: false,
+        }));
+      } else {
+        console.error('[HistoryContext] Unexpected response format:', result);
         setState(prev => ({ ...prev, isLoading: false }));
       }
-    };
+    } catch (error) {
+      console.error('[HistoryContext] Error fetching orders:', error);
+      setState(prev => ({ ...prev, isLoading: false }));
+    }
+  };
 
-    fetchOrders();
-    
+  useEffect(() => {
+    doFetchOrders();
     // Auto-refresh every 30 seconds
-    const interval = setInterval(fetchOrders, 30000);
+    const interval = setInterval(doFetchOrders, 30000);
     return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Filter orders based on current filters
   useEffect(() => {
     let filtered = [...state.orders];
 
-    // Search filter by order ID
+    // Search by order ID or customer name
     if (state.filters.searchQuery) {
       const query = state.filters.searchQuery.toLowerCase();
       filtered = filtered.filter(order =>
-        order.id.toString().includes(query)
+        order.id.toString().includes(query) ||
+        (order.customer_name && order.customer_name.toLowerCase().includes(query))
       );
     }
 
@@ -220,19 +264,21 @@ export function HistoryProvider({ children }: { children: React.ReactNode }) {
 
   const exportToCSV = () => {
     const csvData = state.filteredOrders.map(order => {
-      const totalAmount = typeof order.total_harga === 'string' 
-        ? parseFloat(order.total_harga) 
+      const totalAmount = typeof order.total_harga === 'string'
+        ? parseFloat(order.total_harga)
         : (order.total_harga || 0);
       const shippingCost = typeof order.shipping_cost === 'string'
         ? parseFloat(order.shipping_cost)
         : (order.shipping_cost || 0);
-        
-      const itemsText = order.products?.map((item: OrderItem) => 
-        `${item.nama_id || item.nama_en || 'Unknown'} (${item.jumlah}x)`
+
+      const itemsText = order.products?.map((item: OrderItem) =>
+        `${item.product_name_id || item.nama_id || item.product_name_en || item.nama_en || 'Unknown'} (${item.jumlah}x)`
       ).join(', ') || '';
-      
+
       return {
         'Order ID': order.id,
+        'Customer': order.customer_name || '-',
+        'Phone': order.customer_phone || '-',
         'Date': new Date(order.created_at).toLocaleDateString('id-ID'),
         'Time': new Date(order.created_at).toLocaleTimeString('id-ID'),
         'Items': itemsText,
@@ -262,43 +308,7 @@ export function HistoryProvider({ children }: { children: React.ReactNode }) {
   };
 
   const refreshOrders = async () => {
-    try {
-      // console.log('[HistoryContext] Refreshing orders...');
-      setState(prev => ({ ...prev, isLoading: true }));
-      
-      const response = await fetchWithAuth('/api/orders', {
-        method: 'GET',
-        cache: 'no-store',
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch orders');
-      }
-
-      const result = await response.json();
-      
-      if (result.success && result.data) {
-        // Normalize data
-        const normalizedOrders = result.data.map((order: any) => ({
-          ...order,
-          total_harga: Number(order.total_harga),
-          shipping_cost: Number(order.shipping_cost)
-        }));
-
-        // console.log('[HistoryContext] Refreshed', normalizedOrders.length, 'orders');
-
-        setState(prev => ({
-          ...prev,
-          orders: normalizedOrders,
-          isLoading: false
-        }));
-      } else {
-        setState(prev => ({ ...prev, isLoading: false }));
-      }
-    } catch (error) {
-      console.error('[HistoryContext] Error refreshing orders:', error);
-      setState(prev => ({ ...prev, isLoading: false }));
-    }
+    await doFetchOrders();
   };
 
   const contextValue: HistoryContextType = {
