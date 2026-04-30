@@ -86,10 +86,8 @@ export default function AdminAuthWrapper({ children }: { children: React.ReactNo
         <AdminHeader />
         
         {/* Page Content */}
-        <main className="flex-1 overflow-auto p-6">
-          <div className="max-w-7xl mx-auto">
-            {children}
-          </div>
+        <main className="flex-1 overflow-auto p-4">
+          {children}
         </main>
       </div>
     </div>
