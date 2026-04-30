@@ -97,9 +97,11 @@ function SubJenisFormModal({
       setNamaId(editingSubJenis?.nama_id || "");
       setNamaEn(editingSubJenis?.nama_en || "");
       setJenisId(editingSubJenis?.jenis_id || jenisList[0]?.id || 0);
-      setMinAmount(editingSubJenis?.min_amount || 1);
-      setMaxAmount(editingSubJenis?.max_amount || 100);
-      setPoClosed(editingSubJenis?.po_closed || "15:00:00");
+      // Saat edit: pakai nilai aktual dari backend (termasuk 0 dan null).
+      // Saat tambah baru: pakai default yang masuk akal.
+      setMinAmount(editingSubJenis != null ? (editingSubJenis.min_amount ?? 0) : 1);
+      setMaxAmount(editingSubJenis != null ? (editingSubJenis.max_amount ?? 0) : 100);
+      setPoClosed(editingSubJenis != null ? (editingSubJenis.po_closed ?? "") : "15:00:00");
       setSelectedDays(
         editingSubJenis?.hari != null
           ? editingSubJenis.hari.map((h: Hari) => h.id)
@@ -400,16 +402,18 @@ function SubJenisFormModal({
                     </label>
                     <input
                       type="time"
-                      value={poClosed.substring(0, 5)}
+                      value={poClosed ? poClosed.substring(0, 5) : ""}
                       onChange={(e) => {
                         const val = e.target.value;
-                        setPoClosed(val.split(":").length === 2 ? val + ":00" : val);
+                        setPoClosed(val ? (val.split(":").length === 2 ? val + ":00" : val) : "");
                       }}
                       step="1"
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                     />
                     <p className="text-xs text-gray-500 mt-1">
-                      Pre-order akan ditutup pada jam: {poClosed}
+                      {poClosed
+                        ? `Pre-order akan ditutup pada jam: ${poClosed}`
+                        : "Belum dikonfigurasi (kosongkan jika tidak ada batas waktu)"}
                     </p>
                   </div>
 
