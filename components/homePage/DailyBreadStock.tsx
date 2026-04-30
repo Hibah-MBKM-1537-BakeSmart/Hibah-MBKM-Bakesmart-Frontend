@@ -132,7 +132,13 @@ export function DailyBreadStock() {
         console.log("[DailyBreadStock] Fetching products from /api/products");
 
         // 1. Panggil API internal
-        const response = await fetch("/api/products");
+        const response = await fetch(`/api/products?_t=${Date.now()}`, {
+          cache: "no-store",
+          headers: {
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+          },
+        });
 
         if (!response.ok) {
           const errorData = await response.json();

@@ -25,10 +25,14 @@ export async function GET(request: Request) {
     // If API returns nested structure (data.data.data), flatten it
     const productsData = data?.data?.data || data?.data || data;
 
-    return NextResponse.json({
+    const res = NextResponse.json({
       message: "Products retrieved successfully",
       data: Array.isArray(productsData) ? productsData : [],
     });
+    res.headers.set("Cache-Control", "no-cache, no-store, must-revalidate");
+    res.headers.set("Pragma", "no-cache");
+    res.headers.set("Expires", "0");
+    return res;
   } catch (error) {
     console.error("[Products API] Error:", error);
     return NextResponse.json(

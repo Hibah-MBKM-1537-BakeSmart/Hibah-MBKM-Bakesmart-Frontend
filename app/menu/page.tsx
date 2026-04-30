@@ -1,5 +1,8 @@
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
+
+export const dynamic = 'force-dynamic';
+
 import { MenuHero } from '@/components/menuPage/MenuHero';
 import { MenuGrid } from '@/components/menuPage/MenuGrid';
 

@@ -55,7 +55,13 @@ export function MenuGrid() {
         // [PERUBAHAN] Memanggil API internal Next.js
         console.log("[v2] Fetching products from /api/products");
 
-        const response = await fetch("/api/products"); // <-- PERUBAHAN DI SINI
+        const response = await fetch(`/api/products?_t=${Date.now()}`, {
+          cache: "no-store",
+          headers: {
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+          },
+        });
 
         if (!response.ok) {
           const errorData = await response.json();
