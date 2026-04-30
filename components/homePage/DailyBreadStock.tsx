@@ -171,7 +171,7 @@ export function DailyBreadStock() {
                 created_at: "",
                 updated_at: "",
               })),
-            jenis: product.jenis || [],
+            jenis: product.jenis || { id: 0, nama_en: "Unknown", nama_id: "Tidak Diketahui" },
             hari: product.hari || [],
             attributes: product.attributes || [],
             bahans: product.bahans || [],

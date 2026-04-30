@@ -41,15 +41,14 @@ function ProductCard(item: MenuItem) {
   const image: string = getImageUrl(item.gambars?.[0]?.file_path);
 
   const availableDays = item.hari.map((day) => day.nama_id);
-  const category =
-    item.jenis.length > 0
-      ? language === "id"
-        ? item.jenis[0].nama_id
-        : item.jenis[0].nama_en
-      : "";
+  const category = item.jenis
+    ? language === "id"
+      ? item.jenis.nama_id
+      : item.jenis.nama_en
+    : "";
   const stock = item.isDaily
     ? item.dailyStock || 0
-    : item.sub_jenis?.[0]?.min_amount || 0;
+    : item.sub_jenis?.min_amount || 0;
 
   const isOutOfStock = stock <= 0;
 
@@ -208,7 +207,7 @@ export function BestSeller() {
             deskripsi_en: product.deskripsi_en || "",
             harga: product.harga,
             harga_diskon: product.harga_diskon || null,
-            stok: product.sub_jenis?.[0]?.min_amount || 0, // Use min_amount from sub_jenis as stock
+            stok: product.sub_jenis?.min_amount || 0, // Use min_amount from sub_jenis as stock
             isBestSeller: product.isBestSeller || false,
             isDaily: product.isDaily || false,
             dailyStock: product.daily_stock || 0,
@@ -222,7 +221,7 @@ export function BestSeller() {
                 created_at: "", // Sesuaikan jika ada datanya
                 updated_at: "", // Sesuaikan jika ada datanya
               })),
-            jenis: product.jenis || [],
+            jenis: product.jenis || { id: 0, nama_en: "Unknown", nama_id: "Tidak Diketahui" },
             hari: product.hari || [],
             attributes: product.attributes || [],
             bahans: product.bahans || [],

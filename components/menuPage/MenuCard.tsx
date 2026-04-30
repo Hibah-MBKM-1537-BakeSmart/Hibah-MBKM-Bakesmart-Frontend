@@ -250,23 +250,19 @@ export function MenuCard({
   return (
     <div
       className={`bg-white border-b border-gray-100 p-4 md:p-6 cursor-pointer transition-all duration-300 ${
-        isDisabled || isStoreClosed() || isSubJenisClosed ? "opacity-60" : ""
+        isDisabled || isStoreClosed() ? "opacity-60" : ""
       }`}
       style={{
-        backgroundColor: isSubJenisClosed ? "#f9fafb" : "white",
+        backgroundColor: "white",
         boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
       }}
       onMouseEnter={(e) => {
-        if (!isSubJenisClosed) {
-          e.currentTarget.style.boxShadow = "0 8px 16px rgba(139,111,71,0.1)";
-          e.currentTarget.style.backgroundColor = "#fafaf9";
-        }
+        e.currentTarget.style.boxShadow = "0 8px 16px rgba(139,111,71,0.1)";
+        e.currentTarget.style.backgroundColor = "#fafaf9";
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.boxShadow = "0 1px 2px rgba(0,0,0,0.05)";
-        e.currentTarget.style.backgroundColor = isSubJenisClosed
-          ? "#f9fafb"
-          : "white";
+        e.currentTarget.style.backgroundColor = "white";
       }}
       onClick={onClick}
     >
@@ -279,16 +275,12 @@ export function MenuCard({
               alt={name}
               className="w-full h-full object-cover transition-all duration-300"
             />
-            {(stock <= 0 || isStoreClosed() || isSubJenisClosed) && (
+            {(stock <= 0 || isStoreClosed()) && (
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <span className="text-white text-xs md:text-sm font-bold text-center px-3 py-2 bg-gray-900 rounded-lg shadow-xl border-2 border-white">
-                  {isSubJenisClosed
-                    ? language === "id"
-                      ? "Tidak Tersedia"
-                      : "Unavailable"
-                    : isStoreClosed()
-                      ? t("menu.storeIsClosed")
-                      : t("menu.outOfStock")}
+                  {isStoreClosed()
+                    ? t("menu.storeIsClosed")
+                    : t("menu.outOfStock")}
                 </span>
               </div>
             )}
@@ -302,17 +294,12 @@ export function MenuCard({
               <h3 className="font-medium text-gray-900 text-base md:text-lg lg:text-xl line-clamp-2">
                 {name}
               </h3>
-              {isSubJenisClosed && (
-                <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded whitespace-nowrap">
-                  {language === "id" ? "Tidak Tersedia" : "Unavailable"}
-                </span>
-              )}
-              {item.isDaily && !isSubJenisClosed && (
+              {item.isDaily && (
                 <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded whitespace-nowrap font-semibold">
                   🔥 {language === "id" ? "Roti Hari Ini" : "Today's Bread"}
                 </span>
               )}
-              {!isSubJenisClosed && stock > 0 && !item.isDaily && (
+              {stock > 0 && !item.isDaily && (
                 <span className="text-xs bg-green-100 text-green-600 px-2 py-0.5 rounded">
                   Stok: {stock}
                 </span>
@@ -403,41 +390,33 @@ export function MenuCard({
                   {totalQuantity === 0 ? (
                     <button
                       className={`px-6 py-2.5 lg:px-8 lg:py-3 text-base font-medium rounded-full text-white transition-all duration-200 ${
-                        isDisabled || isStoreClosed() || isSubJenisClosed
+                        isDisabled || isStoreClosed()
                           ? "bg-gray-400 cursor-not-allowed"
                           : "hover:opacity-90 hover:scale-105 active:scale-95"
                       }`}
                       style={{
                         backgroundColor:
-                          isDisabled || isStoreClosed() || isSubJenisClosed
+                          isDisabled || isStoreClosed()
                             ? undefined
                             : "#8b6f47",
                       }}
                       onClick={handleAddItem}
                       disabled={
-                        isDisabled || isStoreClosed() || isSubJenisClosed
+                        isDisabled || isStoreClosed()
                       }
                       title={
-                        isSubJenisClosed
-                          ? language === "id"
-                            ? "Produk tidak tersedia"
-                            : "Product unavailable"
-                          : !validation.canAdd
-                            ? validation.reason
-                            : isStoreClosed()
-                              ? "Toko sedang tutup"
-                              : undefined
+                        !validation.canAdd
+                          ? validation.reason
+                          : isStoreClosed()
+                            ? "Toko sedang tutup"
+                            : undefined
                       }
                     >
-                      {isSubJenisClosed
-                        ? language === "id"
-                          ? "Tidak Tersedia"
-                          : "Unavailable"
-                        : isStoreClosed()
-                          ? t("menu.storeIsClosed")
-                          : stock <= 0
-                            ? t("menu.outOfStock")
-                            : "Tambah"}
+                      {isStoreClosed()
+                        ? t("menu.storeIsClosed")
+                        : stock <= 0
+                          ? t("menu.outOfStock")
+                          : "Tambah"}
                     </button>
                   ) : (
                     <div className="flex items-center gap-4">
@@ -493,39 +472,31 @@ export function MenuCard({
                 {totalQuantity === 0 ? (
                   <button
                     className={`px-4 py-2 text-sm font-medium rounded-full text-white transition-all duration-200 ${
-                      isDisabled || isStoreClosed() || isSubJenisClosed
+                      isDisabled || isStoreClosed()
                         ? "bg-gray-400 cursor-not-allowed"
                         : "hover:opacity-90 hover:scale-105 active:scale-95"
                     }`}
                     style={{
                       backgroundColor:
-                        isDisabled || isStoreClosed() || isSubJenisClosed
+                        isDisabled || isStoreClosed()
                           ? undefined
                           : "#8b6f47",
                     }}
                     onClick={handleAddItem}
-                    disabled={isDisabled || isStoreClosed() || isSubJenisClosed}
+                    disabled={isDisabled || isStoreClosed()}
                     title={
-                      isSubJenisClosed
-                        ? language === "id"
-                          ? "Produk tidak tersedia"
-                          : "Product unavailable"
-                        : !validation.canAdd
-                          ? validation.reason
-                          : isStoreClosed()
-                            ? "Toko sedang tutup"
-                            : undefined
+                      !validation.canAdd
+                        ? validation.reason
+                        : isStoreClosed()
+                          ? "Toko sedang tutup"
+                          : undefined
                     }
                   >
-                    {isSubJenisClosed
-                      ? language === "id"
-                        ? "Tidak Tersedia"
-                        : "Unavailable"
-                      : isStoreClosed()
-                        ? t("menu.storeIsClosed")
-                        : stock <= 0
-                          ? t("menu.outOfStock")
-                          : "Tambah"}
+                    {isStoreClosed()
+                      ? t("menu.storeIsClosed")
+                      : stock <= 0
+                        ? t("menu.outOfStock")
+                        : "Tambah"}
                   </button>
                 ) : (
                   <div className="flex items-center gap-3">
