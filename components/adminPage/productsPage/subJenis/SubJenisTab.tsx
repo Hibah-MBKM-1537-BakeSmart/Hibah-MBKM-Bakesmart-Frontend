@@ -101,7 +101,7 @@ function SubJenisFormModal({
       setMaxAmount(editingSubJenis?.max_amount || 100);
       setPoClosed(editingSubJenis?.po_closed || "15:00:00");
       setSelectedDays(
-        editingSubJenis?.hari?.length
+        editingSubJenis?.hari != null
           ? editingSubJenis.hari.map((h: Hari) => h.id)
           : [1, 2, 3, 4, 5, 6, 7]
       );
@@ -133,8 +133,8 @@ function SubJenisFormModal({
       const hariRes = await fetch(`/api/sub_jenis/${subJenisId}/hari`);
       if (hariRes.ok) {
         const hariData = await hariRes.json();
-        const hariIds = hariData.data?.map((h: any) => h.hari_id) || [];
-        setSelectedDays(hariIds.length > 0 ? hariIds : [1, 2, 3, 4, 5, 6, 7]);
+        const hariIds = hariData.data?.map((h: any) => h.hari_id) ?? [];
+        setSelectedDays(hariIds);
       }
 
       const attrRes = await fetch(`/api/sub_jenis/${subJenisId}/attribute`);
