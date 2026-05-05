@@ -37,6 +37,8 @@ import {
   ChevronUp,
   Hourglass,
   Phone,
+  Plus,
+  Minus,
 } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -469,6 +471,19 @@ export default function ProductionPage() {
   const [editedOrder, setEditedOrder] = useState<Order | null>(null);
   const [isSavingOrder, setIsSavingOrder] = useState(false);
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Add Product Popup states
+  const [showAddProductPopup, setShowAddProductPopup] = useState(false);
+  const [availableProducts, setAvailableProducts] = useState<Array<{
+    id: number;
+    nama_id: string;
+    nama_en: string;
+    harga: number;
+    harga_diskon?: number | null;
+  }>>([]);
+  const [productSearch, setProductSearch] = useState("");
+  const [loadingProducts, setLoadingProducts] = useState(false);
+  const [addProductQty, setAddProductQty] = useState<Record<number, number>>({});
 
   useEffect(() => {
     fetchProductionList();
@@ -1159,6 +1174,70 @@ export default function ProductionPage() {
     } catch (err) {
       console.error("[Production] Error completing order:", err);
     }
+  };
+
+  // Fetch available products for "Add Product" popup
+  const fetchAvailableProducts = async () => {
+    setLoadingProducts(true);
+    try {
+      const response = await fetch(`/api/products?_t=${Date.now()}`, {
+        cache: 'no-store',
+      });
+      if (response.ok) {
+        const data = await response.json();
+        const products = (data.data || []).map((p: any) => ({
+          id: p.id,
+          nama_id: p.nama_id,
+          nama_en: p.nama_en,
+          harga: p.harga,
+          harga_diskon: p.harga_diskon || null,
+        }));
+        setAvailableProducts(products);
+      }
+    } catch (err) {
+      console.error('[Production] Error fetching products:', err);
+    } finally {
+      setLoadingProducts(false);
+    }
+  };
+
+  // Handle adding a product from popup to the edited order
+  const handleAddProductToOrder = (product: { id: number; nama_id: string; harga: number }) => {
+    if (!editedOrder) return;
+    const qty = addProductQty[product.id] || 1;
+
+    // Check if product already exists in order
+    const existingIdx = editedOrder.order_products.findIndex(
+      (p) => p.product.id === product.id
+    );
+
+    if (existingIdx >= 0) {
+      // Increase quantity of existing product
+      const updated = { ...editedOrder };
+      updated.order_products[existingIdx].jumlah += qty;
+      setEditedOrder(updated);
+    } else {
+      // Add new product
+      const newProduct: OrderProduct = {
+        id: product.id,
+        product: {
+          id: product.id,
+          nama: product.nama_id,
+        },
+        jumlah: qty,
+        harga_beli: product.harga,
+        note: '',
+        addons: [],
+      };
+      setEditedOrder({
+        ...editedOrder,
+        order_products: [...editedOrder.order_products, newProduct],
+      });
+    }
+
+    // Reset quantity for this product
+    setAddProductQty((prev) => ({ ...prev, [product.id]: 1 }));
+    setShowAddProductPopup(false);
   };
 
   // Handle saving edited order (for pending/verifying orders)
@@ -2922,6 +3001,20 @@ export default function ProductionPage() {
                   ))}
                 </div>
 
+                {/* Tombol Tambah Produk */}
+                {isEditingOrder && (
+                  <button
+                    onClick={() => {
+                      fetchAvailableProducts();
+                      setShowAddProductPopup(true);
+                      setProductSearch("");
+                    }}
+                    className="mt-3 w-full px-4 py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border-2 border-dashed border-blue-300 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Plus className="w-4 h-4" /> Tambah Produk
+                  </button>
+                )}
+
                 {/* Save Message */}
                 {saveMessage && (
                   <div
@@ -3031,6 +3124,168 @@ export default function ProductionPage() {
                   </button>
                 )}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Product Popup */}
+      {showAddProductPopup && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full max-h-[80vh] flex flex-col overflow-hidden">
+            {/* Popup Header */}
+            <div className="px-5 py-4 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-blue-50 to-indigo-50">
+              <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                <Plus className="w-5 h-5 text-blue-600" /> Tambah Produk
+              </h3>
+              <button
+                onClick={() => setShowAddProductPopup(false)}
+                className="p-1.5 hover:bg-white/80 rounded-lg transition-colors"
+              >
+                <XCircle size={22} className="text-gray-500" />
+              </button>
+            </div>
+
+            {/* Search */}
+            <div className="px-5 py-3 border-b border-gray-100">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="text"
+                  value={productSearch}
+                  onChange={(e) => setProductSearch(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+                  placeholder="Cari produk..."
+                  autoFocus
+                />
+              </div>
+            </div>
+
+            {/* Product List */}
+            <div className="flex-1 overflow-y-auto px-5 py-3">
+              {loadingProducts ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  <span className="ml-3 text-gray-500 text-sm">Memuat produk...</span>
+                </div>
+              ) : (
+                (() => {
+                  const filtered = availableProducts.filter((p) =>
+                    p.nama_id.toLowerCase().includes(productSearch.toLowerCase()) ||
+                    (p.nama_en && p.nama_en.toLowerCase().includes(productSearch.toLowerCase()))
+                  );
+
+                  if (filtered.length === 0) {
+                    return (
+                      <div className="text-center py-12 text-gray-500">
+                        <ShoppingBag className="w-10 h-10 mx-auto mb-3 text-gray-300" />
+                        <p className="text-sm font-medium">Tidak ada produk ditemukan</p>
+                        <p className="text-xs text-gray-400 mt-1">Coba kata kunci lain</p>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="space-y-2">
+                      {filtered.map((product) => {
+                        const alreadyInOrder = editedOrder?.order_products.some(
+                          (p) => p.product.id === product.id
+                        );
+                        const qty = addProductQty[product.id] || 1;
+                        const effectivePrice = (product.harga_diskon && product.harga_diskon < product.harga)
+                          ? product.harga_diskon
+                          : product.harga;
+
+                        return (
+                          <div
+                            key={product.id}
+                            className={`border rounded-lg p-3 transition-all hover:shadow-sm ${
+                              alreadyInOrder
+                                ? "border-blue-200 bg-blue-50/50"
+                                : "border-gray-200 bg-white hover:border-blue-300"
+                            }`}
+                          >
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="flex-1 min-w-0">
+                                <p className="font-semibold text-gray-900 text-sm truncate">
+                                  {product.nama_id}
+                                </p>
+                                <div className="flex items-center gap-2 mt-0.5">
+                                  <p className="text-xs font-medium text-blue-600">
+                                    Rp {effectivePrice.toLocaleString("id-ID")}
+                                  </p>
+                                  {product.harga_diskon && product.harga_diskon < product.harga && (
+                                    <p className="text-xs text-gray-400 line-through">
+                                      Rp {product.harga.toLocaleString("id-ID")}
+                                    </p>
+                                  )}
+                                </div>
+                                {alreadyInOrder && (
+                                  <span className="inline-block mt-1 text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-medium">
+                                    Sudah di pesanan
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* Quantity Controls */}
+                              <div className="flex items-center gap-1">
+                                <button
+                                  onClick={() =>
+                                    setAddProductQty((prev) => ({
+                                      ...prev,
+                                      [product.id]: Math.max(1, (prev[product.id] || 1) - 1),
+                                    }))
+                                  }
+                                  className="w-7 h-7 flex items-center justify-center rounded bg-gray-100 hover:bg-gray-200 text-gray-700 transition-colors"
+                                >
+                                  <Minus className="w-3 h-3" />
+                                </button>
+                                <span className="w-8 text-center text-sm font-bold text-gray-900">
+                                  {qty}
+                                </span>
+                                <button
+                                  onClick={() =>
+                                    setAddProductQty((prev) => ({
+                                      ...prev,
+                                      [product.id]: (prev[product.id] || 1) + 1,
+                                    }))
+                                  }
+                                  className="w-7 h-7 flex items-center justify-center rounded bg-gray-100 hover:bg-gray-200 text-gray-700 transition-colors"
+                                >
+                                  <Plus className="w-3 h-3" />
+                                </button>
+                              </div>
+
+                              {/* Add Button */}
+                              <button
+                                onClick={() => handleAddProductToOrder({
+                                  id: product.id,
+                                  nama_id: product.nama_id,
+                                  harga: effectivePrice,
+                                })}
+                                className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-medium transition-colors flex items-center gap-1 whitespace-nowrap"
+                              >
+                                <Plus className="w-3.5 h-3.5" />
+                                {alreadyInOrder ? "Tambah" : "Pilih"}
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="px-5 py-3 border-t border-gray-200 bg-gray-50">
+              <button
+                onClick={() => setShowAddProductPopup(false)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-white transition-colors text-sm"
+              >
+                Tutup
+              </button>
             </div>
           </div>
         </div>
