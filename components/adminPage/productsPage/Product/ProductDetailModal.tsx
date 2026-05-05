@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useMemo, useState } from "react";
 import { X, Package, CheckCircle, XCircle, Calendar } from "lucide-react";
 import { getImageUrl } from "@/lib/utils";
 import { Product } from "@/app/contexts/ProductCrud";
@@ -17,6 +17,13 @@ export function ProductDetailModal({
   product,
 }: ProductDetailModalProps) {
   if (!isOpen || !product) return null;
+
+  const [imageError, setImageError] = useState(false);
+
+  const firstImageSrc = useMemo(() => {
+    const fp = product.gambars?.[0]?.file_path;
+    return fp ? getImageUrl(fp) : null;
+  }, [product.gambars]);
 
   const formatPrice = (price: number) =>
     new Intl.NumberFormat("id-ID", {
@@ -52,14 +59,14 @@ export function ProductDetailModal({
         <div className="p-6 space-y-6 overflow-y-auto flex-1">
           <div className="flex items-start gap-4">
             <div className="w-24 h-24 rounded-lg overflow-hidden border bg-gray-50 flex items-center justify-center flex-shrink-0">
-              {product.gambars && product.gambars.length > 0 ? (
+              {firstImageSrc && !imageError ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                // <img
-                //   src={getImageUrl(product.gambars[0].file_path)}
-                //   alt={product.nama_id || product.nama_en || "Product Image"}
-                //   className="w-full h-full object-cover"
-                // />
-                <></>
+                <img
+                  src={firstImageSrc}
+                  alt={product.nama_id || product.nama_en || "Product Image"}
+                  className="w-full h-full object-cover"
+                  onError={() => setImageError(true)}
+                />
               ) : (
                 <Package className="w-8 h-8 text-orange-600" />
               )}

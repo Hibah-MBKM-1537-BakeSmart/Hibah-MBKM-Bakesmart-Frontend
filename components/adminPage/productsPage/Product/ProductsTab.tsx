@@ -78,7 +78,14 @@ function ProductTableRow({
             {product.gambars && product.gambars.length > 0 ? (
               <>
                 <img
-                  src={getImageUrl(product.gambars[0]?.file_path)}
+                  key={`${product.gambars[0]?.file_path ?? ""}|${product.updated_at ?? ""}|${product.gambars[0]?.id ?? ""}`}
+                  src={(() => {
+                    const fp = product.gambars[0]?.file_path;
+                    const base = getImageUrl(fp);
+                    const v = product.gambars[0]?.id ?? product.updated_at ?? "";
+                    if (!fp || !v) return base;
+                    return base.includes("?") ? `${base}&v=${encodeURIComponent(String(v))}` : `${base}?v=${encodeURIComponent(String(v))}`;
+                  })()}
                   alt={product.nama_id || product.nama_en || "Unnamed Product"}
                   className="w-10 h-10 rounded-lg object-cover border border-gray-200"
                   onError={(e) => {

@@ -69,12 +69,31 @@ export function AddProductModal({
 
   // Select mode
   const [selectedBahanId, setSelectedBahanId] = useState<number | "">("");
-  const [selectedBahanJumlah, setSelectedBahanJumlah] = useState<number>(0);
+  const [selectedBahanJumlah, setSelectedBahanJumlah] = useState<string>("");
 
   // Manual mode
   const [newBahanNameId, setNewBahanNameId] = useState("");
   const [newBahanNameEn, setNewBahanNameEn] = useState("");
-  const [newBahanJumlah, setNewBahanJumlah] = useState<number>(0);
+  const [newBahanJumlah, setNewBahanJumlah] = useState<string>("");
+
+  const normalizeNumericInput = (raw: string): string => {
+    const value = raw.replace(/,/g, ".");
+    if (value === "") return "";
+    if (value === ".") return "0.";
+
+    const parts = value.split(".");
+    const intPart = parts[0] ?? "";
+    const fracPart = parts.length > 1 ? parts.slice(1).join(".") : undefined;
+
+    const normalizedInt = intPart.replace(/^0+(?=\d)/, "");
+
+    if (fracPart !== undefined) {
+      const intFinal = normalizedInt === "" ? "0" : normalizedInt;
+      return `${intFinal}.${fracPart}`;
+    }
+
+    return normalizedInt === "" ? "0" : normalizedInt;
+  };
 
   // ── Fetch bahan master ───────────────────────────────────────────────────
   useEffect(() => {
@@ -135,10 +154,10 @@ export function AddProductModal({
     setShowBahanForm(false);
     setBahanInputMode("select");
     setSelectedBahanId("");
-    setSelectedBahanJumlah(0);
+    setSelectedBahanJumlah("");
     setNewBahanNameId("");
     setNewBahanNameEn("");
-    setNewBahanJumlah(0);
+    setNewBahanJumlah("");
     setErrors((prev) => ({ ...prev, bahan: "" }));
   };
 
@@ -163,7 +182,7 @@ export function AddProductModal({
           id: selected.id,
           nama_id: selected.nama_id,
           nama_en: selected.nama_en,
-          jumlah: selectedBahanJumlah,
+          jumlah: selectedBahanJumlah ? Number(selectedBahanJumlah) : 0,
         },
       ],
     }));
@@ -183,7 +202,7 @@ export function AddProductModal({
           id: 0, // 0 = manual, will be created on save
           nama_id: newBahanNameId.trim(),
           nama_en: newBahanNameEn.trim(),
-          jumlah: newBahanJumlah,
+          jumlah: newBahanJumlah ? Number(newBahanJumlah) : 0,
         },
       ],
     }));
@@ -239,30 +258,30 @@ export function AddProductModal({
       };
 
       console.log("Submitting new product:", newProduct);
-      onAddProduct(newProduct).then(async (created) => {
-        console.log("created:", created);
-        if (!created?.id) return;
 
-        // Append bahans — id > 0 = existing master, id === 0 = manual new
-        // console.log("created:", created);
-        // console.log("Uploaded bahan 1:", formData.bahans);
-        for (const bahan of formData.bahans) {
-          await appendBahanToProduct(created.id, (bahan as any).id ?? 0, {
-            nama_id: bahan.nama_id || "",
-            nama_en: bahan.nama_en || "",
-            jumlah: Number(bahan.jumlah) || 0,
-          });
-        }
-        
-        // console.log("Uploaded bahan 2:", formData.bahans);
-        // console.log("Uploaded images:", formData.gambars);
-        if (formData.gambars[0]) {
-          await appendGambarToProduct(created.id, formData.gambars[0]);
-        }
-      });
+      const created = await onAddProduct(newProduct);
+      console.log("created:", created);
+      if (!created?.id) {
+        throw new Error("Gagal membuat produk (ID tidak ditemukan)");
+      }
 
-      resetForm();
+      // Append bahans — id > 0 = existing master, id === 0 = manual new
+      for (const bahan of formData.bahans) {
+        await appendBahanToProduct(created.id, (bahan as any).id ?? 0, {
+          nama_id: bahan.nama_id || "",
+          nama_en: bahan.nama_en || "",
+          jumlah: Number(bahan.jumlah) || 0,
+        });
+      }
+
+      // Upload image
+      if (formData.gambars[0]) {
+        await appendGambarToProduct(created.id, formData.gambars[0]);
+      }
+
+      // Refresh list AFTER image upload finished
       await fetchProduct();
+      resetForm();
       onClose();
     } catch (e) {
       const errorMessage = e instanceof Error ? e.message : "Terjadi kesalahan";
@@ -473,8 +492,10 @@ export function AddProductModal({
                             </div>
                             <div>
                               <label className="text-xs font-medium text-gray-700 mb-1 block">Jumlah</label>
-                              <input type="number" value={selectedBahanJumlah}
-                                onChange={(e) => setSelectedBahanJumlah(Number(e.target.value))}
+                              <input
+                                type="number"
+                                value={selectedBahanJumlah}
+                                onChange={(e) => setSelectedBahanJumlah(normalizeNumericInput(e.target.value))}
                                 min={0} step="0.1" placeholder="0"
                                 className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500" />
                             </div>
@@ -500,7 +521,10 @@ export function AddProductModal({
                             </div>
                             <div>
                               <label className="text-xs font-medium text-gray-700 mb-1 block">Jumlah</label>
-                              <input type="number" value={newBahanJumlah} onChange={(e) => setNewBahanJumlah(Number(e.target.value))}
+                              <input
+                                type="number"
+                                value={newBahanJumlah}
+                                onChange={(e) => setNewBahanJumlah(normalizeNumericInput(e.target.value))}
                                 min={0} step="0.1" placeholder="0"
                                 className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500" />
                             </div>

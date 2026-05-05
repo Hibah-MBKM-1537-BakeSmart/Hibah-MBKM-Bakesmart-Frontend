@@ -7,6 +7,7 @@ import { useSubJenis } from "../../../../app/contexts/SubJenisContext";
 import { Bahan, FormProduct, Product } from "@/app/contexts/ProductCrud";
 import { useProducts } from "@/app/contexts/ProductsContext";
 import { useAppAlert } from "@/components/AppAlert";
+import { getImageUrl } from "@/lib/utils";
 
 interface EditProductModalProps {
   isOpen: boolean;
@@ -52,7 +53,7 @@ export function EditProductModal({ isOpen, onClose, product, onEditProduct }: Ed
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [newImagePreviews, setNewImagePreviews] = useState<string[]>([]);
-  const [existingImages, setExistingImages] = useState<Array<{ id: number; url: string }>>([]);
+  const [existingImages, setExistingImages] = useState<Array<{ id: number; file_path: string }>>([]);
   const [removedExistingImageIds, setRemovedExistingImageIds] = useState<number[]>([]);
 
   // ── Bahan master list ────────────────────────────────────────────────────
@@ -64,12 +65,31 @@ export function EditProductModal({ isOpen, onClose, product, onEditProduct }: Ed
 
   // Select mode
   const [selectedBahanId, setSelectedBahanId] = useState<number | "">("");
-  const [selectedBahanJumlah, setSelectedBahanJumlah] = useState<number>(0);
+  const [selectedBahanJumlah, setSelectedBahanJumlah] = useState<string>("");
 
   // Manual mode
   const [newBahanNameId, setNewBahanNameId] = useState("");
   const [newBahanNameEn, setNewBahanNameEn] = useState("");
-  const [newBahanJumlah, setNewBahanJumlah] = useState<number>(0);
+  const [newBahanJumlah, setNewBahanJumlah] = useState<string>("");
+
+  const normalizeNumericInput = (raw: string): string => {
+    const value = raw.replace(/,/g, ".");
+    if (value === "") return "";
+    if (value === ".") return "0.";
+
+    const parts = value.split(".");
+    const intPart = parts[0] ?? "";
+    const fracPart = parts.length > 1 ? parts.slice(1).join(".") : undefined;
+
+    const normalizedInt = intPart.replace(/^0+(?=\d)/, "");
+
+    if (fracPart !== undefined) {
+      const intFinal = normalizedInt === "" ? "0" : normalizedInt;
+      return `${intFinal}.${fracPart}`;
+    }
+
+    return normalizedInt === "" ? "0" : normalizedInt;
+  };
 
   // ── Fetch bahan master ───────────────────────────────────────────────────
   useEffect(() => {
@@ -107,7 +127,9 @@ export function EditProductModal({ isOpen, onClose, product, onEditProduct }: Ed
         bahans: (product.bahans ?? []).map((b) => ({ ...b })),
       });
       setExistingImages(
-        (product.gambars ?? []).filter((g: any) => g !== null).map((g: any) => ({ id: g.id, url: g.url }))
+        (product.gambars ?? [])
+          .filter((g: any) => g !== null)
+          .map((g: any) => ({ id: g.id, file_path: g.file_path }))
       );
       setRemovedExistingImageIds([]);
       setNewImagePreviews([]);
@@ -158,10 +180,10 @@ export function EditProductModal({ isOpen, onClose, product, onEditProduct }: Ed
     setShowBahanForm(false);
     setBahanInputMode("select");
     setSelectedBahanId("");
-    setSelectedBahanJumlah(0);
+    setSelectedBahanJumlah("");
     setNewBahanNameId("");
     setNewBahanNameEn("");
-    setNewBahanJumlah(0);
+    setNewBahanJumlah("");
     setErrors((prev) => ({ ...prev, bahan: "" }));
   };
 
@@ -179,7 +201,15 @@ export function EditProductModal({ isOpen, onClose, product, onEditProduct }: Ed
     if (!selected) return;
     setFormData((prev) => ({
       ...prev,
-      bahans: [...prev.bahans, { id: selected.id, nama_id: selected.nama_id, nama_en: selected.nama_en, jumlah: selectedBahanJumlah }],
+      bahans: [
+        ...prev.bahans,
+        {
+          id: selected.id,
+          nama_id: selected.nama_id,
+          nama_en: selected.nama_en,
+          jumlah: selectedBahanJumlah ? Number(selectedBahanJumlah) : 0,
+        },
+      ],
     }));
     resetBahanForm();
   };
@@ -191,7 +221,15 @@ export function EditProductModal({ isOpen, onClose, product, onEditProduct }: Ed
     }
     setFormData((prev) => ({
       ...prev,
-      bahans: [...prev.bahans, { id: 0, nama_id: newBahanNameId.trim(), nama_en: newBahanNameEn.trim(), jumlah: newBahanJumlah }],
+      bahans: [
+        ...prev.bahans,
+        {
+          id: 0,
+          nama_id: newBahanNameId.trim(),
+          nama_en: newBahanNameEn.trim(),
+          jumlah: newBahanJumlah ? Number(newBahanJumlah) : 0,
+        },
+      ],
     }));
     resetBahanForm();
   };
@@ -487,8 +525,10 @@ export function EditProductModal({ isOpen, onClose, product, onEditProduct }: Ed
                             </div>
                             <div>
                               <label className="text-xs font-medium text-gray-700 mb-1 block">Jumlah</label>
-                              <input type="number" value={selectedBahanJumlah}
-                                onChange={(e) => setSelectedBahanJumlah(Number(e.target.value))}
+                              <input
+                                type="number"
+                                value={selectedBahanJumlah}
+                                onChange={(e) => setSelectedBahanJumlah(normalizeNumericInput(e.target.value))}
                                 min={0} step="0.1" placeholder="0"
                                 className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500" />
                             </div>
@@ -513,7 +553,10 @@ export function EditProductModal({ isOpen, onClose, product, onEditProduct }: Ed
                             </div>
                             <div>
                               <label className="text-xs font-medium text-gray-700 mb-1 block">Jumlah</label>
-                              <input type="number" value={newBahanJumlah} onChange={(e) => setNewBahanJumlah(Number(e.target.value))}
+                              <input
+                                type="number"
+                                value={newBahanJumlah}
+                                onChange={(e) => setNewBahanJumlah(normalizeNumericInput(e.target.value))}
                                 min={0} step="0.1" placeholder="0"
                                 className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500" />
                             </div>
@@ -585,7 +628,27 @@ export function EditProductModal({ isOpen, onClose, product, onEditProduct }: Ed
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                         {visibleExistingImages.map((img) => (
                           <div key={img.id} className="relative group">
-                            <img src={img.url} alt="Existing product" className="w-full h-24 object-cover rounded-lg border border-gray-200" />
+                            <img
+                              src={getImageUrl(img.file_path)}
+                              alt="Existing product"
+                              className="w-full h-24 object-cover rounded-lg border border-gray-200"
+                              onError={(e) => {
+                                const target = e.currentTarget as HTMLImageElement;
+                                target.style.display = "none";
+                                const fallback =
+                                  target.parentElement?.querySelector(
+                                    "[data-fallback='true']"
+                                  ) as HTMLElement | null;
+                                if (fallback) fallback.style.display = "flex";
+                              }}
+                            />
+                            <div
+                              data-fallback="true"
+                              className="absolute inset-0 w-full h-24 bg-orange-100 rounded-lg items-center justify-center"
+                              style={{ display: "none" }}
+                            >
+                              <Package className="w-6 h-6 text-orange-600" />
+                            </div>
                             <button type="button" onClick={() => removeExistingImage(img.id)} disabled={isSubmitting}
                               className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity">
                               <Trash2 className="w-3 h-3" />
