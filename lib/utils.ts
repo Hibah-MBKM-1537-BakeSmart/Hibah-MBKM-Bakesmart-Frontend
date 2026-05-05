@@ -16,5 +16,23 @@ export function getImageUrl(path: string | undefined | null): string {
     path.startsWith("blob:")
   )
     return path;
-  return `${BACKEND_URL}${path.startsWith("/") ? "" : "/"}${path}`;
+
+  // Defensive fix: some backends mistakenly return image paths under `/products/<filename>`.
+  // That collides with the REST route `/products/{id}` and causes DB errors.
+  // If it looks like an image file, rewrite to `/uploads/products/<filename>`.
+  const [rawPath, rawQuery] = path.split("?");
+  const query = rawQuery ? `?${rawQuery}` : "";
+  const imageExtRe = /\.(png|jpe?g|webp|gif|svg)$/i;
+
+  let fixedPath = rawPath;
+
+  if (imageExtRe.test(rawPath) && !rawPath.includes("/uploads/")) {
+    const match = rawPath.match(/^\/?products\/(.+)$/i);
+    if (match?.[1]) {
+      fixedPath = `/uploads/products/${match[1]}`;
+    }
+  }
+
+  const normalizedPath = fixedPath.startsWith("/") ? fixedPath : `/${fixedPath}`;
+  return `${BACKEND_URL}${normalizedPath}${query}`;
 }
