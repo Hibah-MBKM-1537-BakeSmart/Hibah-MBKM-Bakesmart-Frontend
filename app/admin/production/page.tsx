@@ -467,6 +467,8 @@ export default function ProductionPage() {
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
   const [isEditingOrder, setIsEditingOrder] = useState(false);
   const [editedOrder, setEditedOrder] = useState<Order | null>(null);
+  const [isSavingOrder, setIsSavingOrder] = useState(false);
+  const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
     fetchProductionList();
@@ -1156,6 +1158,73 @@ export default function ProductionPage() {
       }
     } catch (err) {
       console.error("[Production] Error completing order:", err);
+    }
+  };
+
+  // Handle saving edited order (for pending/verifying orders)
+  const handleSaveEditedOrder = async () => {
+    if (!editedOrder) return;
+    setIsSavingOrder(true);
+    setSaveMessage(null);
+
+    try {
+      const payload = {
+        items: editedOrder.order_products.map((p) => ({
+          product_id: p.product.id,
+          jumlah: p.jumlah,
+          harga_beli: p.harga_beli,
+          note: p.note || null,
+        })),
+        note: editedOrder.notes || null,
+      };
+
+      const response = await fetch(`/api/orders/${editedOrder.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        setSaveMessage({ type: 'success', text: 'Pesanan berhasil diperbarui!' });
+
+        // Update local state
+        const updatedProducts = editedOrder.order_products;
+        const newTotal = updatedProducts.reduce(
+          (sum, p) => sum + p.jumlah * p.harga_beli, 0
+        );
+
+        setAllOrders(
+          allOrders.map((o) =>
+            o.id === editedOrder.id
+              ? { ...o, order_products: updatedProducts }
+              : o
+          )
+        );
+        setOrders(
+          orders.map((o) =>
+            o.id === editedOrder.id
+              ? { ...o, order_products: updatedProducts }
+              : o
+          )
+        );
+
+        setIsEditingOrder(false);
+
+        // Auto-clear success message after 3s
+        setTimeout(() => setSaveMessage(null), 3000);
+      } else {
+        const errorData = await response.json();
+        setSaveMessage({
+          type: 'error',
+          text: errorData.message || 'Gagal menyimpan perubahan',
+        });
+      }
+    } catch (err) {
+      console.error('[Production] Error saving order:', err);
+      setSaveMessage({ type: 'error', text: 'Gagal menyimpan perubahan. Cek koneksi.' });
+    } finally {
+      setIsSavingOrder(false);
     }
   };
 
@@ -2749,7 +2818,7 @@ export default function ProductionPage() {
                   <h3 className="font-bold text-gray-900 flex items-center gap-2">
                     <Package size={16} /> Produk
                   </h3>
-                  {editedOrder.status === "verifying" && (
+                  {(editedOrder.status === "verifying" || editedOrder.status === "pending" || editedOrder.status === "ongoing") && (
                     <button
                       onClick={() => setIsEditingOrder(!isEditingOrder)}
                       className="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-sm rounded font-medium transition-colors flex items-center gap-1.5"
@@ -2762,7 +2831,7 @@ export default function ProductionPage() {
                       {isEditingOrder ? "Selesai Edit" : "Edit"}
                     </button>
                   )}
-                  {editedOrder.status !== "verifying" && (
+                  {editedOrder.status !== "verifying" && editedOrder.status !== "pending" && editedOrder.status !== "ongoing" && (
                     <span className="text-sm text-gray-500 flex items-center gap-1.5">
                       <Lock className="w-4 h-4" /> Tidak Bisa Diubah
                     </span>
@@ -2794,7 +2863,7 @@ export default function ProductionPage() {
                                 setEditedOrder(updated);
                               }}
                               className="w-full px-2 py-1 border border-gray-300 rounded font-semibold"
-                              disabled={editedOrder.status !== "verifying"}
+                              min="0"
                             />
                           ) : (
                             <p className="font-semibold text-gray-900">
@@ -2812,14 +2881,71 @@ export default function ProductionPage() {
                           </p>
                         </div>
                       </div>
-                      {item.note && (
-                        <p className="text-xs text-gray-600 mt-2">
-                          📝 {item.note}
-                        </p>
+                      {isEditingOrder ? (
+                        <div className="mt-2">
+                          <p className="text-xs text-gray-600">Catatan Item</p>
+                          <input
+                            type="text"
+                            value={item.note || ""}
+                            onChange={(e) => {
+                              const updated = { ...editedOrder };
+                              updated.order_products[idx].note = e.target.value;
+                              setEditedOrder(updated);
+                            }}
+                            className="w-full px-2 py-1 border border-gray-300 rounded text-sm mt-1"
+                            placeholder="Catatan untuk item ini..."
+                          />
+                        </div>
+                      ) : (
+                        item.note && (
+                          <p className="text-xs text-gray-600 mt-2">
+                            📝 {item.note}
+                          </p>
+                        )
+                      )}
+                      {/* Tombol hapus item saat editing */}
+                      {isEditingOrder && editedOrder.order_products.length > 1 && (
+                        <button
+                          onClick={() => {
+                            const updated = { ...editedOrder };
+                            updated.order_products = updated.order_products.filter(
+                              (_, i) => i !== idx
+                            );
+                            setEditedOrder(updated);
+                          }}
+                          className="mt-2 px-3 py-1 bg-red-50 hover:bg-red-100 text-red-600 rounded text-xs font-medium transition-colors flex items-center gap-1"
+                        >
+                          <X className="w-3 h-3" /> Hapus Item
+                        </button>
                       )}
                     </div>
                   ))}
                 </div>
+
+                {/* Save Message */}
+                {saveMessage && (
+                  <div
+                    className={`mt-3 px-4 py-2 rounded text-sm font-medium ${
+                      saveMessage.type === 'success'
+                        ? 'bg-green-50 text-green-700 border border-green-200'
+                        : 'bg-red-50 text-red-700 border border-red-200'
+                    }`}
+                  >
+                    {saveMessage.text}
+                  </div>
+                )}
+
+                {/* Tombol Simpan Perubahan */}
+                {isEditingOrder && (
+                  <button
+                    onClick={handleSaveEditedOrder}
+                    disabled={isSavingOrder}
+                    className="mt-4 w-full px-4 py-2.5 bg-green-500 hover:bg-green-600 disabled:bg-green-300 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Save className="w-4 h-4" />
+                    {isSavingOrder ? 'Menyimpan...' : 'Simpan Perubahan'}
+                  </button>
+                )}
               </div>
 
               {/* Notes */}
@@ -2837,9 +2963,11 @@ export default function ProductionPage() {
                     <p className="text-xs text-gray-600">Status</p>
                     <p className="font-bold text-lg text-gray-900">
                       {editedOrder.status === "verifying" && "Verifikasi"}
-                      {editedOrder.status === "pending" && "Menunggu"}
+                      {editedOrder.status === "pending" && "Menunggu Pembayaran"}
+                      {editedOrder.status === "ongoing" && "Proses"}
                       {editedOrder.status === "paid" && "Dibayar"}
                       {editedOrder.status === "completed" && "Selesai"}
+                      {editedOrder.status === "cancelled" && "Dibatalkan"}
                     </p>
                   </div>
                   <div>
@@ -2889,6 +3017,18 @@ export default function ProductionPage() {
                       <X className="w-5 h-5" /> Tolak
                     </button>
                   </>
+                )}
+                {editedOrder.status === "pending" && (
+                  <button
+                    onClick={() => {
+                      handleVerifyPayment(editedOrder.id);
+                      setSelectedOrderId(null);
+                      setEditedOrder(null);
+                    }}
+                    className="flex-1 px-4 py-2.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                  >
+                    <CreditCard className="w-5 h-5" /> Verifikasi Pembayaran
+                  </button>
                 )}
               </div>
             </div>
