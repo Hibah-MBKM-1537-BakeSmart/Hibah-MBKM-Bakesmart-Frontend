@@ -35,6 +35,20 @@ export function MenuModal({
     ? cartItems.some((cartItem) => cartItem.id === item.id)
     : false;
 
+  const isClosedForSelectedDay = () => {
+    if (!item?.isSubJenisClosed) return false;
+    if (!tempOrderDay) return false;
+    
+    const days = ["minggu", "senin", "selasa", "rabu", "kamis", "jumat", "sabtu"];
+    const todayIndex = new Date().getDay();
+    const tomorrowIndex = (todayIndex + 1) % 7;
+    const selectedIndex = days.indexOf(tempOrderDay.toLowerCase());
+    
+    return selectedIndex === tomorrowIndex || selectedIndex === todayIndex;
+  };
+
+  const isSubJenisClosed = isClosedForSelectedDay();
+
   useEffect(() => {
     if (isOpen && item) {
       document.body.style.overflow = "hidden";
@@ -97,7 +111,7 @@ export function MenuModal({
 
   const handleAddToCart = () => {
     // Check if sub_jenis is closed - product cannot be ordered
-    if (item.isSubJenisClosed) {
+    if (isSubJenisClosed) {
       alert(
         language === "id"
           ? "Maaf, produk ini sedang tidak tersedia untuk dipesan."
@@ -228,10 +242,10 @@ export function MenuModal({
                 className="w-full h-full max-w-none object-cover cursor-pointer hover:opacity-90 transition-opacity rounded-t-lg md:rounded-l-lg md:rounded-tr-none"
                 onClick={() => setIsImagePopupOpen(true)}
               />
-              {(isOutOfStock || isStoreClosed() || item.isSubJenisClosed) && (
+              {(isOutOfStock || isStoreClosed() || isSubJenisClosed) && (
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none rounded-t-lg md:rounded-l-lg md:rounded-tr-none">
                   <span className="text-white text-lg md:text-xl font-bold text-center px-4 py-3 bg-gray-900 rounded-lg shadow-xl border-2 border-white">
-                    {item.isSubJenisClosed
+                    {isSubJenisClosed
                       ? language === "id"
                         ? "Tidak Tersedia untuk Dipesan"
                         : "Not Available for Order"
@@ -498,7 +512,7 @@ export function MenuModal({
                         isOutOfStock ||
                         !tempOrderDay ||
                         isStoreClosed() ||
-                        item.isSubJenisClosed
+                        isSubJenisClosed
                           ? "bg-gray-400 text-gray-600 cursor-not-allowed"
                           : "bg-[#5D4037] text-white hover:bg-[#8B6F47] shadow-md hover:shadow-lg"
                       }`}
@@ -507,10 +521,10 @@ export function MenuModal({
                         isOutOfStock ||
                         !tempOrderDay ||
                         isStoreClosed() ||
-                        item.isSubJenisClosed
+                        isSubJenisClosed
                       }
                     >
-                      {item.isSubJenisClosed
+                      {isSubJenisClosed
                         ? language === "id"
                           ? "Tidak Tersedia"
                           : "Unavailable"

@@ -67,8 +67,21 @@ export function MenuCard({
     additionalPrice: attr.harga,
   }));
 
-  // Check if product's sub_jenis is closed (cannot be ordered)
-  const isSubJenisClosed = item.isSubJenisClosed || false;
+  // The backend cron job sets is_closed to true when PO time has passed for tomorrow's orders.
+  // We should only block ordering if the selected day is tomorrow (or today).
+  const isClosedForSelectedDay = () => {
+    if (!item.isSubJenisClosed) return false;
+    if (!selectedOrderDay) return false;
+    
+    const days = ["minggu", "senin", "selasa", "rabu", "kamis", "jumat", "sabtu"];
+    const todayIndex = new Date().getDay();
+    const tomorrowIndex = (todayIndex + 1) % 7;
+    const selectedIndex = days.indexOf(selectedOrderDay.toLowerCase());
+    
+    return selectedIndex === tomorrowIndex || selectedIndex === todayIndex;
+  };
+
+  const isSubJenisClosed = isClosedForSelectedDay();
 
   // Calculate total quantity for this product across all customizations
   const totalQuantity = cartItems
