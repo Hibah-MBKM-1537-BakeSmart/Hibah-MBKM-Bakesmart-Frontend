@@ -426,7 +426,7 @@ export function EditProductModal({ isOpen, onClose, product, onEditProduct }: Ed
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Hitungan Kalkulasi*</label>
                     <input type="number" name="calc_count" value={formData.calc_count} onChange={handleInputChange}
-                      placeholder="1" min="0" step="0.1" disabled={isSubmitting}
+                      placeholder="1" min="0" step="any" disabled={isSubmitting}
                       className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 ${errors.harga ? "border-red-500" : "border-gray-300"}`} />
                     {errors.calc_count && <p className="mt-1 text-sm text-red-600">{errors.calc_count}</p>}
                   </div>
