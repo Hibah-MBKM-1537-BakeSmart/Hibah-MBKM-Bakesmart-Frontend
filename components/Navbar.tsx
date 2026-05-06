@@ -137,7 +137,7 @@ export function Navbar() {
               disabled={storeIsClosed} // Cart tetap disabled saat tutup
               className={`relative transition-all duration-300 ${
                 showCartAnimation ? "animate-bounce bg-white/20" : ""
-              } ${storeIsClosed ? "opacity-50 cursor-not-allowed" : ""}`}
+              } ${storeIsClosed ? "opacity-50 cursor-not-allowed" : "text-white hover:bg-white/20"}`}
             >
               <ShoppingCart className="h-5 w-5" />
               {totalItems > 0 && (
