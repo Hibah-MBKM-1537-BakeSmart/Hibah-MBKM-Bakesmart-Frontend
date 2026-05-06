@@ -14,7 +14,7 @@ import {
   Clock,
 } from "lucide-react";
 import { useAdminTranslation } from "@/app/contexts/AdminTranslationContext";
-import { Modal } from "@/components/adminPage/Modal";
+
 import { AddProductModal } from "@/components/adminPage/productsPage/Product/AddProductModal";
 import { AddUserModal } from "@/components/adminPage/users/AddUserModal";
 import { WhatsAppBlastModal } from "@/components/adminPage/customersPage/WhatsAppBlastModal";
@@ -34,7 +34,7 @@ interface StatCard {
 export default function DashboardPage() {
   const router = useRouter();
   const { t } = useAdminTranslation();
-  const { addProduct } = useProducts();
+  const { createProduct } = useProducts();
   const { createAdmin } = useAdmin();
   // const { addToast } = useToast();
 
@@ -213,19 +213,20 @@ export default function DashboardPage() {
 
   const handleAddProduct = async (productData: any) => {
     try {
-      await addProduct(productData);
+      const result = await createProduct(productData);
       // addToast({
       //   type: "success",
       //   title: "Success",
       //   message: "Product added successfully",
       // });
-      setActiveModal(null);
+      return result;
     } catch (error) {
       // addToast({
       //   type: "error",
       //   title: "Error",
       //   message: "Failed to add product",
       // });
+      return null;
     }
   };
 
@@ -443,7 +444,10 @@ export default function DashboardPage() {
               ))}
             </div>
             <div className="mt-4">
-              <button className="w-full text-center py-2 px-4 text-sm font-medium transition-all duration-200 font-admin-body bg-blue-500 text-white rounded-lg hover:bg-blue-600 hover:shadow-sm">
+              <button
+                onClick={() => router.push("/admin/history")}
+                className="w-full text-center py-2 px-4 text-sm font-medium transition-all duration-200 font-admin-body bg-blue-500 text-white rounded-lg hover:bg-blue-600 hover:shadow-sm"
+              >
                 {t("dashboard.viewAllOrders")}
               </button>
             </div>
